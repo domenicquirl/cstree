@@ -53,6 +53,16 @@ impl NodeCache {
                 len: usize,
             }
 
+            impl ChildrenIter {
+                fn new(data: [Option<GreenElement>; 3], count: usize) -> Self {
+                    ChildrenIter {
+                        data,
+                        idx: 0,
+                        len: count,
+                    }
+                }
+            }
+
             impl Iterator for ChildrenIter {
                 type Item = GreenElement;
 
@@ -76,11 +86,7 @@ impl NodeCache {
                 data[count] = Some(child);
                 count += 1;
             }
-            let children = ChildrenIter {
-                data,
-                idx: 0,
-                len: count,
-            };
+            let children = ChildrenIter::new(data, count);
 
             let head = GreenNodeHead::from_child_iter(kind, children.clone());
             self.nodes
