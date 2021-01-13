@@ -1,10 +1,7 @@
 use serde::ser::{Serialize, SerializeMap, SerializeSeq, Serializer};
 use std::fmt;
 
-use crate::{
-    api::{Language, SyntaxNode, SyntaxToken},
-    NodeOrToken,
-};
+use crate::{Language, NodeOrToken, SyntaxNode, SyntaxToken};
 
 struct SerDisplay<T>(T);
 impl<T: fmt::Display> Serialize for SerDisplay<T> {

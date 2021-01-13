@@ -22,7 +22,10 @@ pub(super) struct GreenNodeHead {
 
 impl GreenNodeHead {
     #[inline]
-    pub(super) fn from_child_slice(kind: SyntaxKind, children: &[GreenElement]) -> Self {
+    pub(super) fn from_child_iter<I>(kind: SyntaxKind, children: I) -> Self
+    where
+        I: Iterator<Item = GreenElement>,
+    {
         let mut hasher = FxHasher32::default();
         let mut text_len: TextSize = 0.into();
         for child in children {

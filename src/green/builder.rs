@@ -2,7 +2,6 @@ use std::{convert::TryFrom, num::NonZeroUsize};
 
 use fxhash::{FxBuildHasher, FxHashMap};
 use lasso::{Capacity, Rodeo, Spur};
-use smallvec::SmallVec;
 use text_size::TextSize;
 
 use crate::{
@@ -12,6 +11,12 @@ use crate::{
 };
 
 use super::{node::GreenNodeHead, token::GreenTokenData};
+
+/// If `node.children() <= CHILDREN_CACHE_THRESHOLD`, we will not create
+/// a new [`GreenNode`], but instead lookup in the cache if this node is
+/// already present. If so we use the one in the cache, otherwise we insert
+/// this node into the cache.
+const CHILDREN_CACHE_THRESHOLD: usize = 3;
 
 #[derive(Debug)]
 pub struct NodeCache {
@@ -39,6 +44,7 @@ impl NodeCache {
         I::IntoIter: ExactSizeIterator,
     {
         let children = children.into_iter();
+
         // Green nodes are fully immutable, so it's ok to deduplicate them.
         // This is the same optimization that Roslyn does
         // https://github.com/KirillOsenkov/Bliki/wiki/Roslyn-Immutable-Trees
@@ -46,16 +52,67 @@ impl NodeCache {
         // For example, all `#[inline]` in this file share the same green node!
         // For `libsyntax/parse/parser.rs`, measurements show that deduping saves
         // 17% of the memory for green nodes!
-        if children.len() <= 3 {
-            let children: SmallVec<[_; 3]> = children.collect();
-            let head = GreenNodeHead::from_child_slice(kind, children.as_ref());
-            self.nodes
-                .entry(head.clone())
-                .or_insert_with(|| GreenNode::from_head_and_children(head, children))
-                .clone()
+        if children.len() <= CHILDREN_CACHE_THRESHOLD {
+            self.get_cached_node(kind, children)
         } else {
             GreenNode::new(kind, children)
         }
+    }
+
+    /// Creates a [`GreenNode`] by looking inside the cache or inserting
+    /// a new node into the cache if it's a cache miss.
+    fn get_cached_node<I>(&mut self, kind: SyntaxKind, children: I) -> GreenNode
+    where
+        I: IntoIterator<Item = GreenElement>,
+        I::IntoIter: ExactSizeIterator,
+    {
+        #[derive(Clone)]
+        struct ChildrenIter {
+            data: [Option<GreenElement>; CHILDREN_CACHE_THRESHOLD],
+            idx:  usize,
+            len:  usize,
+        }
+
+        impl ChildrenIter {
+            fn new(data: [Option<GreenElement>; CHILDREN_CACHE_THRESHOLD], count: usize) -> Self {
+                ChildrenIter {
+                    data,
+                    idx: 0,
+                    len: count,
+                }
+            }
+        }
+
+        impl Iterator for ChildrenIter {
+            type Item = GreenElement;
+
+            fn next(&mut self) -> Option<Self::Item> {
+                let item = self.data.get_mut(self.idx)?;
+                self.idx += 1;
+                item.take()
+            }
+        }
+
+        impl ExactSizeIterator for ChildrenIter {
+            fn len(&self) -> usize {
+                self.len - self.idx
+            }
+        }
+
+        let mut data: [Option<GreenElement>; CHILDREN_CACHE_THRESHOLD] = [None, None, None];
+        let mut count = 0;
+
+        for child in children {
+            data[count] = Some(child);
+            count += 1;
+        }
+        let children = ChildrenIter::new(data, count);
+
+        let head = GreenNodeHead::from_child_iter(kind, children.clone());
+        self.nodes
+            .entry(head.clone())
+            .or_insert_with(|| GreenNode::from_head_and_children(head, children))
+            .clone()
     }
 
     fn token(&mut self, kind: SyntaxKind, text: &str) -> GreenToken {
