@@ -2,7 +2,6 @@ use std::{convert::TryFrom, num::NonZeroUsize};
 
 use fxhash::{FxBuildHasher, FxHashMap};
 use lasso::{Capacity, Rodeo, Spur};
-use smallvec::SmallVec;
 use text_size::TextSize;
 
 use crate::{
@@ -15,16 +14,16 @@ use super::{node::GreenNodeHead, token::GreenTokenData};
 
 #[derive(Debug)]
 pub struct NodeCache {
-    nodes:    FxHashMap<GreenNodeHead, GreenNode>,
-    tokens:   FxHashMap<GreenTokenData, GreenToken>,
+    nodes: FxHashMap<GreenNodeHead, GreenNode>,
+    tokens: FxHashMap<GreenTokenData, GreenToken>,
     interner: Rodeo<Spur, FxBuildHasher>,
 }
 
 impl NodeCache {
     pub fn new() -> Self {
         Self {
-            nodes:    FxHashMap::default(),
-            tokens:   FxHashMap::default(),
+            nodes: FxHashMap::default(),
+            tokens: FxHashMap::default(),
             interner: Rodeo::with_capacity_and_hasher(
                 // capacity values suggested by author of `lasso`
                 Capacity::new(512, unsafe { NonZeroUsize::new_unchecked(4096) }),
@@ -47,8 +46,43 @@ impl NodeCache {
         // For `libsyntax/parse/parser.rs`, measurements show that deduping saves
         // 17% of the memory for green nodes!
         if children.len() <= 3 {
-            let children: SmallVec<[_; 3]> = children.collect();
-            let head = GreenNodeHead::from_child_slice(kind, children.as_ref());
+            #[derive(Clone)]
+            struct ChildrenIter {
+                data: [Option<GreenElement>; 3],
+                idx: usize,
+                len: usize,
+            }
+
+            impl Iterator for ChildrenIter {
+                type Item = GreenElement;
+
+                fn next(&mut self) -> Option<Self::Item> {
+                    let item = self.data.get_mut(self.idx)?;
+                    self.idx += 1;
+                    item.take()
+                }
+            }
+
+            impl ExactSizeIterator for ChildrenIter {
+                fn len(&self) -> usize {
+                    self.len - self.idx
+                }
+            }
+
+            let mut data: [Option<GreenElement>; 3] = [None, None, None];
+            let mut count = 0;
+
+            for child in children {
+                data[count] = Some(child);
+                count += 1;
+            }
+            let children = ChildrenIter {
+                data,
+                idx: 0,
+                len: count,
+            };
+
+            let head = GreenNodeHead::from_child_iter(kind, children.clone());
             self.nodes
                 .entry(head.clone())
                 .or_insert_with(|| GreenNode::from_head_and_children(head, children))
@@ -108,8 +142,8 @@ pub struct Checkpoint(usize);
 /// A builder for a green tree.
 #[derive(Debug)]
 pub struct GreenNodeBuilder<'cache> {
-    cache:    MaybeOwned<'cache, NodeCache>,
-    parents:  Vec<(SyntaxKind, usize)>,
+    cache: MaybeOwned<'cache, NodeCache>,
+    parents: Vec<(SyntaxKind, usize)>,
     children: Vec<GreenElement>,
 }
 
@@ -117,8 +151,8 @@ impl GreenNodeBuilder<'_> {
     /// Creates new builder.
     pub fn new() -> GreenNodeBuilder<'static> {
         GreenNodeBuilder {
-            cache:    MaybeOwned::Owned(NodeCache::new()),
-            parents:  Vec::with_capacity(8),
+            cache: MaybeOwned::Owned(NodeCache::new()),
+            parents: Vec::with_capacity(8),
             children: Vec::with_capacity(8),
         }
     }
@@ -127,8 +161,8 @@ impl GreenNodeBuilder<'_> {
     /// It allows to structurally share underlying trees.
     pub fn with_cache(cache: &mut NodeCache) -> GreenNodeBuilder<'_> {
         GreenNodeBuilder {
-            cache:    MaybeOwned::Borrowed(cache),
-            parents:  Vec::with_capacity(8),
+            cache: MaybeOwned::Borrowed(cache),
+            parents: Vec::with_capacity(8),
             children: Vec::with_capacity(8),
         }
     }

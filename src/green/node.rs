@@ -15,14 +15,17 @@ use crate::{
 #[repr(align(2))] // NB: this is an at-least annotation
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub(super) struct GreenNodeHead {
-    kind:       SyntaxKind,
-    text_len:   TextSize,
+    kind: SyntaxKind,
+    text_len: TextSize,
     child_hash: u32,
 }
 
 impl GreenNodeHead {
     #[inline]
-    pub(super) fn from_child_slice(kind: SyntaxKind, children: &[GreenElement]) -> Self {
+    pub(super) fn from_child_iter<I>(kind: SyntaxKind, children: I) -> Self
+    where
+        I: Iterator<Item = GreenElement>,
+    {
         let mut hasher = FxHasher32::default();
         let mut text_len: TextSize = 0.into();
         for child in children {
