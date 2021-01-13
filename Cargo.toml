@@ -1,0 +1,23 @@
+[package]
+edition = "2018"
+name = "cstree"
+version = "0.0.2"
+authors = ["Domenic Quirl <DomenicQuirl@pm.me>", "Aleksey Kladov <aleksey.kladov@gmail.com>"]
+description = "Library for generic lossless syntax trees"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/domenicquirl/cstree"
+
+[dependencies]
+serde = { version = "1.0.89", optional = true, default-features = false }
+lasso = "0.4.1"
+text-size = "1.0.0"
+fxhash= "0.2.1"
+smallvec = "1.6.1"
+servo_arc = { path = "vendor/servo_arc" }
+parking_lot= "0.11.1"
+
+[dev-dependencies]
+m_lexer = "0.0.4"
+
+[features]
+serde1 = ["serde", "text-size/serde"]

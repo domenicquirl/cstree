@@ -1,0 +1,21 @@
+unstable_features = true
+
+edition = "2018"
+
+max_width = 120
+comment_width = 120
+wrap_comments = true
+
+format_code_in_doc_comments = true
+format_macro_matchers = true
+
+merge_imports = true
+
+reorder_impl_items = true
+
+use_field_init_shorthand = true
+
+# should be 1, but as of writing is too unstable and introduces blank lines at the start of random blocks
+blank_lines_lower_bound = 0
+
+struct_field_align_threshold = 8
