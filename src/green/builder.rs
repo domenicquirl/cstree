@@ -68,7 +68,7 @@ impl NodeCache {
     {
         #[derive(Clone)]
         struct ChildrenIter {
-            data: [Option<GreenElement>; 3],
+            data: [Option<GreenElement>; CHILDREN_CACHE_THRESHOLD],
             idx:  usize,
             len:  usize,
         }
