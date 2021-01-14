@@ -1,6 +1,6 @@
 use std::{
     cell::UnsafeCell,
-    fmt::Write,
+    fmt::{self, Write},
     hash::{Hash, Hasher},
     iter, ptr,
     sync::atomic::{AtomicU32, Ordering},
@@ -872,6 +872,24 @@ where
     }
 }
 
+impl<L: Language, D, R> fmt::Debug for SyntaxNode<L, D, R>
+where
+    R: Resolver,
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", Self::debug(self, self.resolver().as_ref(), f.alternate()))
+    }
+}
+
+impl<L: Language, D, R> fmt::Display for SyntaxNode<L, D, R>
+where
+    R: Resolver,
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", Self::display(self, self.resolver().as_ref()))
+    }
+}
+
 impl<L: Language, D, R> SyntaxToken<L, D, R> {
     fn new(parent: &SyntaxNode<L, D, R>, index: u32, offset: TextSize) -> SyntaxToken<L, D, R> {
         Self {
@@ -997,6 +1015,24 @@ where
     #[inline]
     pub fn text(&self) -> &str {
         self.green().text(self.parent().resolver().as_ref())
+    }
+}
+
+impl<L: Language, D, R> fmt::Debug for SyntaxToken<L, D, R>
+where
+    R: Resolver,
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", Self::debug(self, self.parent().resolver().as_ref()))
+    }
+}
+
+impl<L: Language, D, R> fmt::Display for SyntaxToken<L, D, R>
+where
+    R: Resolver,
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", Self::display(self, self.parent().resolver().as_ref()))
     }
 }
 

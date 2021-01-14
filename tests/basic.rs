@@ -147,11 +147,23 @@ fn inline_resolver() {
         let leaf1_0 = leaf1_0.into_token().unwrap();
         assert_eq!(leaf1_0.text(), "1.0");
         assert_eq!(leaf1_0.text_range(), TextRange::at(6.into(), 3.into()));
+        assert_eq!(format!("{}", leaf1_0), leaf1_0.text());
+        assert_eq!(format!("{:?}", leaf1_0), "SyntaxKind(5)@6..9 \"1.0\"");
     }
     {
         let node2 = tree.children().nth(2).unwrap();
         assert_eq!(node2.text(), "2.02.12.2");
         let resolver = node2.resolver();
         assert_eq!(node2.resolve_text(resolver.as_ref()), node2.text());
+        assert_eq!(format!("{}", node2).as_str(), node2.text());
+        assert_eq!(format!("{:?}", node2), "SyntaxKind(6)@9..18");
+        assert_eq!(
+            format!("{:#?}", node2),
+            r#"SyntaxKind(6)@9..18
+  SyntaxKind(7)@9..12 "2.0"
+  SyntaxKind(8)@12..15 "2.1"
+  SyntaxKind(9)@15..18 "2.2"
+"#
+        );
     }
 }
