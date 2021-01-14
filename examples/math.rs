@@ -13,10 +13,7 @@
 //!     - "+" Token(Add)
 //!     - "4" Token(Number)
 
-use cstree::{
-    interning::{Reader, Resolver},
-    GreenNodeBuilder, NodeOrToken,
-};
+use cstree::{interning::Resolver, GreenNodeBuilder, NodeOrToken};
 use std::iter::Peekable;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -66,7 +63,7 @@ type SyntaxElement = cstree::NodeOrToken<SyntaxNode, SyntaxToken>;
 type SyntaxElementRef<'a> = cstree::NodeOrToken<&'a SyntaxNode, &'a SyntaxToken>;
 
 struct Parser<'input, I: Iterator<Item = (SyntaxKind, &'input str)>> {
-    builder: GreenNodeBuilder<'static>,
+    builder: GreenNodeBuilder<'static, 'static>,
     iter:    Peekable<I>,
 }
 impl<'input, I: Iterator<Item = (SyntaxKind, &'input str)>> Parser<'input, I> {
@@ -134,7 +131,7 @@ fn print(indent: usize, element: SyntaxElementRef<'_>, resolver: &impl Resolver)
             }
         }
 
-        NodeOrToken::Token(token) => println!("- {:?} {:?}", token.text(resolver), kind),
+        NodeOrToken::Token(token) => println!("- {:?} {:?}", token.resolve_text(resolver), kind),
     }
 }
 

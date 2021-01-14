@@ -19,29 +19,42 @@ use super::{node::GreenNodeHead, token::GreenTokenData};
 const CHILDREN_CACHE_THRESHOLD: usize = 3;
 
 #[derive(Debug)]
-pub struct NodeCache {
+pub struct NodeCache<'i, I = Rodeo<Spur, FxBuildHasher>> {
     nodes:    FxHashMap<GreenNodeHead, GreenNode>,
     tokens:   FxHashMap<GreenTokenData, GreenToken>,
-    interner: Rodeo<Spur, FxBuildHasher>,
+    interner: MaybeOwned<'i, I>,
 }
 
-impl NodeCache {
+impl NodeCache<'static, Rodeo<Spur, FxBuildHasher>> {
     pub fn new() -> Self {
         Self {
             nodes:    FxHashMap::default(),
             tokens:   FxHashMap::default(),
-            interner: Rodeo::with_capacity_and_hasher(
+            interner: MaybeOwned::Owned(Rodeo::with_capacity_and_hasher(
                 // capacity values suggested by author of `lasso`
                 Capacity::new(512, unsafe { NonZeroUsize::new_unchecked(4096) }),
                 FxBuildHasher::default(),
-            ),
+            )),
+        }
+    }
+}
+
+impl<'i, I> NodeCache<'i, I>
+where
+    I: Interner,
+{
+    pub fn with_interner(interner: &'i mut I) -> Self {
+        Self {
+            nodes:    FxHashMap::default(),
+            tokens:   FxHashMap::default(),
+            interner: MaybeOwned::Borrowed(interner),
         }
     }
 
-    fn node<I>(&mut self, kind: SyntaxKind, children: I) -> GreenNode
+    fn node<It>(&mut self, kind: SyntaxKind, children: It) -> GreenNode
     where
-        I: IntoIterator<Item = GreenElement>,
-        I::IntoIter: ExactSizeIterator,
+        It: IntoIterator<Item = GreenElement>,
+        It::IntoIter: ExactSizeIterator,
     {
         let children = children.into_iter();
 
@@ -61,10 +74,10 @@ impl NodeCache {
 
     /// Creates a [`GreenNode`] by looking inside the cache or inserting
     /// a new node into the cache if it's a cache miss.
-    fn get_cached_node<I>(&mut self, kind: SyntaxKind, children: I) -> GreenNode
+    fn get_cached_node<It>(&mut self, kind: SyntaxKind, children: It) -> GreenNode
     where
-        I: IntoIterator<Item = GreenElement>,
-        I::IntoIter: ExactSizeIterator,
+        It: IntoIterator<Item = GreenElement>,
+        It::IntoIter: ExactSizeIterator,
     {
         #[derive(Clone)]
         struct ChildrenIter {
@@ -132,6 +145,15 @@ enum MaybeOwned<'a, T> {
     Borrowed(&'a mut T),
 }
 
+impl<T> MaybeOwned<'_, T> {
+    fn as_owned(self) -> Option<T> {
+        match self {
+            MaybeOwned::Owned(owned) => Some(owned),
+            MaybeOwned::Borrowed(_) => None,
+        }
+    }
+}
+
 impl<T> std::ops::Deref for MaybeOwned<'_, T> {
     type Target = T;
 
@@ -164,26 +186,31 @@ pub struct Checkpoint(usize);
 
 /// A builder for a green tree.
 #[derive(Debug)]
-pub struct GreenNodeBuilder<'cache> {
-    cache:    MaybeOwned<'cache, NodeCache>,
+pub struct GreenNodeBuilder<'cache, 'interner, I = Rodeo<Spur, FxBuildHasher>> {
+    cache:    MaybeOwned<'cache, NodeCache<'interner, I>>,
     parents:  Vec<(SyntaxKind, usize)>,
     children: Vec<GreenElement>,
 }
 
-impl GreenNodeBuilder<'_> {
+impl GreenNodeBuilder<'static, 'static, Rodeo<Spur, FxBuildHasher>> {
     /// Creates new builder.
-    pub fn new() -> GreenNodeBuilder<'static> {
-        GreenNodeBuilder {
+    pub fn new() -> Self {
+        Self {
             cache:    MaybeOwned::Owned(NodeCache::new()),
             parents:  Vec::with_capacity(8),
             children: Vec::with_capacity(8),
         }
     }
+}
 
+impl<'cache, 'interner, I> GreenNodeBuilder<'cache, 'interner, I>
+where
+    I: Interner,
+{
     /// Reusing `NodeCache` between different `GreenNodeBuilder`s saves memory.
     /// It allows to structurally share underlying trees.
-    pub fn with_cache(cache: &mut NodeCache) -> GreenNodeBuilder<'_> {
-        GreenNodeBuilder {
+    pub fn with_cache(cache: &'cache mut NodeCache<'interner, I>) -> Self {
+        Self {
             cache:    MaybeOwned::Borrowed(cache),
             parents:  Vec::with_capacity(8),
             children: Vec::with_capacity(8),
@@ -268,15 +295,12 @@ impl GreenNodeBuilder<'_> {
     /// `start_node_at` and `finish_node` calls
     /// are paired!
     #[inline]
-    pub fn finish(mut self) -> (GreenNode, Option<impl Interner<Spur>>) {
+    pub fn finish(mut self) -> (GreenNode, Option<I>) {
         assert_eq!(self.children.len(), 1);
-        let resolver = match self.cache {
-            MaybeOwned::Owned(cache) => Some(cache.interner),
-            MaybeOwned::Borrowed(_) => None,
-        };
+        let resolver = self.cache.as_owned().and_then(|cache| cache.interner.as_owned());
         match self.children.pop().unwrap() {
             NodeOrToken::Node(node) => (node, resolver),
-            NodeOrToken::Token(_) => panic!(),
+            NodeOrToken::Token(_) => panic!("called `finish` on a `GreenNodeBuilder` which only contained a token"),
         }
     }
 }

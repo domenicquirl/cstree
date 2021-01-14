@@ -3,14 +3,14 @@ use std::fmt;
 use crate::{interning::Resolver, Language, SyntaxNode, SyntaxToken, TextRange, TextSize};
 
 #[derive(Clone)]
-pub struct SyntaxText<'n, 'i, I: ?Sized, L: Language, D: 'static = ()> {
-    node:     &'n SyntaxNode<L, D>,
+pub struct SyntaxText<'n, 'i, I: ?Sized, L: Language, D: 'static = (), R: 'static = ()> {
+    node:     &'n SyntaxNode<L, D, R>,
     range:    TextRange,
     resolver: &'i I,
 }
 
-impl<'n, 'i, I: Resolver + ?Sized, L: Language, D> SyntaxText<'n, 'i, I, L, D> {
-    pub(crate) fn new(node: &'n SyntaxNode<L, D>, resolver: &'i I) -> Self {
+impl<'n, 'i, I: Resolver + ?Sized, L: Language, D, R> SyntaxText<'n, 'i, I, L, D, R> {
+    pub(crate) fn new(node: &'n SyntaxNode<L, D, R>, resolver: &'i I) -> Self {
         let range = node.text_range();
         SyntaxText { node, range, resolver }
     }
@@ -56,7 +56,7 @@ impl<'n, 'i, I: Resolver + ?Sized, L: Language, D> SyntaxText<'n, 'i, I, L, D> {
         found(res)
     }
 
-    pub fn slice<R: private::SyntaxTextRange>(&self, range: R) -> Self {
+    pub fn slice<Ra: private::SyntaxTextRange>(&self, range: Ra) -> Self {
         let start = range.start().unwrap_or_default();
         let end = range.end().unwrap_or(self.len());
         assert!(start <= end);
@@ -88,7 +88,7 @@ impl<'n, 'i, I: Resolver + ?Sized, L: Language, D> SyntaxText<'n, 'i, I, L, D> {
         F: FnMut(T, &str) -> Result<T, E>,
     {
         self.tokens_with_ranges().try_fold(init, move |acc, (token, range)| {
-            f(acc, &token.text(self.resolver)[range])
+            f(acc, &token.resolve_text(self.resolver)[range])
         })
     }
 
@@ -104,7 +104,7 @@ impl<'n, 'i, I: Resolver + ?Sized, L: Language, D> SyntaxText<'n, 'i, I, L, D> {
         }
     }
 
-    fn tokens_with_ranges(&self) -> impl Iterator<Item = (&SyntaxToken<L, D>, TextRange)> {
+    fn tokens_with_ranges(&self) -> impl Iterator<Item = (&SyntaxToken<L, D, R>, TextRange)> {
         let text_range = self.range;
         self.node
             .descendants_with_tokens()
@@ -124,25 +124,25 @@ fn found<T>(res: Result<(), T>) -> Option<T> {
     }
 }
 
-impl<I: Resolver + ?Sized, L: Language, D> fmt::Debug for SyntaxText<'_, '_, I, L, D> {
+impl<I: Resolver + ?Sized, L: Language, D, R> fmt::Debug for SyntaxText<'_, '_, I, L, D, R> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         fmt::Debug::fmt(&self.to_string(), f)
     }
 }
 
-impl<I: Resolver + ?Sized, L: Language, D> fmt::Display for SyntaxText<'_, '_, I, L, D> {
+impl<I: Resolver + ?Sized, L: Language, D, R> fmt::Display for SyntaxText<'_, '_, I, L, D, R> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         self.try_for_each_chunk(|chunk| fmt::Display::fmt(chunk, f))
     }
 }
 
-impl<I: Resolver + ?Sized, L: Language, D> From<SyntaxText<'_, '_, I, L, D>> for String {
-    fn from(text: SyntaxText<'_, '_, I, L, D>) -> String {
+impl<I: Resolver + ?Sized, L: Language, D, R> From<SyntaxText<'_, '_, I, L, D, R>> for String {
+    fn from(text: SyntaxText<'_, '_, I, L, D, R>) -> String {
         text.to_string()
     }
 }
 
-impl<I: Resolver + ?Sized, L: Language, D> PartialEq<str> for SyntaxText<'_, '_, I, L, D> {
+impl<I: Resolver + ?Sized, L: Language, D, R> PartialEq<str> for SyntaxText<'_, '_, I, L, D, R> {
     fn eq(&self, mut rhs: &str) -> bool {
         self.try_for_each_chunk(|chunk| {
             if !rhs.starts_with(chunk) {
@@ -156,33 +156,33 @@ impl<I: Resolver + ?Sized, L: Language, D> PartialEq<str> for SyntaxText<'_, '_,
     }
 }
 
-impl<I: Resolver + ?Sized, L: Language, D> PartialEq<SyntaxText<'_, '_, I, L, D>> for str {
-    fn eq(&self, rhs: &SyntaxText<'_, '_, I, L, D>) -> bool {
+impl<I: Resolver + ?Sized, L: Language, D, R> PartialEq<SyntaxText<'_, '_, I, L, D, R>> for str {
+    fn eq(&self, rhs: &SyntaxText<'_, '_, I, L, D, R>) -> bool {
         rhs == self
     }
 }
 
-impl<I: Resolver + ?Sized, L: Language, D> PartialEq<&'_ str> for SyntaxText<'_, '_, I, L, D> {
+impl<I: Resolver + ?Sized, L: Language, D, R> PartialEq<&'_ str> for SyntaxText<'_, '_, I, L, D, R> {
     fn eq(&self, rhs: &&str) -> bool {
         self == *rhs
     }
 }
 
-impl<I: Resolver + ?Sized, L: Language, D> PartialEq<SyntaxText<'_, '_, I, L, D>> for &'_ str {
-    fn eq(&self, rhs: &SyntaxText<'_, '_, I, L, D>) -> bool {
+impl<I: Resolver + ?Sized, L: Language, D, R> PartialEq<SyntaxText<'_, '_, I, L, D, R>> for &'_ str {
+    fn eq(&self, rhs: &SyntaxText<'_, '_, I, L, D, R>) -> bool {
         rhs == self
     }
 }
 
-impl<'n1, 'i1, 'n2, 'i2, I1, I2, D1, D2, L1, L2> PartialEq<SyntaxText<'n2, 'i2, I2, L2, D2>>
-    for SyntaxText<'n1, 'i1, I1, L1, D1>
+impl<'n1, 'i1, 'n2, 'i2, I1, I2, L1, L2, D1, D2, R1, R2> PartialEq<SyntaxText<'n2, 'i2, I2, L2, D2, R2>>
+    for SyntaxText<'n1, 'i1, I1, L1, D1, R1>
 where
     L1: Language,
     L2: Language,
     I1: Resolver + ?Sized,
     I2: Resolver + ?Sized,
 {
-    fn eq(&self, other: &SyntaxText<'_, '_, I2, L2, D2>) -> bool {
+    fn eq(&self, other: &SyntaxText<'_, '_, I2, L2, D2, R2>) -> bool {
         if self.range.len() != other.range.len() {
             return false;
         }
@@ -194,19 +194,21 @@ where
     }
 }
 
-fn zip_texts<'it1, 'it2, It1, It2, I1, I2, L1, L2, D1, D2>(
+fn zip_texts<'it1, 'it2, It1, It2, I1, I2, L1, L2, D1, D2, R1, R2>(
     xs: &mut It1,
     ys: &mut It2,
     resolver_x: &I1,
     resolver_y: &I2,
 ) -> Option<()>
 where
-    It1: Iterator<Item = (&'it1 SyntaxToken<L1, D1>, TextRange)>,
-    It2: Iterator<Item = (&'it2 SyntaxToken<L2, D2>, TextRange)>,
+    It1: Iterator<Item = (&'it1 SyntaxToken<L1, D1, R1>, TextRange)>,
+    It2: Iterator<Item = (&'it2 SyntaxToken<L2, D2, R2>, TextRange)>,
     I1: Resolver + ?Sized,
     I2: Resolver + ?Sized,
     D1: 'static,
     D2: 'static,
+    R1: 'static,
+    R2: 'static,
     L1: Language + 'it1,
     L2: Language + 'it2,
 {
@@ -219,8 +221,8 @@ where
         while y.1.is_empty() {
             y = ys.next()?;
         }
-        let x_text = &x.0.text(resolver_x)[x.1];
-        let y_text = &y.0.text(resolver_y)[y.1];
+        let x_text = &x.0.resolve_text(resolver_x)[x.1];
+        let y_text = &y.0.resolve_text(resolver_y)[y.1];
         if !(x_text.starts_with(y_text) || y_text.starts_with(x_text)) {
             return Some(());
         }
@@ -328,9 +330,9 @@ mod tests {
     fn test_text_equality() {
         fn do_check(t1: &[&str], t2: &[&str]) {
             let (t1, resolver) = build_tree(t1);
-            let t1 = t1.text(&resolver);
+            let t1 = t1.resolve_text(&resolver);
             let (t2, resolver) = build_tree(t2);
-            let t2 = t2.text(&resolver);
+            let t2 = t2.resolve_text(&resolver);
             let expected = t1.to_string() == t2.to_string();
             let actual = t1 == t2;
             assert_eq!(expected, actual, "`{}` (SyntaxText) `{}` (SyntaxText)", t1, t2);
