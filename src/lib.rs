@@ -53,7 +53,7 @@ use std::fmt;
 pub use text_size::{TextLen, TextRange, TextSize};
 
 pub use crate::{
-    green::{Checkpoint, Children, GreenNode, GreenNodeBuilder, GreenToken, SyntaxKind},
+    green::{Checkpoint, Children, GreenNode, GreenNodeBuilder, GreenToken, NodeCache, SyntaxKind},
     syntax::{SyntaxElement, SyntaxElementChildren, SyntaxElementRef, SyntaxNode, SyntaxNodeChildren, SyntaxToken},
     syntax_text::SyntaxText,
     utility_types::{Direction, NodeOrToken, TokenAtOffset, WalkEvent},

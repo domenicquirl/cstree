@@ -62,10 +62,7 @@ impl cstree::Language for Lang {
 
 /// GreenNode is an immutable tree, which is cheap to change,
 /// but doesn't contain offsets and parent pointers.
-use cstree::{
-    interning::{Reader, Resolver},
-    GreenNode,
-};
+use cstree::{interning::Resolver, GreenNode};
 
 /// You can construct GreenNodes by hand, but a builder
 /// is helpful for top-down parsers: it maintains a stack
@@ -91,7 +88,7 @@ fn parse(text: &str) -> Parse<impl Resolver> {
         /// in *reverse* order.
         tokens:  Vec<(SyntaxKind, &'input str)>,
         /// the in-progress tree.
-        builder: GreenNodeBuilder<'static>,
+        builder: GreenNodeBuilder<'static, 'static>,
         /// the list of syntax errors we've accumulated
         /// so far.
         errors:  Vec<String>,
