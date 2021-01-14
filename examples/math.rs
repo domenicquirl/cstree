@@ -131,7 +131,7 @@ fn print(indent: usize, element: SyntaxElementRef<'_>, resolver: &impl Resolver)
             }
         }
 
-        NodeOrToken::Token(token) => println!("- {:?} {:?}", token.text(resolver), kind),
+        NodeOrToken::Token(token) => println!("- {:?} {:?}", token.resolve_text(resolver), kind),
     }
 }
 
