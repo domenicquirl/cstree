@@ -3,7 +3,7 @@
 mod common;
 
 use common::TestLang;
-use cstree::{GreenNodeBuilder, SyntaxNode};
+use cstree::{GreenNodeBuilder, NodeOrToken, SyntaxNode};
 use serde_test::{assert_tokens, Token::*};
 
 type Rodeo = lasso::Rodeo<lasso::Spur, fxhash::FxBuildHasher>;
@@ -17,7 +17,8 @@ fn build_tree() -> SyntaxNode<TestLang, (), Rodeo> {
     SyntaxNode::<TestLang, (), _>::new_root_with_resolver(node, interner.unwrap())
 }
 
-/// Serializable SyntaxNode that doesn't have a identity `PartialEq` implementation.
+/// Serializable SyntaxNode that doesn't have a identity `PartialEq` implementation,
+/// but checks if both trees have equal nodes and tokens.
 #[derive(Debug)]
 struct TestNode(SyntaxNode<TestLang, (), Rodeo>);
 
@@ -41,14 +42,27 @@ impl<'de> serde::Deserialize<'de> for TestNode {
 
 impl PartialEq<TestNode> for TestNode {
     fn eq(&self, other: &TestNode) -> bool {
-        self.0.kind() == other.0.kind() && self.0.text_range() == other.0.text_range()
+        self.0.kind() == other.0.kind()
+            && self.0.text_range() == other.0.text_range()
+            && self
+                .0
+                .children_with_tokens()
+                .zip(other.0.children_with_tokens())
+                .all(|(this, other)| match (this, other) {
+                    (NodeOrToken::Node(this), NodeOrToken::Node(other)) => {
+                        TestNode(this.clone()) == TestNode(other.clone())
+                    }
+                    (NodeOrToken::Token(this), NodeOrToken::Token(other)) => {
+                        this.kind() == other.kind() && this.text_range() == other.text_range()
+                    }
+                    _ => unreachable!(),
+                })
     }
 }
 
 #[test]
 fn serialize_big_tree() {
     let tree = TestNode(build_tree());
-    print!("{}", serde_json::to_string_pretty(&tree).unwrap());
 
     #[rustfmt::skip]
     assert_tokens(
