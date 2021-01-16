@@ -8,15 +8,23 @@ license = "MIT OR Apache-2.0"
 repository = "https://github.com/domenicquirl/cstree"
 
 [dependencies]
-serde = { version = "1.0.89", optional = true, default-features = false }
 lasso = "0.4.1"
 text-size = "1.0.0"
 fxhash= "0.2.1"
 servo_arc = { path = "vendor/servo_arc" }
 parking_lot= "0.11.1"
 
+[dependencies.serde]
+version = "1.0"
+optional = true
+default-features = false
+features = ["derive"]
+
 [dev-dependencies]
 m_lexer = "0.0.4"
+serde_json = "1.0.61"
+serde_test = "1.0.119"
 
 [features]
+default = ["serde1"]
 serde1 = ["serde", "text-size/serde"]
