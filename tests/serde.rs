@@ -69,8 +69,6 @@ fn serialize_json_big_tree() {
     });
 
     let serialized = serde_json::to_string_pretty(&tree).unwrap();
-    print!("{}\n", serialized);
-
     let deserialized = serde_json::from_str::<TestNode>(&serialized).unwrap();
     assert_eq!(tree, deserialized);
 }
