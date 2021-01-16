@@ -39,7 +39,7 @@ mod green;
 #[allow(unsafe_code)]
 pub mod syntax;
 
-#[cfg(feature = "serde")]
+#[cfg(feature = "serde1")]
 mod serde_impls;
 mod syntax_text;
 mod utility_types;

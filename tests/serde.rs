@@ -1,4 +1,4 @@
-#![cfg(feature = "serde")]
+#![cfg(feature = "serde1")]
 
 mod common;
 
