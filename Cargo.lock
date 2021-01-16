@@ -250,6 +250,7 @@ name = "servo_arc"
 version = "0.1.1"
 dependencies = [
  "nodrop",
+ "serde",
  "stable_deref_trait",
 ]
 
