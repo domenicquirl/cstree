@@ -1,3 +1,5 @@
+#![cfg(feature = "serde")]
+
 mod common;
 
 use common::TestLang;

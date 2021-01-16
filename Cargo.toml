@@ -27,4 +27,3 @@ serde_test = "1.0.119"
 
 [features]
 default = []
-serde1 = ["serde", "text-size/serde"]
