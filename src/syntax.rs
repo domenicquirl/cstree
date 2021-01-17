@@ -872,6 +872,18 @@ where
     }
 }
 
+#[cfg(feature = "serde1")]
+impl<L: Language, D, R: Resolver> SyntaxNode<L, D, R>
+where
+    L: Language,
+{
+    /// Return an anonymous object that can be used to serialize this node,
+    /// without serializing the data.
+    pub fn serialize_without_data(&self) -> impl serde::Serialize + '_ {
+        crate::serde_impls::SerializeWithoutData { node: self }
+    }
+}
+
 impl<L: Language, D, R> fmt::Debug for SyntaxNode<L, D, R>
 where
     R: Resolver,

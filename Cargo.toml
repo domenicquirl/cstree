@@ -28,3 +28,6 @@ serde_test = "1.0.119"
 [features]
 default = []
 serde1 = ["serde", "servo_arc/servo"]
+
+[package.metadata.docs.rs]
+features = ["serde1"]

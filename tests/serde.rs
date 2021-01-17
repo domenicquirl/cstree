@@ -17,6 +17,15 @@ fn build_tree() -> SyntaxNode<TestLang, String, Rodeo> {
     SyntaxNode::<TestLang, _, _>::new_root_with_resolver(node, interner.unwrap())
 }
 
+fn build_tree_with_data() -> SyntaxNode<TestLang, String, Rodeo> {
+    let tree = build_tree();
+    tree.descendants().enumerate().for_each(|(idx, node)| {
+        node.set_data(format!("{}", idx));
+    });
+
+    tree
+}
+
 /// Serializable SyntaxNode that doesn't have a identity `PartialEq` implementation,
 /// but checks if both trees have equal nodes and tokens.
 #[derive(Debug)]
@@ -62,14 +71,22 @@ impl PartialEq<TestNode> for TestNode {
 }
 
 #[test]
-fn serialize_json_big_tree() {
-    let tree = TestNode(build_tree());
-    tree.0.children().enumerate().for_each(|(idx, node)| {
-        node.set_data(format!("{}", idx));
-    });
+fn serialize_data_tree() {
+    let tree = TestNode(build_tree_with_data());
 
     let serialized = serde_json::to_string_pretty(&tree).unwrap();
     let deserialized = serde_json::from_str::<TestNode>(&serialized).unwrap();
+    assert_eq!(tree, deserialized);
+}
+
+#[test]
+fn serialize_data_tree_without_data() {
+    let tree = TestNode(build_tree_with_data());
+
+    let serialized = serde_json::to_string_pretty(&tree.0.serialize_without_data()).unwrap();
+    let deserialized = serde_json::from_str::<TestNode>(&serialized).unwrap();
+
+    tree.0.descendants().for_each(|node| node.clear_data());
     assert_eq!(tree, deserialized);
 }
 
