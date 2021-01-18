@@ -74,12 +74,28 @@ pub(crate) struct SerializeWithResolver<'node, 'resolver, L: Language, D: 'stati
 
 /// Make a `SyntaxNode` serializable, even if it doesn't have
 /// data that is serializable.
-pub(crate) struct SerializeWithoutData<'node, 'resolver, L: Language, D: 'static, RN: 'static, R> {
+pub(crate) struct SerializeWithData<'node, 'resolver, L: Language, D: 'static, RN: 'static, R> {
     pub(crate) node:     &'node SyntaxNode<L, D, RN>,
     pub(crate) resolver: &'resolver R,
 }
 
-impl<L, D, RN, R> Serialize for SerializeWithoutData<'_, '_, L, D, RN, R>
+impl<L, D, RN, R> Serialize for SerializeWithData<'_, '_, L, D, RN, R>
+where
+    L: Language,
+    R: Resolver,
+    D: Serialize,
+{
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let mut counter = 0;
+        let mut data_list = Vec::new();
+        gen_serialize!(L, self.node, self.resolver, serializer, counter, data_list)
+    }
+}
+
+impl<L, D, RN, R> Serialize for SerializeWithResolver<'_, '_, L, D, RN, R>
 where
     L: Language,
     R: Resolver,
@@ -89,22 +105,6 @@ where
         S: serde::Serializer,
     {
         gen_serialize!(L, self.node, self.resolver, serializer, __,)
-    }
-}
-
-impl<L, D, RN, R> Serialize for SerializeWithResolver<'_, '_, L, D, RN, R>
-where
-    L: Language,
-    D: Serialize,
-    R: Resolver,
-{
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        let mut counter = 0;
-        let mut data_list = Vec::new();
-        gen_serialize!(L, self.node, self.resolver, serializer, counter, data_list)
     }
 }
 

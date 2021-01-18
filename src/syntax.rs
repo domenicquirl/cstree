@@ -878,24 +878,28 @@ where
     L: Language,
 {
     /// Return an anonymous object that can be used to serialize this node,
-    /// without serializing the data.
-    pub fn serialize_without_data(&self) -> impl serde::Serialize + '_
+    /// including the data for each node.
+    pub fn serialize_with_data(&self) -> impl serde::Serialize + '_
     where
         R: Resolver,
+        D: serde::Serialize,
     {
-        crate::serde_impls::SerializeWithoutData {
+        crate::serde_impls::SerializeWithData {
             node:     self,
             resolver: self.resolver().as_ref(),
         }
     }
 
     /// Return an anonymous object that can be used to serialize this node,
-    /// without serializing the data.
-    pub fn serialize_without_data_with_resolver<'node>(
+    /// including the data and by using an external resolver.
+    pub fn serialize_with_data_with_resolver<'node>(
         &'node self,
         resolver: &'node impl Resolver,
-    ) -> impl serde::Serialize + 'node {
-        crate::serde_impls::SerializeWithoutData { node: self, resolver }
+    ) -> impl serde::Serialize + 'node
+    where
+        D: serde::Serialize,
+    {
+        crate::serde_impls::SerializeWithData { node: self, resolver }
     }
 
     /// Return an anonymous object that can be used to serialize this node,

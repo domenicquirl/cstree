@@ -74,7 +74,7 @@ impl PartialEq<TestNode> for TestNode {
 fn serialize_data_tree() {
     let tree = TestNode(build_tree_with_data());
 
-    let serialized = serde_json::to_string_pretty(&tree).unwrap();
+    let serialized = serde_json::to_string_pretty(&tree.0.serialize_with_data()).unwrap();
     let deserialized = serde_json::from_str::<TestNode>(&serialized).unwrap();
     assert_eq!(tree, deserialized);
 }
@@ -83,7 +83,7 @@ fn serialize_data_tree() {
 fn serialize_data_tree_without_data() {
     let tree = TestNode(build_tree_with_data());
 
-    let serialized = serde_json::to_string_pretty(&tree.0.serialize_without_data()).unwrap();
+    let serialized = serde_json::to_string_pretty(&tree.0).unwrap();
     let deserialized = serde_json::from_str::<TestNode>(&serialized).unwrap();
 
     tree.0.descendants().for_each(|node| node.clear_data());
