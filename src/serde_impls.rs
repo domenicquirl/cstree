@@ -21,7 +21,7 @@ macro_rules! data_list {
 }
 
 macro_rules! gen_serialize {
-    ($l:ident, $node:expr, $ser:ident, $counter:ident, $($data_list:ident)?) => {{
+    ($l:ident, $node:expr, $resolver:expr, $ser:ident, $counter:ident, $($data_list:ident)?) => {{
         #[allow(unused_variables)]
         let events = $node.preorder_with_tokens().filter_map(|event| match event {
             WalkEvent::Enter(NodeOrToken::Node(node)) => {
@@ -37,7 +37,7 @@ macro_rules! gen_serialize {
 
                 Some(Event::EnterNode($l::kind_to_raw(node.kind()), id))
             }
-            WalkEvent::Enter(NodeOrToken::Token(tok)) => Some(Event::Token($l::kind_to_raw(tok.kind()), tok.text())),
+            WalkEvent::Enter(NodeOrToken::Token(tok)) => Some(Event::Token($l::kind_to_raw(tok.kind()), tok.resolve_text($resolver))),
 
             WalkEvent::Leave(NodeOrToken::Node(_)) => Some(Event::LeaveNode),
             WalkEvent::Leave(NodeOrToken::Token(_)) => None,
@@ -48,7 +48,6 @@ macro_rules! gen_serialize {
         // TODO(Stupremee): We can easily avoid this allocation but it would
         // require more weird and annoying-to-write code, so I'll skip it for now.
         tuple.serialize_element(&events.collect::<Vec<_>>())?;
-
         tuple.serialize_element(&data_list!(Vec::<()>::new(), $($data_list)?))?;
 
         tuple.end()
@@ -66,13 +65,21 @@ enum Event<'text> {
     LeaveNode,
 }
 
-/// Make a `SyntaxNode` serializable, even if it doesn't have
-/// data that is serializable.
-pub(crate) struct SerializeWithoutData<'node, L: Language, D: 'static, R: 'static> {
-    pub(crate) node: &'node SyntaxNode<L, D, R>,
+/// Make a `SyntaxNode` serializable, by using an external resolver instead of
+/// the resolver that is inside the tree.
+pub(crate) struct SerializeWithResolver<'node, 'resolver, L: Language, D: 'static, RN: 'static, R> {
+    pub(crate) node:     &'node SyntaxNode<L, D, RN>,
+    pub(crate) resolver: &'resolver R,
 }
 
-impl<L, D, R> Serialize for SerializeWithoutData<'_, L, D, R>
+/// Make a `SyntaxNode` serializable, even if it doesn't have
+/// data that is serializable.
+pub(crate) struct SerializeWithoutData<'node, 'resolver, L: Language, D: 'static, RN: 'static, R> {
+    pub(crate) node:     &'node SyntaxNode<L, D, RN>,
+    pub(crate) resolver: &'resolver R,
+}
+
+impl<L, D, RN, R> Serialize for SerializeWithoutData<'_, '_, L, D, RN, R>
 where
     L: Language,
     R: Resolver,
@@ -81,7 +88,23 @@ where
     where
         S: serde::Serializer,
     {
-        gen_serialize!(L, self.node, serializer, __,)
+        gen_serialize!(L, self.node, self.resolver, serializer, __,)
+    }
+}
+
+impl<L, D, RN, R> Serialize for SerializeWithResolver<'_, '_, L, D, RN, R>
+where
+    L: Language,
+    D: Serialize,
+    R: Resolver,
+{
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        let mut counter = 0;
+        let mut data_list = Vec::new();
+        gen_serialize!(L, self.node, self.resolver, serializer, counter, data_list)
     }
 }
 
@@ -95,9 +118,11 @@ where
     where
         S: serde::Serializer,
     {
-        let mut counter = 0;
-        let mut data_list = Vec::new();
-        gen_serialize!(L, self, serializer, counter, data_list)
+        let node = SerializeWithResolver {
+            node:     self,
+            resolver: self.resolver().as_ref(),
+        };
+        node.serialize(serializer)
     }
 }
 
