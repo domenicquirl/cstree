@@ -10,6 +10,10 @@ use std::{fmt, marker::PhantomData};
 
 type Rodeo = lasso::Rodeo<lasso::Spur, fxhash::FxBuildHasher>;
 
+/// Expands to the first expression, if there's
+/// no expression following, otherwise return the second expression.
+///
+/// Required for having two different values if the argument is `$(...)?`.
 macro_rules! data_list {
     ($_:expr, $list:expr) => {
         $list
@@ -20,6 +24,21 @@ macro_rules! data_list {
     };
 }
 
+/// Generate the code that should be put inside the [`Serialize`] implementation
+/// of a [`SyntaxNode`]-like type.
+///
+/// It serializes a [`SyntaxNode`] into a tuple with 2 elements.
+/// The first element is the serialized event stream that was generated
+/// by [`SyntaxNode::preorder_with_tokens()`].
+/// The second element is a list of `D`s, where `D` is the data of the nodes.
+/// The data may only be serialized if it's `Some(data)`. Each `EnterNode` event
+/// contains a boolean which indicates if this node has a data. If it has one,
+/// the deserializer should pop the first element from the data list and continue.
+///
+/// The macro will not use the `$counter` if the data list is not given.
+/// Takes the `Language` (`$l`), `SyntaxNode` (`$node`), `Resolver` (`$resolver`),
+/// `Serializer` (`$serializer`), `counter` (which must be a `u16`),
+/// and an optional `data_list` which must be a `mut Vec<D>`.
 macro_rules! gen_serialize {
     ($l:ident, $node:expr, $resolver:expr, $ser:ident, $counter:ident, $($data_list:ident)?) => {{
         #[allow(unused_variables)]
@@ -131,6 +150,11 @@ where
     L: Language,
     D: Deserialize<'de>,
 {
+    // Deserialization is done by walking down the deserialized event stream,
+    // which is the first element inside the tuple. The events
+    // are then passed to a `GreenNodeBuilder` which will do all
+    // the hard work for use. While walking the event stream, we also store
+    // a list of booleans, which indicates which node needs to set data.
     fn deserialize<DE>(deserializer: DE) -> Result<Self, DE::Error>
     where
         DE: serde::Deserializer<'de>,

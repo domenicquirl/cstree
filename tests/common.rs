@@ -1,5 +1,3 @@
-#![allow(unused)]
-
 use cstree::{
     interning::{Interner, Resolver},
     GreenNode, GreenNodeBuilder, Language, NodeCache, SyntaxKind,
