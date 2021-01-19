@@ -109,7 +109,7 @@ fn serialize_big_tree() {
             BorrowedStr("c"),
             Tuple { len: 2 },
             U16(0),
-            U32(0),
+            Bool(false),
             TupleEnd,
             StructEnd,
 
@@ -119,7 +119,7 @@ fn serialize_big_tree() {
             BorrowedStr("c"),
             Tuple { len: 2 },
             U16(1),
-            U32(0),
+            Bool(false),
             TupleEnd,
             StructEnd,
 
@@ -129,7 +129,7 @@ fn serialize_big_tree() {
             BorrowedStr("c"),
             Tuple { len: 2 },
             U16(2),
-            U32(0),
+            Bool(false),
             TupleEnd,
             StructEnd,
 
@@ -179,7 +179,7 @@ fn serialize_big_tree() {
             BorrowedStr("c"),
             Tuple { len: 2 },
             U16(6),
-            U32(0),
+            Bool(false),
             TupleEnd,
             StructEnd,
 

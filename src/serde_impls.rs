@@ -2,11 +2,11 @@
 
 use crate::{interning::Resolver, GreenNodeBuilder, Language, NodeOrToken, SyntaxKind, SyntaxNode, WalkEvent};
 use serde::{
-    de::{SeqAccess, Visitor},
+    de::{Error, SeqAccess, Visitor},
     ser::SerializeTuple,
     Deserialize, Serialize,
 };
-use std::{fmt, marker::PhantomData};
+use std::{collections::VecDeque, fmt, marker::PhantomData};
 
 type Rodeo = lasso::Rodeo<lasso::Spur, fxhash::FxBuildHasher>;
 
@@ -37,24 +37,22 @@ macro_rules! data_list {
 ///
 /// The macro will not use the `$counter` if the data list is not given.
 /// Takes the `Language` (`$l`), `SyntaxNode` (`$node`), `Resolver` (`$resolver`),
-/// `Serializer` (`$serializer`), `counter` (which must be a `u16`),
-/// and an optional `data_list` which must be a `mut Vec<D>`.
+/// `Serializer` (`$serializer`), and an optional `data_list` which must be a `mut Vec<D>`.
 macro_rules! gen_serialize {
-    ($l:ident, $node:expr, $resolver:expr, $ser:ident, $counter:ident, $($data_list:ident)?) => {{
+    ($l:ident, $node:expr, $resolver:expr, $ser:ident, $($data_list:ident)?) => {{
         #[allow(unused_variables)]
         let events = $node.preorder_with_tokens().filter_map(|event| match event {
             WalkEvent::Enter(NodeOrToken::Node(node)) => {
-                let id = 0;
-                $(let id = node
+                let has_data = false;
+                $(let has_data = node
                     .get_data()
                     .map(|data| {
                         $data_list.push(data);
-                        $counter += 1;
-                        $counter
+                        true
                     })
-                    .unwrap_or(0);)?
+                    .unwrap_or(false);)?
 
-                Some(Event::EnterNode($l::kind_to_raw(node.kind()), id))
+                Some(Event::EnterNode($l::kind_to_raw(node.kind()), has_data))
             }
             WalkEvent::Enter(NodeOrToken::Token(tok)) => Some(Event::Token($l::kind_to_raw(tok.kind()), tok.resolve_text($resolver))),
 
@@ -76,10 +74,10 @@ macro_rules! gen_serialize {
 #[derive(Deserialize, Serialize)]
 #[serde(tag = "t", content = "c")]
 enum Event<'text> {
-    /// The second parameter represents the data of the node.
-    /// `0` means there's no data, otherwise it's the `idx + 1`,
-    /// where `idx` is the element inside the data list.
-    EnterNode(SyntaxKind, u32),
+    /// The second parameter indicates if this node needs data.
+    /// If the boolean is true, the next element inside the data list
+    /// must be attached to this node.
+    EnterNode(SyntaxKind, bool),
     Token(SyntaxKind, &'text str),
     LeaveNode,
 }
@@ -108,9 +106,8 @@ where
     where
         S: serde::Serializer,
     {
-        let mut counter = 0;
         let mut data_list = Vec::new();
-        gen_serialize!(L, self.node, self.resolver, serializer, counter, data_list)
+        gen_serialize!(L, self.node, self.resolver, serializer, data_list)
     }
 }
 
@@ -123,7 +120,7 @@ where
     where
         S: serde::Serializer,
     {
-        gen_serialize!(L, self.node, self.resolver, serializer, __,)
+        gen_serialize!(L, self.node, self.resolver, serializer,)
     }
 }
 
@@ -153,8 +150,13 @@ where
     // Deserialization is done by walking down the deserialized event stream,
     // which is the first element inside the tuple. The events
     // are then passed to a `GreenNodeBuilder` which will do all
-    // the hard work for use. While walking the event stream, we also store
-    // a list of booleans, which indicates which node needs to set data.
+    // the hard work for use.
+    //
+    // While walking the event stream, we also store a list of booleans,
+    // which indicate which node needs to set data. After creating the tree,
+    // we walk down the nodes, check if the bool at `data_list[idx]` is true,
+    // and if so, pop the first element of the data list and attach the data
+    // to the current node.
     fn deserialize<DE>(deserializer: DE) -> Result<Self, DE::Error>
     where
         DE: serde::Deserializer<'de>,
@@ -168,7 +170,7 @@ where
             L: Language,
             D: Deserialize<'de>,
         {
-            type Value = (SyntaxNode<L, D, Rodeo>, Vec<u32>);
+            type Value = (SyntaxNode<L, D, Rodeo>, VecDeque<bool>);
 
             fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
                 formatter.write_str("a list of tree events")
@@ -179,13 +181,13 @@ where
                 A: SeqAccess<'de>,
             {
                 let mut builder = GreenNodeBuilder::new();
-                let mut ids = Vec::new();
+                let mut data_indices = VecDeque::new();
 
                 while let Some(next) = seq.next_element::<Event<'_>>()? {
                     match next {
-                        Event::EnterNode(kind, id) => {
+                        Event::EnterNode(kind, has_data) => {
                             builder.start_node(kind);
-                            ids.push(id);
+                            data_indices.push_back(has_data);
                         }
                         Event::Token(kind, text) => builder.token(kind, text),
                         Event::LeaveNode => builder.finish_node(),
@@ -194,11 +196,11 @@ where
 
                 let (tree, resolver) = builder.finish();
                 let tree = SyntaxNode::new_root_with_resolver(tree, resolver.unwrap());
-                Ok((tree, ids))
+                Ok((tree, data_indices))
             }
         }
 
-        struct ProcessedEvents<L: Language, D: 'static>(SyntaxNode<L, D, Rodeo>, Vec<u32>);
+        struct ProcessedEvents<L: Language, D: 'static>(SyntaxNode<L, D, Rodeo>, VecDeque<bool>);
         impl<'de, L, D> Deserialize<'de> for ProcessedEvents<L, D>
         where
             L: Language,
@@ -213,17 +215,17 @@ where
             }
         }
 
-        let (ProcessedEvents(tree, ids), mut data) = <(ProcessedEvents<L, D>, Vec<D>)>::deserialize(deserializer)?;
+        let (ProcessedEvents(tree, data_indices), mut data) =
+            <(ProcessedEvents<L, D>, VecDeque<D>)>::deserialize(deserializer)?;
 
-        let mut num_removed = 0;
-        tree.descendants().zip(ids).for_each(|(node, id)| {
-            if id == 0 {
-                return;
+        tree.descendants().zip(data_indices).try_for_each(|(node, has_data)| {
+            if has_data {
+                let data = data
+                    .pop_front()
+                    .ok_or_else(|| DE::Error::custom("invalid serialized tree"))?;
+                node.set_data(data);
             }
-
-            num_removed += 1;
-            let data = data.remove(id as usize - num_removed);
-            node.set_data(data);
+            <Result<(), DE::Error>>::Ok(())
         });
 
         Ok(tree)
