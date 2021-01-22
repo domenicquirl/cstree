@@ -226,7 +226,7 @@ where
                 node.set_data(data);
             }
             <Result<(), DE::Error>>::Ok(())
-        });
+        })?;
 
         Ok(tree)
     }

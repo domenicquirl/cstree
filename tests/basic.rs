@@ -1,8 +1,24 @@
 mod common;
 
-use common::{build_tree, build_tree_with_cache, two_level_tree, SyntaxNode};
-use cstree::{NodeCache, SyntaxKind, TextRange};
-use lasso::Rodeo;
+use common::{build_recursive, build_tree_with_cache, Element, SyntaxNode};
+use cstree::{GreenNodeBuilder, NodeCache, SyntaxKind, TextRange};
+use lasso::{Resolver, Rodeo};
+
+fn build_tree<D>(root: &Element<'_>) -> (SyntaxNode<D>, impl Resolver) {
+    let mut builder = GreenNodeBuilder::new();
+    build_recursive(root, &mut builder, 0);
+    let (node, interner) = builder.finish();
+    (SyntaxNode::new_root(node), interner.unwrap())
+}
+
+fn two_level_tree() -> Element<'static> {
+    use Element::*;
+    Node(vec![
+        Node(vec![Token("0.0"), Token("0.1")]),
+        Node(vec![Token("1.0")]),
+        Node(vec![Token("2.0"), Token("2.1"), Token("2.2")]),
+    ])
+}
 
 #[test]
 fn create() {

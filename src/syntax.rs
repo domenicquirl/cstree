@@ -6,6 +6,8 @@ use std::{
     sync::atomic::{AtomicU32, Ordering},
 };
 
+#[cfg(feature = "serde1")]
+use crate::serde_impls::{SerializeWithData, SerializeWithResolver};
 use parking_lot::RwLock;
 use servo_arc::Arc;
 
@@ -879,12 +881,12 @@ where
 {
     /// Return an anonymous object that can be used to serialize this node,
     /// including the data for each node.
-    pub fn serialize_with_data(&self) -> impl serde::Serialize + '_
+    pub fn as_serialize_with_data(&self) -> impl serde::Serialize + '_
     where
         R: Resolver,
         D: serde::Serialize,
     {
-        crate::serde_impls::SerializeWithData {
+        SerializeWithData {
             node:     self,
             resolver: self.resolver().as_ref(),
         }
@@ -892,23 +894,26 @@ where
 
     /// Return an anonymous object that can be used to serialize this node,
     /// including the data and by using an external resolver.
-    pub fn serialize_with_data_with_resolver<'node>(
+    pub fn as_serialize_with_data_with_resolver<'node>(
         &'node self,
         resolver: &'node impl Resolver,
     ) -> impl serde::Serialize + 'node
     where
         D: serde::Serialize,
     {
-        crate::serde_impls::SerializeWithData { node: self, resolver }
+        SerializeWithData { node: self, resolver }
     }
 
     /// Return an anonymous object that can be used to serialize this node,
     /// which uses the given resolver instead of the resolver inside the tree.
-    pub fn serialize_with_resolver<'node>(&'node self, resolver: &'node impl Resolver) -> impl serde::Serialize + 'node
+    pub fn as_serialize_with_resolver<'node>(
+        &'node self,
+        resolver: &'node impl Resolver,
+    ) -> impl serde::Serialize + 'node
     where
         D: serde::Serialize,
     {
-        crate::serde_impls::SerializeWithResolver { node: self, resolver }
+        SerializeWithResolver { node: self, resolver }
     }
 }
 

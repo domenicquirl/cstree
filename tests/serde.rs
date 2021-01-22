@@ -2,41 +2,170 @@
 
 mod common;
 
-use common::TestLang;
-use cstree::{GreenNodeBuilder, NodeOrToken, SyntaxNode};
-use serde_test::assert_tokens;
+use common::{Element, SyntaxNode};
+use cstree::{GreenNodeBuilder, NodeCache, NodeOrToken};
+use serde_test::Token;
+use std::fmt;
 
 type Rodeo = lasso::Rodeo<lasso::Spur, fxhash::FxBuildHasher>;
 
-fn build_tree() -> SyntaxNode<TestLang, String, Rodeo> {
-    let tree = common::big_tree();
-    let mut builder = GreenNodeBuilder::new();
-    common::build_recursive(&tree, &mut builder, 0);
-    let (node, interner) = builder.finish();
+/// Macro for generating a list of `serde_test::Token`s using a simpler DSL.
+macro_rules! event_tokens {
+    ($($name:ident($($token:tt)*)),*) => {
+        [
+            $(
+                event_tokens!(@token, $name($($token)*))
+            ),*
+        ].concat()
+    };
 
-    SyntaxNode::<TestLang, _, _>::new_root_with_resolver(node, interner.unwrap())
+    (@token, token($kind:expr, $str:expr)) => {
+        [
+            Token::Struct { name: "Event", len: 2 },
+            Token::BorrowedStr("t"),
+            Token::BorrowedStr("Token"),
+            Token::BorrowedStr("c"),
+            Token::Tuple { len: 2 },
+            Token::U16($kind),
+            Token::BorrowedStr($str),
+            Token::TupleEnd,
+            Token::StructEnd,
+        ].as_ref()
+    };
+
+    (@token, node($kind:expr, $data:expr)) => {
+        [
+            Token::Struct { name: "Event", len: 2 },
+            Token::BorrowedStr("t"),
+            Token::BorrowedStr("EnterNode"),
+            Token::BorrowedStr("c"),
+            Token::Tuple { len: 2 },
+            Token::U16($kind),
+            Token::Bool($data),
+            Token::TupleEnd,
+            Token::StructEnd,
+        ].as_ref()
+    };
+
+    (@token, leave_node()) => {
+        [
+            Token::Struct { name: "Event", len: 1 },
+            Token::BorrowedStr("t"),
+            Token::BorrowedStr("LeaveNode"),
+            Token::StructEnd,
+        ].as_ref()
+    };
+
+    (@token, data($data:expr)) => {
+        [Token::Str($data)].as_ref()
+    };
+
+    (@token, seq($len:expr)) => {
+        [Token::Seq { len: Option::Some($len) }].as_ref()
+    };
+
+    (@token, seq_end()) => {
+        [Token::SeqEnd].as_ref()
+    };
+
+    (@token, tuple($len:expr)) => {
+        [Token::Tuple { len: $len }].as_ref()
+    };
+
+    (@token, tuple_end()) => {
+        [Token::TupleEnd].as_ref()
+    };
+
+    (@token,) => {};
 }
 
-fn build_tree_with_data() -> SyntaxNode<TestLang, String, Rodeo> {
-    let tree = build_tree();
-    tree.descendants().enumerate().for_each(|(idx, node)| {
-        node.set_data(format!("{}", idx));
-    });
+fn three_level_tree_with_data_tokens() -> Vec<Token> {
+    event_tokens!(
+        tuple(2),
+        seq(14),
+        node(0, true),
+        node(1, true),
+        node(2, true),
+        token(3, "foo"),
+        token(4, "bar"),
+        leave_node(),
+        token(5, "baz"),
+        leave_node(),
+        node(6, true),
+        token(7, "pub"),
+        token(8, "fn"),
+        token(9, "tree"),
+        leave_node(),
+        leave_node(),
+        seq_end(),
+        seq(4),
+        data("1"),
+        data("2"),
+        data("3"),
+        data("4"),
+        seq_end(),
+        tuple_end()
+    )
+}
 
-    tree
+fn three_level_tree_tokens() -> Vec<Token> {
+    event_tokens!(
+        tuple(2),
+        seq(14),
+        node(0, false),
+        node(1, false),
+        node(2, false),
+        token(3, "foo"),
+        token(4, "bar"),
+        leave_node(),
+        token(5, "baz"),
+        leave_node(),
+        node(6, false),
+        token(7, "pub"),
+        token(8, "fn"),
+        token(9, "tree"),
+        leave_node(),
+        leave_node(),
+        seq_end(),
+        seq(0),
+        seq_end(),
+        tuple_end()
+    )
 }
 
 /// Serializable SyntaxNode that doesn't have a identity `PartialEq` implementation,
 /// but checks if both trees have equal nodes and tokens.
-#[derive(Debug)]
-struct TestNode(SyntaxNode<TestLang, String, Rodeo>);
+struct TestNode {
+    node:      SyntaxNode<String, Rodeo>,
+    with_data: bool,
+}
+
+impl TestNode {
+    fn new(node: SyntaxNode<String, Rodeo>) -> Self {
+        Self { node, with_data: false }
+    }
+
+    fn with_data(node: SyntaxNode<String, Rodeo>) -> Self {
+        Self { node, with_data: true }
+    }
+}
+
+impl fmt::Debug for TestNode {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Debug::fmt(&self.node, f)
+    }
+}
 
 impl serde::Serialize for TestNode {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
     {
-        self.0.serialize(serializer)
+        if self.with_data {
+            self.node.as_serialize_with_data().serialize(serializer)
+        } else {
+            self.node.serialize(serializer)
+        }
     }
 }
 
@@ -45,22 +174,25 @@ impl<'de> serde::Deserialize<'de> for TestNode {
     where
         D: serde::Deserializer<'de>,
     {
-        Ok(Self(SyntaxNode::deserialize(deserializer)?))
+        Ok(Self {
+            node:      SyntaxNode::deserialize(deserializer)?,
+            with_data: true,
+        })
     }
 }
 
 impl PartialEq<TestNode> for TestNode {
     fn eq(&self, other: &TestNode) -> bool {
-        self.0.kind() == other.0.kind()
-            && self.0.get_data() == other.0.get_data()
-            && self.0.text_range() == other.0.text_range()
+        self.node.kind() == other.node.kind()
+            && self.node.get_data() == other.node.get_data()
+            && self.node.text_range() == other.node.text_range()
             && self
-                .0
+                .node
                 .children_with_tokens()
-                .zip(other.0.children_with_tokens())
+                .zip(other.node.children_with_tokens())
                 .all(|(this, other)| match (this, other) {
                     (NodeOrToken::Node(this), NodeOrToken::Node(other)) => {
-                        TestNode(this.clone()) == TestNode(other.clone())
+                        TestNode::new(this.clone()) == TestNode::new(other.clone())
                     }
                     (NodeOrToken::Token(this), NodeOrToken::Token(other)) => {
                         this.kind() == other.kind() && this.text_range() == other.text_range()
@@ -70,164 +202,81 @@ impl PartialEq<TestNode> for TestNode {
     }
 }
 
-#[test]
-fn serialize_data_tree() {
-    let tree = TestNode(build_tree_with_data());
+#[rustfmt::skip]
+fn three_level_tree() -> Element<'static> {
+    use Element::*;
 
-    let serialized = serde_json::to_string_pretty(&tree.0.serialize_with_data()).unwrap();
-    let deserialized = serde_json::from_str::<TestNode>(&serialized).unwrap();
-    assert_eq!(tree, deserialized);
+    Node(vec![
+        Node(vec![
+             Node(vec![
+                  Token("foo"),
+                  Token("bar")
+             ]),
+             Token("baz")
+        ]),
+        Node(vec![
+             Token("pub"),
+             Token("fn"),
+             Token("tree")
+        ]),
+    ])
+}
+
+fn build_tree(root: Element<'_>) -> SyntaxNode<String, Rodeo> {
+    let mut builder = GreenNodeBuilder::new();
+    common::build_recursive(&root, &mut builder, 0);
+    let (node, interner) = builder.finish();
+    SyntaxNode::new_root_with_resolver(node, interner.unwrap())
 }
 
 #[test]
-fn serialize_data_tree_without_data() {
-    let tree = TestNode(build_tree_with_data());
+fn serialize_tree_with_resolver_with_data() {
+    let mut interner = Rodeo::with_hasher(Default::default());
+    let mut cache = NodeCache::with_interner(&mut interner);
 
-    let serialized = serde_json::to_string_pretty(&tree.0).unwrap();
-    let deserialized = serde_json::from_str::<TestNode>(&serialized).unwrap();
+    let root = three_level_tree();
+    let root = common::build_tree_with_cache(&root, &mut cache);
+    let tree = SyntaxNode::<String, ()>::new_root(root.clone());
 
-    tree.0.descendants().for_each(|node| node.clear_data());
-    assert_eq!(tree, deserialized);
+    let serialized = serde_json::to_string(&tree.as_serialize_with_data_with_resolver(&interner)).unwrap();
+    let deserialized: TestNode = serde_json::from_str(&serialized).unwrap();
+
+    let expected = SyntaxNode::new_root_with_resolver(root, interner);
+    assert_eq!(TestNode::new(expected), deserialized);
 }
 
 #[test]
-fn serialize_big_tree() {
-    use serde_test::Token::*;
+fn serialize_tree_with_resolver() {
+    let mut interner = Rodeo::with_hasher(Default::default());
+    let mut cache = NodeCache::with_interner(&mut interner);
 
-    let tree = TestNode(build_tree());
+    let root = three_level_tree();
+    let root = common::build_tree_with_cache(&root, &mut cache);
+    let tree = SyntaxNode::<String, ()>::new_root(root.clone());
 
-    #[rustfmt::skip]
-    assert_tokens(
-        &tree,
-        &[
-            Tuple { len: 2 },
+    let serialized = serde_json::to_string(&tree.as_serialize_with_resolver(&interner)).unwrap();
+    let deserialized: TestNode = serde_json::from_str(&serialized).unwrap();
 
-            Seq { len: Option::Some(14) },
-            Struct { name: "Event", len: 2 },
-            BorrowedStr("t"),
-            BorrowedStr("EnterNode"),
-            BorrowedStr("c"),
-            Tuple { len: 2 },
-            U16(0),
-            Bool(false),
-            TupleEnd,
-            StructEnd,
+    let expected = SyntaxNode::new_root_with_resolver(root, interner);
+    assert_eq!(TestNode::new(expected), deserialized);
+}
 
-            Struct { name: "Event", len: 2 },
-            BorrowedStr("t"),
-            BorrowedStr("EnterNode"),
-            BorrowedStr("c"),
-            Tuple { len: 2 },
-            U16(1),
-            Bool(false),
-            TupleEnd,
-            StructEnd,
+#[test]
+fn serialize_tree_with_data() {
+    let tree = build_tree(three_level_tree());
+    let tree = TestNode::with_data(tree);
 
-            Struct { name: "Event", len: 2 },
-            BorrowedStr("t"),
-            BorrowedStr("EnterNode"),
-            BorrowedStr("c"),
-            Tuple { len: 2 },
-            U16(2),
-            Bool(false),
-            TupleEnd,
-            StructEnd,
+    tree.node.descendants().enumerate().for_each(|(idx, node)| {
+        node.set_data(format!("{}", idx + 1));
+    });
 
-            Struct { name: "Event", len: 2 },
-            BorrowedStr("t"),
-            BorrowedStr("Token"),
-            BorrowedStr("c"),
-            Tuple { len: 2 },
-            U16(3),
-            BorrowedStr("foo"),
-            TupleEnd,
-            StructEnd,
+    serde_test::assert_tokens(&tree, three_level_tree_with_data_tokens().as_slice());
+}
 
-            Struct { name: "Event", len: 2 },
-            BorrowedStr("t"),
-            BorrowedStr("Token"),
-            BorrowedStr("c"),
-            Tuple { len: 2 },
-            U16(4),
-            BorrowedStr("bar"),
-            TupleEnd,
-            StructEnd,
+#[test]
+fn serialize_tree_without_data() {
+    let tree = build_tree(three_level_tree());
+    let tree = TestNode::new(tree);
 
-            Struct { name: "Event", len: 1 },
-            BorrowedStr("t"),
-            BorrowedStr("LeaveNode"),
-            StructEnd,
-
-            Struct { name: "Event", len: 2 },
-            BorrowedStr("t"),
-            BorrowedStr("Token"),
-            BorrowedStr("c"),
-            Tuple { len: 2 },
-            U16(5),
-            BorrowedStr("baz"),
-            TupleEnd,
-            StructEnd,
-
-            Struct { name: "Event", len: 1 },
-            BorrowedStr("t"),
-            BorrowedStr("LeaveNode"),
-            StructEnd,
-
-            Struct { name: "Event", len: 2 },
-            BorrowedStr("t"),
-            BorrowedStr("EnterNode"),
-            BorrowedStr("c"),
-            Tuple { len: 2 },
-            U16(6),
-            Bool(false),
-            TupleEnd,
-            StructEnd,
-
-            Struct { name: "Event", len: 2 },
-            BorrowedStr("t"),
-            BorrowedStr("Token"),
-            BorrowedStr("c"),
-            Tuple { len: 2 },
-            U16(7),
-            BorrowedStr("pub"),
-            TupleEnd,
-            StructEnd,
-
-            Struct { name: "Event", len: 2 },
-            BorrowedStr("t"),
-            BorrowedStr("Token"),
-            BorrowedStr("c"),
-            Tuple { len: 2 },
-            U16(8),
-            BorrowedStr("fn"),
-            TupleEnd,
-            StructEnd,
-
-            Struct { name: "Event", len: 2 },
-            BorrowedStr("t"),
-            BorrowedStr("Token"),
-            BorrowedStr("c"),
-            Tuple { len: 2 },
-            U16(9),
-            BorrowedStr("tree"),
-            TupleEnd,
-            StructEnd,
-
-            Struct { name: "Event", len: 1 },
-            BorrowedStr("t"),
-            BorrowedStr("LeaveNode"),
-            StructEnd,
-
-            Struct { name: "Event", len: 1 },
-            BorrowedStr("t"),
-            BorrowedStr("LeaveNode"),
-            StructEnd,
-            SeqEnd,
-
-            Seq { len: Option::Some(0) },
-            SeqEnd,
-
-            TupleEnd,
-        ],
-    );
+    serde_test::assert_tokens(&tree, three_level_tree_tokens().as_slice());
 }
