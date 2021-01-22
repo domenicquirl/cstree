@@ -229,6 +229,12 @@ fn build_tree(root: Element<'_>) -> SyntaxNode<String, Rodeo> {
     SyntaxNode::new_root_with_resolver(node, interner.unwrap())
 }
 
+fn attach_data<R>(node: &SyntaxNode<String, R>) {
+    node.descendants().enumerate().for_each(|(idx, node)| {
+        node.set_data(format!("{}", idx + 1));
+    });
+}
+
 #[test]
 fn serialize_tree_with_resolver_with_data() {
     let mut interner = Rodeo::with_hasher(Default::default());
@@ -237,11 +243,13 @@ fn serialize_tree_with_resolver_with_data() {
     let root = three_level_tree();
     let root = common::build_tree_with_cache(&root, &mut cache);
     let tree = SyntaxNode::<String, ()>::new_root(root.clone());
+    attach_data(&tree);
 
     let serialized = serde_json::to_string(&tree.as_serialize_with_data_with_resolver(&interner)).unwrap();
     let deserialized: TestNode = serde_json::from_str(&serialized).unwrap();
 
     let expected = SyntaxNode::new_root_with_resolver(root, interner);
+    attach_data(&expected);
     assert_eq!(TestNode::new(expected), deserialized);
 }
 
@@ -265,10 +273,7 @@ fn serialize_tree_with_resolver() {
 fn serialize_tree_with_data() {
     let tree = build_tree(three_level_tree());
     let tree = TestNode::with_data(tree);
-
-    tree.node.descendants().enumerate().for_each(|(idx, node)| {
-        node.set_data(format!("{}", idx + 1));
-    });
+    attach_data(&tree.node);
 
     serde_test::assert_tokens(&tree, three_level_tree_with_data_tokens().as_slice());
 }
