@@ -264,7 +264,7 @@ fn serialize_tree_with_resolver() {
 
     let root = three_level_tree();
     let root = common::build_tree_with_cache(&root, &mut cache);
-    let tree = SyntaxNode::<String, NonSerializable>::new_root(root.clone());
+    let tree = SyntaxNode::<NonSerializable>::new_root(root.clone());
 
     let serialized = serde_json::to_string(&tree.as_serialize_with_resolver(&interner)).unwrap();
     let deserialized: TestNode<_> = serde_json::from_str(&serialized).unwrap();
