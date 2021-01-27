@@ -42,7 +42,6 @@ impl<'n, 'i, I: Resolver + ?Sized, L: Language, D, R> SyntaxText<'n, 'i, I, L, D
     }
 
     pub fn char_at(&self, offset: TextSize) -> Option<char> {
-        let offset = offset.into();
         let mut start: TextSize = 0.into();
         let res = self.try_for_each_chunk(|chunk| {
             let end = start + TextSize::of(chunk);
@@ -58,7 +57,7 @@ impl<'n, 'i, I: Resolver + ?Sized, L: Language, D, R> SyntaxText<'n, 'i, I, L, D
 
     pub fn slice<Ra: private::SyntaxTextRange>(&self, range: Ra) -> Self {
         let start = range.start().unwrap_or_default();
-        let end = range.end().unwrap_or(self.len());
+        let end = range.end().unwrap_or_else(|| self.len());
         assert!(start <= end);
         let len = end - start;
         let start = self.range.start() + start;
@@ -98,7 +97,10 @@ impl<'n, 'i, I: Resolver + ?Sized, L: Language, D, R> SyntaxText<'n, 'i, I, L, D
 
     pub fn for_each_chunk<F: FnMut(&str)>(&self, mut f: F) {
         enum Void {}
-        match self.try_for_each_chunk(|chunk| Ok::<(), Void>(f(chunk))) {
+        match self.try_for_each_chunk(|chunk| {
+            f(chunk);
+            Ok::<(), Void>(())
+        }) {
             Ok(()) => (),
             Err(void) => match void {},
         }
@@ -319,7 +321,7 @@ mod tests {
         let mut builder = GreenNodeBuilder::new();
         builder.start_node(SyntaxKind(62));
         for &chunk in chunks.iter() {
-            builder.token(SyntaxKind(92), chunk.into())
+            builder.token(SyntaxKind(92), chunk);
         }
         builder.finish_node();
         let (node, interner) = builder.finish();
@@ -336,7 +338,7 @@ mod tests {
             let expected = t1.to_string() == t2.to_string();
             let actual = t1 == t2;
             assert_eq!(expected, actual, "`{}` (SyntaxText) `{}` (SyntaxText)", t1, t2);
-            let actual = t1 == &*t2.to_string();
+            let actual = t1 == t2.to_string().as_str();
             assert_eq!(expected, actual, "`{}` (SyntaxText) `{}` (&str)", t1, t2);
         }
         fn check(t1: &[&str], t2: &[&str]) {

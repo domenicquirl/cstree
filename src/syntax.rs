@@ -50,9 +50,9 @@ impl<L: Language, D, R> SyntaxNode<L, D, R> {
                         for _ in 0..level {
                             write!(res, "  ").unwrap();
                         }
-                        write!(
+                        writeln!(
                             res,
-                            "{}\n",
+                            "{}",
                             match element {
                                 NodeOrToken::Node(node) => node.debug(resolver, false),
                                 NodeOrToken::Token(token) => token.debug(resolver),
@@ -129,6 +129,7 @@ impl<L: Language, D, R> SyntaxNode<L, D, R> {
     /// Caller must ensure that the access to the underlying data is unique (no active _mutable or immutable_
     /// references).
     #[inline]
+    #[allow(clippy::mut_from_ref)]
     unsafe fn data_mut(&self) -> &mut NodeData<L, D, R> {
         &mut *self.data
     }
@@ -604,6 +605,7 @@ impl<L: Language, D, R> SyntaxNode<L, D, R> {
     }
 
     #[inline]
+    #[allow(clippy::map_clone)]
     pub fn first_child(&self) -> Option<&SyntaxNode<L, D, R>> {
         let (node, (index, offset)) = filter_nodes(self.green().children_from(0, self.text_range().start())).next()?;
         self.get_or_add_node(node, index, offset).as_node().map(|node| *node)
@@ -616,6 +618,7 @@ impl<L: Language, D, R> SyntaxNode<L, D, R> {
     }
 
     #[inline]
+    #[allow(clippy::map_clone)]
     pub fn last_child(&self) -> Option<&SyntaxNode<L, D, R>> {
         let (node, (index, offset)) = filter_nodes(
             self.green()
@@ -637,7 +640,7 @@ impl<L: Language, D, R> SyntaxNode<L, D, R> {
     #[inline]
     pub fn next_child_after(&self, n: usize, offset: TextSize) -> Option<&SyntaxNode<L, D, R>> {
         let (node, (index, offset)) = filter_nodes(self.green().children_from(n + 1, offset)).next()?;
-        self.get_or_add_node(node, index, offset).as_node().map(|node| *node)
+        self.get_or_add_node(node, index, offset).as_node().copied()
     }
 
     #[inline]
@@ -649,7 +652,7 @@ impl<L: Language, D, R> SyntaxNode<L, D, R> {
     #[inline]
     pub fn prev_child_before(&self, n: usize, offset: TextSize) -> Option<&SyntaxNode<L, D, R>> {
         let (node, (index, offset)) = filter_nodes(self.green().children_to(n, offset)).next()?;
-        self.get_or_add_node(node, index, offset).as_node().map(|node| *node)
+        self.get_or_add_node(node, index, offset).as_node().copied()
     }
 
     #[inline]
@@ -668,7 +671,7 @@ impl<L: Language, D, R> SyntaxNode<L, D, R> {
                 .children_from((index + 1) as usize, self.text_range().end()),
         )
         .next()?;
-        parent.get_or_add_node(node, index, offset).as_node().map(|node| *node)
+        parent.get_or_add_node(node, index, offset).as_node().copied()
     }
 
     #[inline]
@@ -688,7 +691,7 @@ impl<L: Language, D, R> SyntaxNode<L, D, R> {
 
         let (node, (index, offset)) =
             filter_nodes(parent.green().children_to(index as usize, self.text_range().start())).next()?;
-        parent.get_or_add_node(node, index, offset).as_node().map(|node| *node)
+        parent.get_or_add_node(node, index, offset).as_node().copied()
     }
 
     #[inline]
@@ -869,7 +872,7 @@ where
     R: Resolver,
 {
     #[inline]
-    pub fn text<'n>(&'n self) -> SyntaxText<'n, 'n, R, L, D, R> {
+    pub fn text(&self) -> SyntaxText<'_, '_, R, L, D, R> {
         SyntaxText::new(self, self.resolver().as_ref())
     }
 }

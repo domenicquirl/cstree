@@ -42,7 +42,7 @@ impl GreenNodeHead {
 
 /// Internal node in the immutable tree.
 /// It has other nodes and tokens as children.
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone)]
 pub struct GreenNode {
     pub(super) data: ThinArc<GreenNodeHead, PackedGreenElement>,
 }
@@ -136,6 +136,14 @@ impl Hash for GreenNode {
     }
 }
 
+impl PartialEq for GreenNode {
+    fn eq(&self, other: &Self) -> bool {
+        self.data == other.data
+    }
+}
+
+impl Eq for GreenNode {}
+
 #[derive(Debug, Clone)]
 pub struct Children<'a> {
     inner: slice::Iter<'a, PackedGreenElement>,
@@ -184,12 +192,12 @@ impl<'a> Iterator for Children<'a> {
     }
 
     #[inline]
-    fn fold<Acc, Fold>(mut self, init: Acc, mut f: Fold) -> Acc
+    fn fold<Acc, Fold>(self, init: Acc, mut f: Fold) -> Acc
     where
         Fold: FnMut(Acc, Self::Item) -> Acc,
     {
         let mut accum = init;
-        while let Some(x) = self.next() {
+        for x in self {
             accum = f(accum, x);
         }
         accum

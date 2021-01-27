@@ -39,6 +39,12 @@ impl NodeCache<'static, Rodeo<Spur, FxBuildHasher>> {
     }
 }
 
+impl Default for NodeCache<'static> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<'i, I> NodeCache<'i, I>
 where
     I: Interner,
@@ -132,10 +138,7 @@ where
         let text_len = TextSize::try_from(text.len()).unwrap();
         let text = self.interner.get_or_intern(text);
         let data = GreenTokenData { kind, text, text_len };
-        self.tokens
-            .entry(data.clone())
-            .or_insert_with(|| GreenToken::new(data))
-            .clone()
+        self.tokens.entry(data).or_insert_with(|| GreenToken::new(data)).clone()
     }
 }
 
@@ -146,7 +149,7 @@ enum MaybeOwned<'a, T> {
 }
 
 impl<T> MaybeOwned<'_, T> {
-    fn as_owned(self) -> Option<T> {
+    fn into_owned(self) -> Option<T> {
         match self {
             MaybeOwned::Owned(owned) => Some(owned),
             MaybeOwned::Borrowed(_) => None,
@@ -200,6 +203,12 @@ impl GreenNodeBuilder<'static, 'static, Rodeo<Spur, FxBuildHasher>> {
             parents:  Vec::with_capacity(8),
             children: Vec::with_capacity(8),
         }
+    }
+}
+
+impl Default for GreenNodeBuilder<'static, 'static> {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -297,7 +306,7 @@ where
     #[inline]
     pub fn finish(mut self) -> (GreenNode, Option<I>) {
         assert_eq!(self.children.len(), 1);
-        let resolver = self.cache.as_owned().and_then(|cache| cache.interner.as_owned());
+        let resolver = self.cache.into_owned().and_then(|cache| cache.interner.into_owned());
         match self.children.pop().unwrap() {
             NodeOrToken::Node(node) => (node, resolver),
             NodeOrToken::Token(_) => panic!("called `finish` on a `GreenNodeBuilder` which only contained a token"),
