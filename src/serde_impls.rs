@@ -9,6 +9,7 @@ use serde::{
 use std::{collections::VecDeque, fmt, marker::PhantomData};
 
 type Rodeo = lasso::Rodeo<lasso::Spur, fxhash::FxBuildHasher>;
+type RodeoResolver = lasso::RodeoResolver<lasso::Spur>;
 
 /// Expands to the first expression, if there's
 /// no expression following, otherwise return the second expression.
@@ -35,7 +36,6 @@ macro_rules! data_list {
 /// contains a boolean which indicates if this node has a data. If it has one,
 /// the deserializer should pop the first element from the data list and continue.
 ///
-/// The macro will not use the `$counter` if the data list is not given.
 /// Takes the `Language` (`$l`), `SyntaxNode` (`$node`), `Resolver` (`$resolver`),
 /// `Serializer` (`$serializer`), and an optional `data_list` which must be a `mut Vec<D>`.
 macro_rules! gen_serialize {
@@ -82,15 +82,13 @@ enum Event<'text> {
     LeaveNode,
 }
 
-/// Make a `SyntaxNode` serializable, by using an external resolver instead of
-/// the resolver that is inside the tree.
+/// Make a `SyntaxNode` serializable but without serializing the data.
 pub(crate) struct SerializeWithResolver<'node, 'resolver, L: Language, D: 'static, RN: 'static, R> {
     pub(crate) node:     &'node SyntaxNode<L, D, RN>,
     pub(crate) resolver: &'resolver R,
 }
 
-/// Make a `SyntaxNode` serializable, even if it doesn't have
-/// data that is serializable.
+/// Make a `SyntaxNode` serializable which will include the data for serialization.
 pub(crate) struct SerializeWithData<'node, 'resolver, L: Language, D: 'static, RN: 'static, R> {
     pub(crate) node:     &'node SyntaxNode<L, D, RN>,
     pub(crate) resolver: &'resolver R,
@@ -142,7 +140,7 @@ where
     }
 }
 
-impl<'de, L, D> Deserialize<'de> for SyntaxNode<L, D, Rodeo>
+impl<'de, L, D> Deserialize<'de> for SyntaxNode<L, D, RodeoResolver>
 where
     L: Language,
     D: Deserialize<'de>,
@@ -170,7 +168,7 @@ where
             L: Language,
             D: Deserialize<'de>,
         {
-            type Value = (SyntaxNode<L, D, Rodeo>, VecDeque<bool>);
+            type Value = (SyntaxNode<L, D, RodeoResolver>, VecDeque<bool>);
 
             fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
                 formatter.write_str("a list of tree events")
@@ -195,12 +193,12 @@ where
                 }
 
                 let (tree, resolver) = builder.finish();
-                let tree = SyntaxNode::new_root_with_resolver(tree, resolver.unwrap());
+                let tree = SyntaxNode::new_root_with_resolver(tree, resolver.unwrap().into_resolver());
                 Ok((tree, data_indices))
             }
         }
 
-        struct ProcessedEvents<L: Language, D: 'static>(SyntaxNode<L, D, Rodeo>, VecDeque<bool>);
+        struct ProcessedEvents<L: Language, D: 'static>(SyntaxNode<L, D, RodeoResolver>, VecDeque<bool>);
         impl<'de, L, D> Deserialize<'de> for ProcessedEvents<L, D>
         where
             L: Language,
@@ -228,7 +226,13 @@ where
             <Result<(), DE::Error>>::Ok(())
         })?;
 
-        Ok(tree)
+        if !data.is_empty() {
+            Err(DE::Error::custom(
+                "serialized SyntaxNode contained too many data elements",
+            ))
+        } else {
+            Ok(tree)
+        }
     }
 }
 

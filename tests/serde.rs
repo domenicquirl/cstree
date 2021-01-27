@@ -4,10 +4,12 @@ mod common;
 
 use common::{Element, SyntaxNode};
 use cstree::{GreenNodeBuilder, NodeCache, NodeOrToken};
+use lasso::Resolver;
 use serde_test::Token;
 use std::fmt;
 
 type Rodeo = lasso::Rodeo<lasso::Spur, fxhash::FxBuildHasher>;
+type RodeoResolver = lasso::RodeoResolver<lasso::Spur>;
 
 /// Macro for generating a list of `serde_test::Token`s using a simpler DSL.
 macro_rules! event_tokens {
@@ -133,30 +135,32 @@ fn three_level_tree_tokens() -> Vec<Token> {
     )
 }
 
+struct NonSerializable;
+
 /// Serializable SyntaxNode that doesn't have a identity `PartialEq` implementation,
 /// but checks if both trees have equal nodes and tokens.
-struct TestNode {
-    node:      SyntaxNode<String, Rodeo>,
+struct TestNode<R: 'static> {
+    node:      SyntaxNode<String, R>,
     with_data: bool,
 }
 
-impl TestNode {
-    fn new(node: SyntaxNode<String, Rodeo>) -> Self {
+impl<R> TestNode<R> {
+    fn new(node: SyntaxNode<String, R>) -> Self {
         Self { node, with_data: false }
     }
 
-    fn with_data(node: SyntaxNode<String, Rodeo>) -> Self {
+    fn with_data(node: SyntaxNode<String, R>) -> Self {
         Self { node, with_data: true }
     }
 }
 
-impl fmt::Debug for TestNode {
+impl<R: Resolver> fmt::Debug for TestNode<R> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt::Debug::fmt(&self.node, f)
     }
 }
 
-impl serde::Serialize for TestNode {
+impl<R: Resolver> serde::Serialize for TestNode<R> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
@@ -169,7 +173,7 @@ impl serde::Serialize for TestNode {
     }
 }
 
-impl<'de> serde::Deserialize<'de> for TestNode {
+impl<'de> serde::Deserialize<'de> for TestNode<RodeoResolver> {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
@@ -181,8 +185,8 @@ impl<'de> serde::Deserialize<'de> for TestNode {
     }
 }
 
-impl PartialEq<TestNode> for TestNode {
-    fn eq(&self, other: &TestNode) -> bool {
+impl<R1: Resolver, R2: Resolver> PartialEq<TestNode<R2>> for TestNode<R1> {
+    fn eq(&self, other: &TestNode<R2>) -> bool {
         self.node.kind() == other.node.kind()
             && self.node.get_data() == other.node.get_data()
             && self.node.text_range() == other.node.text_range()
@@ -222,11 +226,11 @@ fn three_level_tree() -> Element<'static> {
     ])
 }
 
-fn build_tree(root: Element<'_>) -> SyntaxNode<String, Rodeo> {
+fn build_tree(root: Element<'_>) -> SyntaxNode<String, RodeoResolver> {
     let mut builder = GreenNodeBuilder::new();
     common::build_recursive(&root, &mut builder, 0);
     let (node, interner) = builder.finish();
-    SyntaxNode::new_root_with_resolver(node, interner.unwrap())
+    SyntaxNode::new_root_with_resolver(node, interner.unwrap().into_resolver())
 }
 
 fn attach_data<R>(node: &SyntaxNode<String, R>) {
@@ -236,7 +240,7 @@ fn attach_data<R>(node: &SyntaxNode<String, R>) {
 }
 
 #[test]
-fn serialize_tree_with_resolver_with_data() {
+fn serialize_tree_with_data_with_resolver() {
     let mut interner = Rodeo::with_hasher(Default::default());
     let mut cache = NodeCache::with_interner(&mut interner);
 
@@ -246,7 +250,7 @@ fn serialize_tree_with_resolver_with_data() {
     attach_data(&tree);
 
     let serialized = serde_json::to_string(&tree.as_serialize_with_data_with_resolver(&interner)).unwrap();
-    let deserialized: TestNode = serde_json::from_str(&serialized).unwrap();
+    let deserialized: TestNode<_> = serde_json::from_str(&serialized).unwrap();
 
     let expected = SyntaxNode::new_root_with_resolver(root, interner);
     attach_data(&expected);
@@ -260,10 +264,10 @@ fn serialize_tree_with_resolver() {
 
     let root = three_level_tree();
     let root = common::build_tree_with_cache(&root, &mut cache);
-    let tree = SyntaxNode::<String, ()>::new_root(root.clone());
+    let tree = SyntaxNode::<String, NonSerializable>::new_root(root.clone());
 
     let serialized = serde_json::to_string(&tree.as_serialize_with_resolver(&interner)).unwrap();
-    let deserialized: TestNode = serde_json::from_str(&serialized).unwrap();
+    let deserialized: TestNode<_> = serde_json::from_str(&serialized).unwrap();
 
     let expected = SyntaxNode::new_root_with_resolver(root, interner);
     assert_eq!(TestNode::new(expected), deserialized);

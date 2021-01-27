@@ -909,10 +909,7 @@ where
     pub fn as_serialize_with_resolver<'node>(
         &'node self,
         resolver: &'node impl Resolver,
-    ) -> impl serde::Serialize + 'node
-    where
-        D: serde::Serialize,
-    {
+    ) -> impl serde::Serialize + 'node {
         SerializeWithResolver { node: self, resolver }
     }
 }
