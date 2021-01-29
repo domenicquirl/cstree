@@ -109,12 +109,12 @@ impl<L: Language, D, R> Drop for SyntaxNode<L, D, R> {
             // `ref_count`
             let root = self.root();
             let mut root = root.clone_uncounted();
-            let ref_count = unsafe { Box::from_raw(root.data().ref_count) };
+            let ref_count = root.data().ref_count;
             root.drop_recursive();
             let root_data = root.data;
             drop(root);
             unsafe { drop(Box::from_raw(root_data)) };
-            drop(ref_count);
+            unsafe { drop(Box::from_raw(ref_count)) };
         }
     }
 }
