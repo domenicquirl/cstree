@@ -27,7 +27,7 @@ fn create() {
     assert_eq!(tree.syntax_kind(), SyntaxKind(0));
     assert_eq!(tree.kind(), SyntaxKind(0));
     {
-        let leaf1_0 = tree.children().nth(1).unwrap().children_with_tokens().nth(0).unwrap();
+        let leaf1_0 = tree.children().nth(1).unwrap().children_with_tokens().next().unwrap();
         let leaf1_0 = leaf1_0.into_token().unwrap();
         assert_eq!(leaf1_0.syntax_kind(), SyntaxKind(5));
         assert_eq!(leaf1_0.kind(), SyntaxKind(5));
@@ -86,7 +86,7 @@ fn with_interner() {
     let tree: SyntaxNode = SyntaxNode::new_root(tree);
     let resolver = interner;
     {
-        let leaf1_0 = tree.children().nth(1).unwrap().children_with_tokens().nth(0).unwrap();
+        let leaf1_0 = tree.children().nth(1).unwrap().children_with_tokens().next().unwrap();
         let leaf1_0 = leaf1_0.into_token().unwrap();
         assert_eq!(leaf1_0.resolve_text(&resolver), "1.0");
         assert_eq!(leaf1_0.text_range(), TextRange::at(6.into(), 3.into()));
@@ -105,7 +105,7 @@ fn inline_resolver() {
     let tree = build_tree_with_cache(&tree, &mut cache);
     let tree: SyntaxNode<(), Rodeo> = SyntaxNode::new_root_with_resolver(tree, interner);
     {
-        let leaf1_0 = tree.children().nth(1).unwrap().children_with_tokens().nth(0).unwrap();
+        let leaf1_0 = tree.children().nth(1).unwrap().children_with_tokens().next().unwrap();
         let leaf1_0 = leaf1_0.into_token().unwrap();
         assert_eq!(leaf1_0.text(), "1.0");
         assert_eq!(leaf1_0.text_range(), TextRange::at(6.into(), 3.into()));

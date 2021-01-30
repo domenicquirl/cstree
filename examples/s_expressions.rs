@@ -364,7 +364,7 @@ impl List {
     }
 
     fn eval(&self, resolver: &impl Resolver) -> Option<i64> {
-        let op = match self.sexps().nth(0)?.kind() {
+        let op = match self.sexps().next()?.kind() {
             SexpKind::Atom(atom) => atom.as_op(resolver)?,
             _ => return None,
         };

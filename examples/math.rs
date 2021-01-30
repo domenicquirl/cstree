@@ -121,7 +121,7 @@ impl<'input, I: Iterator<Item = (SyntaxKind, &'input str)>> Parser<'input, I> {
 }
 
 fn print(indent: usize, element: SyntaxElementRef<'_>, resolver: &impl Resolver) {
-    let kind: SyntaxKind = element.kind().into();
+    let kind = element.kind();
     print!("{:indent$}", "", indent = indent);
     match element {
         NodeOrToken::Node(node) => {
@@ -140,19 +140,19 @@ fn main() {
         builder: GreenNodeBuilder::new(),
         iter:    vec![
             // 1 + 2 * 3 + 4
-            (NUMBER, "1".into()),
-            (WHITESPACE, " ".into()),
-            (ADD, "+".into()),
-            (WHITESPACE, " ".into()),
-            (NUMBER, "2".into()),
-            (WHITESPACE, " ".into()),
-            (MUL, "*".into()),
-            (WHITESPACE, " ".into()),
-            (NUMBER, "3".into()),
-            (WHITESPACE, " ".into()),
-            (ADD, "+".into()),
-            (WHITESPACE, " ".into()),
-            (NUMBER, "4".into()),
+            (NUMBER, "1"),
+            (WHITESPACE, " "),
+            (ADD, "+"),
+            (WHITESPACE, " "),
+            (NUMBER, "2"),
+            (WHITESPACE, " "),
+            (MUL, "*"),
+            (WHITESPACE, " "),
+            (NUMBER, "3"),
+            (WHITESPACE, " "),
+            (ADD, "+"),
+            (WHITESPACE, " "),
+            (NUMBER, "4"),
         ]
         .into_iter()
         .peekable(),
