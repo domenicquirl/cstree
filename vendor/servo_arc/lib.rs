@@ -46,7 +46,9 @@ use std::{
     mem::align_of_val,
     ops::{Deref, DerefMut},
     os::raw::c_void,
-    process, ptr, slice,
+    process,
+    ptr::{self, NonNull},
+    slice,
     sync::{
         atomic,
         atomic::Ordering::{Acquire, Relaxed, Release},
@@ -91,65 +93,9 @@ fn padding_needed_for(layout: &Layout, align: usize) -> usize {
 /// necessarily) at _exactly_ `MAX_REFCOUNT + 1` references.
 const MAX_REFCOUNT: usize = (isize::MAX) as usize;
 
-/// Wrapper type for pointers to get the non-zero optimization. When
-/// NonZero/Shared/Unique are stabilized, we should just use Shared
-/// here to get the same effect. Gankro is working on this in [1].
-///
-/// It's unfortunate that this needs to infect all the caller types
-/// with 'static. It would be nice to just use a &() and a PhantomData<T>
-/// instead, but then the compiler can't determine whether the &() should
-/// be thin or fat (which depends on whether or not T is sized). Given
-/// that this is all a temporary hack, this restriction is fine for now.
-///
-/// [1]: https://github.com/rust-lang/rust/issues/27730
-// FIXME: remove this and use std::ptr::NonNull when Firefox requires Rust 1.25+
-pub struct NonZeroPtrMut<T: ?Sized + 'static>(&'static mut T);
-impl<T: ?Sized> NonZeroPtrMut<T> {
-    pub fn new(ptr: *mut T) -> Self {
-        assert!(!(ptr as *mut u8).is_null());
-        NonZeroPtrMut(unsafe { mem::transmute(ptr) })
-    }
-
-    pub fn ptr(&self) -> *mut T {
-        self.0 as *const T as *mut T
-    }
-}
-
-impl<T: ?Sized + 'static> Clone for NonZeroPtrMut<T> {
-    fn clone(&self) -> Self {
-        NonZeroPtrMut::new(self.ptr())
-    }
-}
-
-impl<T: ?Sized + 'static> fmt::Pointer for NonZeroPtrMut<T> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        fmt::Pointer::fmt(&self.ptr(), f)
-    }
-}
-
-impl<T: ?Sized + 'static> fmt::Debug for NonZeroPtrMut<T> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        <Self as fmt::Pointer>::fmt(self, f)
-    }
-}
-
-impl<T: ?Sized + 'static> PartialEq for NonZeroPtrMut<T> {
-    fn eq(&self, other: &Self) -> bool {
-        self.ptr() == other.ptr()
-    }
-}
-
-impl<T: ?Sized + 'static> Eq for NonZeroPtrMut<T> {}
-
-impl<T: Sized + 'static> Hash for NonZeroPtrMut<T> {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        self.ptr().hash(state)
-    }
-}
-
 #[repr(C)]
 pub struct Arc<T: ?Sized + 'static> {
-    p: NonZeroPtrMut<ArcInner<T>>,
+    p: NonNull<ArcInner<T>>,
 }
 
 /// An Arc that is known to be uniquely owned
@@ -207,7 +153,8 @@ impl<T> Arc<T> {
             data,
         });
         Arc {
-            p: NonZeroPtrMut::new(Box::into_raw(x)),
+            // safety: we created `x`
+            p: unsafe { NonNull::new_unchecked(Box::into_raw(x)) },
         }
     }
 
@@ -225,7 +172,7 @@ impl<T> Arc<T> {
         let offset = data_offset(ptr);
         let ptr = (ptr as *const u8).offset(-offset);
         Arc {
-            p: NonZeroPtrMut::new(ptr as *mut ArcInner<T>),
+            p: NonNull::new_unchecked(ptr as *mut ArcInner<T>),
         }
     }
 
@@ -259,7 +206,7 @@ impl<T> Arc<T> {
     /// Returns the address on the heap of the Arc itself -- not the T within it -- for memory
     /// reporting.
     pub fn heap_ptr(&self) -> *const c_void {
-        self.p.ptr() as *const ArcInner<T> as *const c_void
+        self.p.as_ptr() as *const ArcInner<T> as *const c_void
     }
 }
 
@@ -286,7 +233,7 @@ impl<T: ?Sized> Arc<T> {
     }
 
     fn ptr(&self) -> *mut ArcInner<T> {
-        self.p.ptr()
+        self.p.as_ptr()
     }
 }
 
@@ -320,7 +267,10 @@ impl<T: ?Sized> Clone for Arc<T> {
         }
 
         Arc {
-            p: NonZeroPtrMut::new(self.ptr()),
+            // safety: as described above, as long as the original reference is alive, the
+            // allocation is valid. Since the allocation existed previously, the pointer to it is
+            // not null.
+            p: unsafe { NonNull::new_unchecked(self.ptr()) },
         }
     }
 }
@@ -558,27 +508,13 @@ impl<H, T> Arc<HeaderSlice<H, [T]>> {
         // Compute the required size for the allocation.
         let num_items = items.len();
         let size = {
-            // First, determine the alignment of a hypothetical pointer to a
-            // HeaderSlice.
-            let fake_slice_ptr_align: usize = mem::align_of::<ArcInner<HeaderSlice<H, [T; 1]>>>();
-
-            // Next, synthesize a totally garbage (but properly aligned) pointer
-            // to a sequence of T.
-            let fake_slice_ptr = fake_slice_ptr_align as *const T;
-
-            // Convert that sequence to a fat pointer. The address component of
-            // the fat pointer will be garbage, but the length will be correct.
-            let fake_slice = unsafe { slice::from_raw_parts(fake_slice_ptr, num_items) };
-
-            // Pretend the garbage address points to our allocation target (with
-            // a trailing sequence of T), rather than just a sequence of T.
-            let fake_ptr = fake_slice as *const [T] as *const ArcInner<HeaderSlice<H, [T]>>;
-            let fake_ref: &ArcInner<HeaderSlice<H, [T]>> = unsafe { &*fake_ptr };
-
-            // Use size_of_val, which will combine static information about the
-            // type with the length from the fat pointer. The garbage address
-            // will not be used.
-            mem::size_of_val(fake_ref)
+            let inner_layout = Layout::new::<ArcInner<HeaderSlice<H, [T; 0]>>>();
+            let slice_layout =
+                Layout::array::<T>(num_items).expect("arithmetic overflow when trying to create array layout");
+            let slice_align = mem::align_of_val::<[T]>(&[]);
+            assert_eq!(slice_layout.align(), slice_align);
+            let padding = padding_needed_for(&inner_layout, slice_align);
+            inner_layout.size() + padding + slice_layout.size()
         };
 
         let ptr: *mut ArcInner<HeaderSlice<H, [T]>>;
@@ -630,7 +566,8 @@ impl<H, T> Arc<HeaderSlice<H, [T]>> {
         // Return the fat Arc.
         assert_eq!(size_of::<Self>(), size_of::<usize>() * 2, "The Arc will be fat");
         Arc {
-            p: NonZeroPtrMut::new(ptr),
+            // safety: we have just created the underlying allocation
+            p: unsafe { NonNull::new_unchecked(ptr) },
         }
     }
 
@@ -691,7 +628,8 @@ impl<H: 'static, T: 'static> ThinArc<H, T> {
     {
         // Synthesize transient Arc, which never touches the refcount of the ArcInner.
         let transient = NoDrop::new(Arc {
-            p: NonZeroPtrMut::new(thin_to_thick(self.ptr)),
+            // safety: the original thin arc guarantees the object was and is still alive
+            p: unsafe { NonNull::new_unchecked(thin_to_thick(self.ptr)) },
         });
 
         // Expose the transient Arc to the callback, which may clone it if it wants.
@@ -762,7 +700,8 @@ impl<H: 'static, T: 'static> Arc<HeaderSliceWithLength<H, [T]>> {
         let ptr = thin_to_thick(a.ptr);
         mem::forget(a);
         Arc {
-            p: NonZeroPtrMut::new(ptr),
+            // safety: as above
+            p: unsafe { NonNull::new_unchecked(ptr) },
         }
     }
 }
@@ -794,7 +733,7 @@ impl<H: Eq + 'static, T: Eq + 'static> Eq for ThinArc<H, T> {}
 #[derive(Eq)]
 #[repr(C)]
 pub struct RawOffsetArc<T: 'static> {
-    ptr: NonZeroPtrMut<T>,
+    ptr: NonNull<T>,
 }
 
 unsafe impl<T: 'static + Sync + Send> Send for RawOffsetArc<T> {}
@@ -804,7 +743,7 @@ impl<T: 'static> Deref for RawOffsetArc<T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
-        unsafe { &*self.ptr.ptr() }
+        unsafe { &*self.ptr.as_ptr() }
     }
 }
 
@@ -846,7 +785,7 @@ impl<T: 'static> RawOffsetArc<T> {
         F: FnOnce(&Arc<T>) -> U,
     {
         // Synthesize transient Arc, which never touches the refcount of the ArcInner.
-        let transient = unsafe { NoDrop::new(Arc::from_raw(self.ptr.ptr())) };
+        let transient = unsafe { NoDrop::new(Arc::from_raw(self.ptr.as_ptr())) };
 
         // Expose the transient Arc to the callback, which may clone it if it wants.
         let result = f(&transient);
@@ -902,7 +841,8 @@ impl<T: 'static> Arc<T> {
     #[inline]
     pub fn into_raw_offset(a: Self) -> RawOffsetArc<T> {
         RawOffsetArc {
-            ptr: NonZeroPtrMut::new(Arc::into_raw(a) as *mut T),
+            // safety: as above
+            ptr: unsafe { NonNull::new_unchecked(Arc::into_raw(a) as *mut T) },
         }
     }
 
@@ -910,7 +850,7 @@ impl<T: 'static> Arc<T> {
     /// is not modified.
     #[inline]
     pub fn from_raw_offset(a: RawOffsetArc<T>) -> Self {
-        let ptr = a.ptr.ptr();
+        let ptr = a.ptr.as_ptr();
         mem::forget(a);
         unsafe { Arc::from_raw(ptr) }
     }
