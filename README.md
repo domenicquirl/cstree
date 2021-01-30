@@ -1,4 +1,13 @@
-# `cstree`
+<div align=center
+  <h1><code>cstree</code></h1>
+  <p>
+    <strong>A library for generic lossless syntax trees
+  </p>
+
+  <p>
+    <a href="https://github.com/domenicquirl/cstree/actions?query=workflow%3ACI"> <img src="https://github.com/domenicquirl/cstree/workflows/CI/badge.svg" alt="build status" /></a>
+  </p>
+</div>
 
 `cstree` is a library for creating and working with concrete syntax trees (CSTs).
 The concept of CSTs is inspired in part by Swift's [libsyntax](https://github.com/apple/swift/tree/5e2c815edfd758f9b1309ce07bfc01c4bc20ec23/lib/Syntax).
