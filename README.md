@@ -1,4 +1,4 @@
-<div align=center
+<div align=center>
   <h1><code>cstree</code></h1>
   <p>
     <strong>A library for generic lossless syntax trees
