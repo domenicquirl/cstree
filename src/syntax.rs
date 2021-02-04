@@ -478,12 +478,11 @@ impl<L: Language, D, R> SyntaxNode<L, D, R> {
                     //      overall.
 
                     // safety: `node` was just created and has not been shared
-                    let ref_count = unsafe { Box::from_raw(node.data().ref_count) };
+                    let ref_count = unsafe { &*node.data().ref_count };
                     ref_count.fetch_add(2, Ordering::AcqRel);
                     let node_data = node.data;
                     drop(node);
                     unsafe { drop(Box::from_raw(node_data)) };
-                    drop(ref_count);
                 }
                 SyntaxElement::Token(token) => {
                     // We don't have to worry about `NodeData` or `SyntaxToken<L>`'s own `Drop` here,
