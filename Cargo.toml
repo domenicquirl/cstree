@@ -25,6 +25,7 @@ features = ["derive"]
 m_lexer = "0.0.4"
 serde_json = "1.0.61"
 serde_test = "1.0.119"
+crossbeam-utils = "0.8"
 
 [features]
 default = []

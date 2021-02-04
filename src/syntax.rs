@@ -38,6 +38,9 @@ pub struct SyntaxNode<L: Language, D: 'static = (), R: 'static = ()> {
     data: *mut NodeData<L, D, R>,
 }
 
+unsafe impl<L: Language, D: 'static, R: 'static> Send for SyntaxNode<L, D, R> {}
+unsafe impl<L: Language, D: 'static, R: 'static> Sync for SyntaxNode<L, D, R> {}
+
 impl<L: Language, D, R> SyntaxNode<L, D, R> {
     pub fn debug(&self, resolver: &impl Resolver, recursive: bool) -> String {
         // NOTE: `fmt::Write` methods on `String` never fail
