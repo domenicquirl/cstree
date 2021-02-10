@@ -185,7 +185,7 @@ impl<L: Language, D, R> SyntaxNode<L, D, R> {
 // Identity semantics for hash & eq
 impl<L: Language, D, R> PartialEq for SyntaxNode<L, D, R> {
     fn eq(&self, other: &SyntaxNode<L, D, R>) -> bool {
-        self.green().ptr() == other.green().ptr() && self.text_range().start() == other.text_range().start()
+        self.data == other.data
     }
 }
 
@@ -193,8 +193,7 @@ impl<L: Language, D, R> Eq for SyntaxNode<L, D, R> {}
 
 impl<L: Language, D, R> Hash for SyntaxNode<L, D, R> {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        ptr::hash(self.green().ptr(), state);
-        self.text_range().start().hash(state);
+        ptr::hash(self.data, state);
     }
 }
 

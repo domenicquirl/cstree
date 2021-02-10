@@ -5,7 +5,7 @@ use std::{
 };
 
 use fxhash::FxHasher32;
-use servo_arc::{Arc, HeaderSlice, HeaderWithLength, ThinArc};
+use servo_arc::{Arc, HeaderWithLength, ThinArc};
 
 use crate::{
     green::{GreenElement, GreenElementRef, PackedGreenElement, SyntaxKind},
@@ -121,11 +121,6 @@ impl GreenNode {
         Children {
             inner: self.data.slice.iter(),
         }
-    }
-
-    pub(crate) fn ptr(&self) -> *const u8 {
-        let r: &HeaderSlice<_, _> = &self.data;
-        r as *const _ as _
     }
 }
 
