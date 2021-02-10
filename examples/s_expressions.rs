@@ -1,19 +1,13 @@
-//! In this tutorial, we will write parser
-//! and evaluator of arithmetic S-expressions,
-//! which look like this:
+//! In this tutorial, we will write parser and evaluator of arithmetic S-expressions, which look like
+//! this:
 //! ```
 //! (+ (* 15 2) 62)
 //! ```
 //!
-//! It's suggested to read the conceptual overview of the design
-//! alongside this tutorial:
+//! You may want to follow the conceptual overview of the design alongside this tutorial:
 //! https://github.com/rust-analyzer/rust-analyzer/blob/master/docs/dev/syntax.md
 
-/// cstree uses `TextSize` and `TextRange` types to
-/// represent utf8 offsets and ranges.
-
-/// Let's start with defining all kinds of tokens and
-/// composite nodes.
+/// Let's start with defining all kinds of tokens and composite nodes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 #[allow(non_camel_case_types)]
 #[repr(u16)]
@@ -29,11 +23,12 @@ enum SyntaxKind {
     ATOM, // `+`, `15`, wraps a WORD token
     ROOT, // top-level node: a list of s-expressions
 }
+use std::collections::VecDeque;
+
 use SyntaxKind::*;
 
-/// Some boilerplate is needed, as cstree settled on using its own
-/// `struct SyntaxKind(u16)` internally, instead of accepting the
-/// user's `enum SyntaxKind` as a type parameter.
+/// Some boilerplate is needed, as cstree represents kinds as `struct SyntaxKind(u16)` internally,
+/// in order to not need the user's `enum SyntaxKind` as a type parameter.
 ///
 /// First, to easily pass the enum variants into cstree via `.into()`:
 impl From<SyntaxKind> for cstree::SyntaxKind {
@@ -42,9 +37,9 @@ impl From<SyntaxKind> for cstree::SyntaxKind {
     }
 }
 
-/// Second, implementing the `Language` trait teaches cstree to convert between
-/// these two SyntaxKind types, allowing for a nicer SyntaxNode API where
-/// "kinds" are values from our `enum SyntaxKind`, instead of plain u16 values.
+/// Second, implementing the `Language` trait teaches cstree to convert between these two SyntaxKind
+/// types, allowing for a nicer SyntaxNode API where "kinds" are values from our `enum SyntaxKind`,
+/// instead of plain u16 values.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 enum Lang {}
 impl cstree::Language for Lang {
@@ -60,17 +55,18 @@ impl cstree::Language for Lang {
     }
 }
 
-/// GreenNode is an immutable tree, which is cheap to change,
-/// but doesn't contain offsets and parent pointers.
+/// GreenNode is an immutable tree, which caches identical nodes and tokens, but doesn't contain
+/// offsets and parent pointers.
+/// cstree also deduplicates the actual source string in addition to the tree nodes, so we will need
+/// the Resolver to get the real text back from the interned representation.
 use cstree::{interning::Resolver, GreenNode};
 
-/// You can construct GreenNodes by hand, but a builder
-/// is helpful for top-down parsers: it maintains a stack
-/// of currently in-progress nodes
+/// You can construct GreenNodes by hand, but a builder is helpful for top-down parsers: it maintains
+/// a stack of currently in-progress nodes.
 use cstree::GreenNodeBuilder;
 
 /// The parse results are stored as a "green tree".
-/// We'll discuss working with the results later
+/// We'll discuss how to work with the results later.
 struct Parse<I> {
     green_node: GreenNode,
     resolver:   I,
@@ -80,17 +76,14 @@ struct Parse<I> {
 
 /// Now, let's write a parser.
 /// Note that `parse` does not return a `Result`:
-/// by design, syntax tree can be built even for
-/// completely invalid source code.
+/// By design, syntax trees can be built even for completely invalid source code.
 fn parse(text: &str) -> Parse<impl Resolver> {
     struct Parser<'input> {
-        /// input tokens, including whitespace,
-        /// in *reverse* order.
-        tokens:  Vec<(SyntaxKind, &'input str)>,
-        /// the in-progress tree.
+        /// input tokens, including whitespace.
+        tokens:  VecDeque<(SyntaxKind, &'input str)>,
+        /// the in-progress green tree.
         builder: GreenNodeBuilder<'static, 'static>,
-        /// the list of syntax errors we've accumulated
-        /// so far.
+        /// the list of syntax errors we've accumulated so far.
         errors:  Vec<String>,
     }
 
@@ -115,10 +108,10 @@ fn parse(text: &str) -> Parse<impl Resolver> {
                     SexpRes::RParen => {
                         self.builder.start_node(ERROR.into());
                         self.errors.push("unmatched `)`".to_string());
-                        self.bump(); // be sure to chug along in case of error
+                        self.bump(); // be sure to advance even in case of an error, so as to not get stuck
                         self.builder.finish_node();
                     }
-                    SexpRes::Ok => (),
+                    SexpRes::Ok => {}
                 }
             }
             // Don't forget to eat *trailing* whitespace
@@ -126,11 +119,13 @@ fn parse(text: &str) -> Parse<impl Resolver> {
             // Close the root node.
             self.builder.finish_node();
 
-            // Turn the builder into a GreenNode
-            let (tree, resolver) = self.builder.finish();
+            // Get the green tree from the builder.
+            // Note that, since we didn't provide our own interner to the builder, it has
+            // instantiated one for us and now returns it together with the tree.
+            let (tree, interner) = self.builder.finish();
             Parse {
                 green_node: tree,
-                resolver:   resolver.unwrap().into_resolver(),
+                resolver:   interner.unwrap().into_resolver(),
                 errors:     self.errors,
             }
         }
@@ -150,7 +145,7 @@ fn parse(text: &str) -> Parse<impl Resolver> {
                         self.bump();
                         break;
                     }
-                    SexpRes::Ok => (),
+                    SexpRes::Ok => {}
                 }
             }
             // close the list node
@@ -160,8 +155,7 @@ fn parse(text: &str) -> Parse<impl Resolver> {
         fn sexp(&mut self) -> SexpRes {
             // Eat leading whitespace
             self.skip_ws();
-            // Either a list, an atom, a closing paren,
-            // or an eof.
+            // Either a list, an atom, a closing paren, or an eof.
             let t = match self.current() {
                 None => return SexpRes::Eof,
                 Some(R_PAREN) => return SexpRes::RParen,
@@ -182,13 +176,13 @@ fn parse(text: &str) -> Parse<impl Resolver> {
 
         /// Advance one token, adding it to the current branch of the tree builder.
         fn bump(&mut self) {
-            let (kind, text) = self.tokens.pop().unwrap();
+            let (kind, text) = self.tokens.pop_front().unwrap();
             self.builder.token(kind.into(), text);
         }
 
         /// Peek at the first unprocessed token
         fn current(&self) -> Option<SyntaxKind> {
-            self.tokens.last().map(|(kind, _)| *kind)
+            self.tokens.front().map(|(kind, _)| *kind)
         }
 
         fn skip_ws(&mut self) {
@@ -198,30 +192,29 @@ fn parse(text: &str) -> Parse<impl Resolver> {
         }
     }
 
-    let mut tokens = lex(text);
-    tokens.reverse();
     Parser {
-        tokens,
+        tokens:  lex(text),
         builder: GreenNodeBuilder::new(),
-        errors: Vec::new(),
+        errors:  Vec::new(),
     }
     .parse()
 }
 
-/// To work with the parse results we need a view into the
-/// green tree - the Syntax tree.
-/// It is also immutable, like a GreenNode,
-/// but it contains parent pointers, offsets, and
-/// has identity semantics.
-
+/// To work with the parse results we need a view into the green tree - the syntax tree.
+/// It is also immutable, like a GreenNode, but it contains parent pointers, offsets, and has
+/// identity semantics.
 type SyntaxNode = cstree::SyntaxNode<Lang>;
 #[allow(unused)]
 type SyntaxToken = cstree::SyntaxToken<Lang>;
 #[allow(unused)]
-type SyntaxElement = cstree::NodeOrToken<SyntaxNode, SyntaxToken>;
+type SyntaxElement = cstree::SyntaxElement<Lang>;
 
 impl<I> Parse<I> {
     fn syntax(&self) -> SyntaxNode {
+        // If we owned `self`, we could use `new_root_with_resolver` instead at this point to attach
+        // `self.resolver` to the tree. This simplifies retrieving text and provides automatic
+        // implementations for useful traits like `Display`, but also consumes the resolver (it can
+        // still be accessed indirectly via the `resolver` method).
         SyntaxNode::new_root(self.green_node.clone())
     }
 }
@@ -234,6 +227,7 @@ fn test_parser() {
     let node = parse.syntax();
     let resolver = &parse.resolver;
     assert_eq!(
+        // note how, since we didn't attach the resolver in `syntax`, we now need to provide it
         node.debug(resolver, false),
         "ROOT@0..15", // root node, spanning 15 bytes
     );
@@ -259,17 +253,13 @@ fn test_parser() {
 }
 
 /// So far, we've been working with a homogeneous untyped tree.
-/// It's nice to provide generic tree operations, like traversals,
-/// but it's a bad fit for semantic analysis.
-/// This crate itself does not provide AST facilities directly,
-/// but it is possible to layer AST on top of `SyntaxNode` API.
-/// Let's write a function to evaluate S-expression.
+/// That tree is nice to provide generic tree operations, like traversals, but it's a bad fit for
+/// semantic analysis. cstree itself does not provide AST facilities directly, but it is possible to
+/// layer AST on top of `SyntaxNode` API. Let's write a function to evaluate S-expressions.
 ///
 /// For that, let's define AST nodes.
 /// It'll be quite a bunch of repetitive code, so we'll use a macro.
-///
-/// For a real language, you'd want to generate an AST. I find a
-/// combination of `serde`, `ron` and `tera` crates invaluable for that!
+/// For a real language, you may want to automatically generate the AST implementations with a task.
 macro_rules! ast_node {
     ($ast:ident, $kind:ident) => {
         #[derive(PartialEq, Eq, Hash)]
@@ -292,7 +282,7 @@ ast_node!(Root, ROOT);
 ast_node!(Atom, ATOM);
 ast_node!(List, LIST);
 
-// Sexp is slightly different, so let's do it by hand.
+// Sexp is slightly different because it can be both an atom and a list, so let's do it by hand.
 #[derive(PartialEq, Eq, Hash)]
 #[repr(transparent)]
 struct Sexp(SyntaxNode);
@@ -319,8 +309,7 @@ impl Sexp {
     }
 }
 
-// Let's enhance AST nodes with ancillary functions and
-// eval.
+// Let's enhance AST nodes with ancillary functions and eval.
 impl Root {
     fn sexps(&self) -> impl Iterator<Item = Sexp> + '_ {
         self.0.children().cloned().filter_map(Sexp::cast)
@@ -413,9 +402,8 @@ nan
     assert_eq!(res, vec![Some(92), Some(92), None, None, Some(92),])
 }
 
-/// Split the input string into a flat list of tokens
-/// (such as L_PAREN, WORD, and WHITESPACE)
-fn lex(text: &str) -> Vec<(SyntaxKind, &str)> {
+/// Split the input string into a flat list of tokens (such as L_PAREN, WORD, and WHITESPACE)
+fn lex(text: &str) -> VecDeque<(SyntaxKind, &str)> {
     fn tok(t: SyntaxKind) -> m_lexer::TokenKind {
         m_lexer::TokenKind(cstree::SyntaxKind::from(t).0)
     }
@@ -445,6 +433,7 @@ fn lex(text: &str) -> Vec<(SyntaxKind, &str)> {
         .into_iter()
         .map(|t| (t.len, kind(t.kind)))
         .scan(0usize, |start_offset, (len, kind)| {
+            // reconstruct the item's source text from offset and len
             let s = &text[*start_offset..*start_offset + len];
             *start_offset += len;
             Some((kind, s))
