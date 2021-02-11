@@ -47,7 +47,7 @@
     // missing_debug_implementations,
     unconditional_recursion,
     future_incompatible,
-    // missing_docs,
+    //missing_docs,
 )]
 #![deny(unsafe_code)]
 

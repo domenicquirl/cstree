@@ -4,15 +4,15 @@ use std::{fmt, hash, mem::ManuallyDrop, ptr};
 use crate::{green::SyntaxKind, interning::Resolver, TextSize};
 use lasso::Spur;
 
-#[repr(align(2))] // NB: this is an at-least annotation
+#[repr(align(2))] // to use 1 bit for pointer tagging. NB: this is an at-least annotation
 #[derive(Debug, PartialEq, Eq, Hash, Copy, Clone)]
-pub struct GreenTokenData {
-    pub kind:     SyntaxKind,
-    pub text:     Spur,
-    pub text_len: TextSize,
+pub(super) struct GreenTokenData {
+    pub(super) kind:     SyntaxKind,
+    pub(super) text:     Spur,
+    pub(super) text_len: TextSize,
 }
 
-/// Leaf node in the immutable tree.
+/// Leaf node in the immutable "green" tree.
 pub struct GreenToken {
     ptr: ptr::NonNull<GreenTokenData>,
 }
@@ -39,9 +39,9 @@ impl GreenToken {
         unsafe { &*Self::remove_tag(self.ptr).as_ptr() }
     }
 
-    /// Creates new Token.
+    /// Creates a new Token.
     #[inline]
-    pub fn new(data: GreenTokenData) -> GreenToken {
+    pub(super) fn new(data: GreenTokenData) -> GreenToken {
         let ptr = Arc::into_raw(Arc::new(data));
         let ptr = ptr::NonNull::new(ptr as *mut _).unwrap();
         GreenToken {
@@ -49,13 +49,13 @@ impl GreenToken {
         }
     }
 
-    /// Kind of this Token.
+    /// [`SyntaxKind`] of this Token.
     #[inline]
     pub fn kind(&self) -> SyntaxKind {
         self.data().kind
     }
 
-    /// Text of this Token.
+    /// The original source text of this Token.
     #[inline]
     pub fn text<'i, I>(&self, resolver: &'i I) -> &'i str
     where
@@ -64,7 +64,7 @@ impl GreenToken {
         resolver.resolve(&self.data().text)
     }
 
-    /// Returns the length of the text covered by this token.
+    /// Returns the length of text covered by this token.
     #[inline]
     pub fn text_len(&self) -> TextSize {
         self.data().text_len

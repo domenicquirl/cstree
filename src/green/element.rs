@@ -1,6 +1,6 @@
 use std::{fmt, hash, mem};
 
-// NOTE: From `thin_dst`:
+// NOTE from `thin_dst`:
 // This MUST be size=1 such that pointer math actually advances the pointer.
 type ErasedPtr = *const u8;
 
