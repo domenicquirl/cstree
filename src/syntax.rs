@@ -158,14 +158,12 @@ impl<L: Language, D, R> SyntaxNode<L, D, R> {
             // safety: protected by the write lock
             let slot = unsafe { &mut *data.children.get_unchecked(i).get() };
             let mut child_data = None;
-            if let Some(child) = slot {
+            if let Some(NodeOrToken::Node(node)) = slot {
                 // Tokens have no children that point to them, so if there are no external pointers
                 // and the pointer from the parent is dropped they will be dropped.
                 // Nodes may be pointed to by their children, hence we check them first.
-                if let NodeOrToken::Node(node) = child {
-                    node.drop_recursive();
-                    child_data = Some(node.data);
-                }
+                node.drop_recursive();
+                child_data = Some(node.data);
             }
             // if the above `if let` was true, this drops `child`
             *slot = None;
