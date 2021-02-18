@@ -47,9 +47,8 @@
     // missing_debug_implementations,
     unconditional_recursion,
     future_incompatible,
-    //missing_docs,
 )]
-#![deny(unsafe_code)]
+#![deny(unsafe_code)] //, missing_docs)]
 
 #[allow(unsafe_code)]
 mod green;
@@ -59,8 +58,10 @@ pub mod syntax;
 #[cfg(feature = "serde1")]
 mod serde_impls;
 mod syntax_text;
+#[allow(missing_docs)]
 mod utility_types;
 
+/// Types and Traits for efficient String storage and deduplication.
 pub mod interning {
     pub use lasso::{Interner, Reader, Resolver};
 }
@@ -76,9 +77,47 @@ pub use crate::{
     utility_types::{Direction, NodeOrToken, TokenAtOffset, WalkEvent},
 };
 
+/// The `Language` trait is the bridge between the internal `cstree` representation and your language
+/// types.
+/// This is essential to providing a [`SyntaxNode`] API that can be used with your types, as in the
+/// `s_expressions` example:
+/// ```
+/// #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+/// # #[allow(non_camel_case_types)]
+/// #[repr(u16)]
+/// enum SyntaxKind {
+///     ROOT,       // top-level node
+///     ATOM,       // `+`, `15`
+///     WHITESPACE, // whitespaces is explicit
+///     #[doc(hidden)]
+///     __LAST,
+/// }
+/// use SyntaxKind::*;
+///
+/// #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+/// enum Lang {}
+///
+/// impl cstree::Language for Lang {
+///     type Kind = SyntaxKind;
+///
+///     fn kind_from_raw(raw: cstree::SyntaxKind) -> Self::Kind {
+///         assert!(raw.0 <= __LAST as u16);
+///         unsafe { std::mem::transmute::<u16, SyntaxKind>(raw.0) }
+///     }
+///
+///     fn kind_to_raw(kind: Self::Kind) -> cstree::SyntaxKind {
+///         cstree::SyntaxKind(kind as u16)
+///     }
+/// }
+/// ```
 pub trait Language: Sized + Clone + Copy + fmt::Debug + Eq + Ord + std::hash::Hash {
+    /// A type that represents what items in your Language can be.
+    /// Typically, this is an `enum` with variants such as `Identifier`, `Literal`, ...
     type Kind: fmt::Debug;
 
+    /// Construct a semantic item kind from the compact representation.
     fn kind_from_raw(raw: SyntaxKind) -> Self::Kind;
+
+    /// Convert a semantic item kind into a more compact representation.
     fn kind_to_raw(kind: Self::Kind) -> SyntaxKind;
 }
