@@ -51,6 +51,8 @@
 #![deny(unsafe_code, missing_docs)]
 
 #[allow(unsafe_code)]
+mod arc;
+#[allow(unsafe_code)]
 mod green;
 #[allow(unsafe_code)]
 pub mod syntax;
@@ -72,6 +74,7 @@ use std::fmt;
 pub use text_size::{TextLen, TextRange, TextSize};
 
 pub use crate::{
+    arc::Arc,
     green::{Checkpoint, Children, GreenNode, GreenNodeBuilder, GreenToken, NodeCache, SyntaxKind},
     syntax::{SyntaxElement, SyntaxElementChildren, SyntaxElementRef, SyntaxNode, SyntaxNodeChildren, SyntaxToken},
     syntax_text::SyntaxText,

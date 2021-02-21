@@ -16,9 +16,9 @@ use std::{
 #[cfg(feature = "serde1")]
 use crate::serde_impls::{SerializeWithData, SerializeWithResolver};
 use parking_lot::RwLock;
-use servo_arc::Arc;
 
 use crate::{
+    arc::Arc,
     green::{GreenElementRef, SyntaxKind},
     interning::Resolver,
     Children, Direction, GreenNode, GreenToken, Language, NodeOrToken, SyntaxText, TextRange, TextSize, TokenAtOffset,

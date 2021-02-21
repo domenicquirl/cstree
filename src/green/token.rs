@@ -1,7 +1,6 @@
-use servo_arc::Arc;
 use std::{fmt, hash, mem::ManuallyDrop, ptr};
 
-use crate::{green::SyntaxKind, interning::Resolver, TextSize};
+use crate::{arc::Arc, green::SyntaxKind, interning::Resolver, TextSize};
 use lasso::Spur;
 
 #[repr(align(2))] // to use 1 bit for pointer tagging. NB: this is an at-least annotation

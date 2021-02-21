@@ -8,7 +8,7 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-//! Fork of Arc for Servo. This has the following advantages over std::sync::Arc:
+//! Fork of fork of Arc for Servo. This has the following advantages over std::sync::Arc:
 //!
 //! * We don't waste storage on the weak reference count.
 //! * We don't do extra RMU operations to handle the possibility of weak references.
@@ -21,16 +21,17 @@
 
 // The semantics of Arc are alread documented in the Rust docs, so we don't
 // duplicate those here.
+#![allow(warnings)]
 #![allow(missing_docs)]
 #![allow(clippy::all)]
 
 extern crate nodrop;
-#[cfg(feature = "servo")]
+#[cfg(feature = "serde1")]
 extern crate serde;
 extern crate stable_deref_trait;
 
 use nodrop::NoDrop;
-#[cfg(feature = "servo")]
+#[cfg(feature = "serde1")]
 use serde::{Deserialize, Serialize};
 use stable_deref_trait::{CloneStableDeref, StableDeref};
 use std::{
@@ -93,6 +94,7 @@ fn padding_needed_for(layout: &Layout, align: usize) -> usize {
 /// necessarily) at _exactly_ `MAX_REFCOUNT + 1` references.
 const MAX_REFCOUNT: usize = (isize::MAX) as usize;
 
+/// See [`std::sync::Arc`].
 #[repr(C)]
 pub struct Arc<T: ?Sized + 'static> {
     p: NonNull<ArcInner<T>>,
@@ -458,7 +460,7 @@ impl<T: ?Sized> AsRef<T> for Arc<T> {
 unsafe impl<T: ?Sized> StableDeref for Arc<T> {}
 unsafe impl<T: ?Sized> CloneStableDeref for Arc<T> {}
 
-#[cfg(feature = "servo")]
+#[cfg(feature = "serde1")]
 impl<'de, T: Deserialize<'de>> Deserialize<'de> for Arc<T> {
     fn deserialize<D>(deserializer: D) -> Result<Arc<T>, D::Error>
     where
@@ -468,7 +470,7 @@ impl<'de, T: Deserialize<'de>> Deserialize<'de> for Arc<T> {
     }
 }
 
-#[cfg(feature = "servo")]
+#[cfg(feature = "serde1")]
 impl<T: Serialize> Serialize for Arc<T> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where

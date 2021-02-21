@@ -12,8 +12,11 @@ readme = "README.md"
 lasso = "0.5"
 text-size = "1.0.0"
 fxhash= "0.2.1"
-servo_arc = { path = "vendor/servo_arc" }
 parking_lot= "0.11.1"
+
+# Arc
+stable_deref_trait = "1.0.0"
+nodrop = "0.1.8"
 
 [dependencies.serde]
 version = "1.0"
@@ -29,7 +32,7 @@ crossbeam-utils = "0.8"
 
 [features]
 default = []
-serde1 = ["serde", "servo_arc/servo"]
+serde1 = ["serde"]
 
 [package.metadata.docs.rs]
 features = ["serde1"]
