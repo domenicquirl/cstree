@@ -18,6 +18,8 @@ use super::{node::GreenNodeHead, token::GreenTokenData};
 /// this node into the cache.
 const CHILDREN_CACHE_THRESHOLD: usize = 3;
 
+/// A `NodeCache` deduplicates identical tokens and small nodes during tree construction.
+/// You can re-use the same cache for multiple similar trees with [`GreenNodeBuilder::with_cache`].
 #[derive(Debug)]
 pub struct NodeCache<'i, I = Rodeo<Spur, FxBuildHasher>> {
     nodes:    FxHashMap<GreenNodeHead, GreenNode>,
@@ -26,6 +28,27 @@ pub struct NodeCache<'i, I = Rodeo<Spur, FxBuildHasher>> {
 }
 
 impl NodeCache<'static, Rodeo<Spur, FxBuildHasher>> {
+    /// Constructs a new, empty cache.
+    ///
+    /// By default, this will also create a default interner to deduplicate source text (strings) across
+    /// tokens. To re-use an existing interner, see [`with_interner`](NodeCache::with_interner).
+    /// # Examples
+    /// ```
+    /// # use cstree::*;
+    /// # const ROOT: SyntaxKind = SyntaxKind(0);
+    /// # const INT: SyntaxKind = SyntaxKind(1);
+    /// # fn parse(b: &mut GreenNodeBuilder, s: &str) {}
+    /// let mut cache = NodeCache::new();
+    /// let mut builder = GreenNodeBuilder::with_cache(&mut cache);
+    /// # builder.start_node(ROOT);
+    /// # builder.token(INT, "42");
+    /// # builder.finish_node();
+    /// parse(&mut builder, "42");
+    /// let (tree, _) = builder.finish();
+    /// assert_eq!(tree.kind(), ROOT);
+    /// let int = tree.children().next().unwrap();
+    /// assert_eq!(int.kind(), INT);
+    /// ```
     pub fn new() -> Self {
         Self {
             nodes:    FxHashMap::default(),
@@ -49,6 +72,27 @@ impl<'i, I> NodeCache<'i, I>
 where
     I: Interner,
 {
+    /// Constructs a new, empty cache that will use the given interner to deduplicate source text
+    /// (strings) across tokens.
+    /// # Examples
+    /// ```
+    /// # use cstree::*;
+    /// # use lasso::Rodeo;
+    /// # const ROOT: SyntaxKind = SyntaxKind(0);
+    /// # const INT: SyntaxKind = SyntaxKind(1);
+    /// # fn parse(b: &mut GreenNodeBuilder<Rodeo>, s: &str) {}
+    /// let mut interner = Rodeo::new();
+    /// let mut cache = NodeCache::with_interner(&mut interner);
+    /// let mut builder = GreenNodeBuilder::with_cache(&mut cache);
+    /// # builder.start_node(ROOT);
+    /// # builder.token(INT, "42");
+    /// # builder.finish_node();
+    /// parse(&mut builder, "42");
+    /// let (tree, _) = builder.finish();
+    /// assert_eq!(tree.kind(), ROOT);
+    /// let int = tree.children().next().unwrap();
+    /// assert_eq!(int.kind(), INT);
+    /// ```
     pub fn with_interner(interner: &'i mut I) -> Self {
         Self {
             nodes:    FxHashMap::default(),
@@ -183,11 +227,32 @@ impl<T: Default> Default for MaybeOwned<'_, T> {
     }
 }
 
-/// A checkpoint for maybe wrapping a node. See `GreenNodeBuilder::checkpoint` for details.
+/// A checkpoint for maybe wrapping a node. See [`GreenNodeBuilder::checkpoint`] for details.
 #[derive(Clone, Copy, Debug)]
 pub struct Checkpoint(usize);
 
-/// A builder for a green tree.
+/// A builder for green trees.
+/// Construct with [`new`](GreenNodeBuilder::new) or [`with_cache`](GreenNodeBuilder::with_cache). To
+/// add tree nodes, start them with [`start_node`](GreenNodeBuilder::start_node), add
+/// [`token`](GreenNodeBuilder::token)s and then [`finish_node`](GreenNodeBuilder::finish_node). When
+/// the whole tree is constructed, call [`finish`](GreenNodeBuilder::finish) to obtain the root.
+///
+/// # Examples
+/// ```
+/// # use cstree::*;
+/// # const ROOT: SyntaxKind = SyntaxKind(0);
+/// # const INT: SyntaxKind = SyntaxKind(1);
+/// let mut builder = GreenNodeBuilder::new();
+/// builder.start_node(ROOT);
+/// builder.token(INT, "42");
+/// builder.finish_node();
+/// let (tree, interner) = builder.finish();
+/// assert_eq!(tree.kind(), ROOT);
+/// let int = tree.children().next().unwrap();
+/// assert_eq!(int.kind(), INT);
+/// let resolver = interner.unwrap().into_resolver();
+/// assert_eq!(int.as_token().unwrap().text(&resolver), "42");
+/// ```
 #[derive(Debug)]
 pub struct GreenNodeBuilder<'cache, 'interner, I = Rodeo<Spur, FxBuildHasher>> {
     cache:    MaybeOwned<'cache, NodeCache<'interner, I>>,
@@ -196,7 +261,7 @@ pub struct GreenNodeBuilder<'cache, 'interner, I = Rodeo<Spur, FxBuildHasher>> {
 }
 
 impl GreenNodeBuilder<'static, 'static, Rodeo<Spur, FxBuildHasher>> {
-    /// Creates new builder.
+    /// Creates new builder with an empty [`NodeCache`].
     pub fn new() -> Self {
         Self {
             cache:    MaybeOwned::Owned(NodeCache::new()),
@@ -216,8 +281,8 @@ impl<'cache, 'interner, I> GreenNodeBuilder<'cache, 'interner, I>
 where
     I: Interner,
 {
-    /// Reusing `NodeCache` between different `GreenNodeBuilder`s saves memory.
-    /// It allows to structurally share underlying trees.
+    /// Reusing a [`NodeCache`] between multiple builders saves memory, as it allows to structurally
+    /// share underlying trees.
     pub fn with_cache(cache: &'cache mut NodeCache<'interner, I>) -> Self {
         Self {
             cache:    MaybeOwned::Borrowed(cache),
@@ -226,22 +291,21 @@ where
         }
     }
 
-    /// Adds new token to the current branch.
+    /// Add new token to the current branch.
     #[inline]
     pub fn token(&mut self, kind: SyntaxKind, text: &str) {
         let token = self.cache.token(kind, text);
         self.children.push(token.into());
     }
 
-    /// Start new node and make it current.
+    /// Start new node of the given `kind` and make it current.
     #[inline]
     pub fn start_node(&mut self, kind: SyntaxKind) {
         let len = self.children.len();
         self.parents.push((kind, len));
     }
 
-    /// Finish current branch and restore previous
-    /// branch as current.
+    /// Finish the current branch and restore the previous branch as current.
     #[inline]
     pub fn finish_node(&mut self) {
         let (kind, first_child) = self.parents.pop().unwrap();
@@ -250,12 +314,13 @@ where
         self.children.push(node.into());
     }
 
-    /// Prepare for maybe wrapping the next node.
-    /// The way wrapping works is that you first of all get a checkpoint,
-    /// then you place all tokens you want to wrap, and then *maybe* call
-    /// `start_node_at`.
-    /// Example:
-    /// ```rust
+    /// Prepare for maybe wrapping the next node with a surrounding node.
+    ///
+    /// The way wrapping works is that you first get a checkpoint, then you add nodes and tokens as
+    /// normal, and then you *maybe* call [`start_node_at`](GreenNodeBuilder::start_node_at).
+    ///
+    /// # Examples
+    /// ```
     /// # use cstree::{GreenNodeBuilder, SyntaxKind};
     /// # const PLUS: SyntaxKind = SyntaxKind(0);
     /// # const OPERATION: SyntaxKind = SyntaxKind(1);
@@ -280,8 +345,8 @@ where
         Checkpoint(self.children.len())
     }
 
-    /// Wrap the previous branch marked by `checkpoint` in a new branch and
-    /// make it current.
+    /// Wrap the previous branch marked by [`checkpoint`](GreenNodeBuilder::checkpoint) in a new
+    /// branch and make it current.
     #[inline]
     pub fn start_node_at(&mut self, checkpoint: Checkpoint, kind: SyntaxKind) {
         let Checkpoint(checkpoint) = checkpoint;
@@ -300,9 +365,16 @@ where
         self.parents.push((kind, checkpoint));
     }
 
-    /// Complete tree building. Make sure that
-    /// `start_node_at` and `finish_node` calls
-    /// are paired!
+    /// Complete building the tree.
+    ///
+    /// Make sure that calls to [`start_node`](GreenNodeBuilder::start_node) /
+    /// [`start_node_at`](GreenNodeBuilder::start_node_at) and
+    /// [`finish_node`](GreenNodeBuilder::finish_node) are balanced, i.e. that every started node has
+    /// been completed!
+    ///
+    /// If this builder was constructed with [`new`](GreenNodeBuilder::new), this method returns the
+    /// interner used to deduplicate source text (strings) as its second return value to allow
+    /// resolving tree tokens back to text and re-using the interner to build additonal trees.
     #[inline]
     pub fn finish(mut self) -> (GreenNode, Option<I>) {
         assert_eq!(self.children.len(), 1);

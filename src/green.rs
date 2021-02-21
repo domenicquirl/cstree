@@ -1,3 +1,7 @@
+//! Implementation of the inner, "green" tree.
+//! The [`GreenNodeBuilder`] is the main entry point to constructing [`GreenNode`]s and
+//! [`GreenToken`]s.
+
 mod builder;
 mod element;
 mod node;

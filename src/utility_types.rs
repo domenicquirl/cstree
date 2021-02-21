@@ -1,3 +1,6 @@
+/// Convenience type to represent tree elements which may either be a node or a token.
+///
+/// Used for both red and green tree, references to elements, ...
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum NodeOrToken<N, T> {
     Node(N),

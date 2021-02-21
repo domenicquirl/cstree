@@ -12,7 +12,7 @@ use crate::{
     TextSize,
 };
 
-#[repr(align(2))] // NB: this is an at-least annotation
+#[repr(align(2))] //to use 1 bit for pointer tagging. NB: this is an at-least annotation
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub(super) struct GreenNodeHead {
     kind:       SyntaxKind,
@@ -40,8 +40,8 @@ impl GreenNodeHead {
     }
 }
 
-/// Internal node in the immutable tree.
-/// It has other nodes and tokens as children.
+/// Internal node in the immutable "green" tree.
+/// It contains other nodes and tokens as its children.
 #[derive(Clone)]
 pub struct GreenNode {
     pub(super) data: ThinArc<GreenNodeHead, PackedGreenElement>,
@@ -54,7 +54,7 @@ impl std::fmt::Debug for GreenNode {
 }
 
 impl GreenNode {
-    /// Creates new Node.
+    /// Creates a new Node.
     #[inline]
     pub fn new<I>(kind: SyntaxKind, children: I) -> GreenNode
     where
@@ -103,19 +103,19 @@ impl GreenNode {
         }
     }
 
-    /// Kind of this node.
+    /// [`SyntaxKind`] of this node.
     #[inline]
     pub fn kind(&self) -> SyntaxKind {
         self.data.header.header.kind
     }
 
-    /// Returns the length of the text covered by this node.
+    /// Returns the length of text covered by this node.
     #[inline]
     pub fn text_len(&self) -> TextSize {
         self.data.header.header.text_len
     }
 
-    /// Children of this node.
+    /// Iterator over all children of this node.
     #[inline]
     pub fn children(&self) -> Children<'_> {
         Children {
@@ -139,6 +139,7 @@ impl PartialEq for GreenNode {
 
 impl Eq for GreenNode {}
 
+/// An iterator over a [`GreenNode`]'s children.
 #[derive(Debug, Clone)]
 pub struct Children<'a> {
     inner: slice::Iter<'a, PackedGreenElement>,
