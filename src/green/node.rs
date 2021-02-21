@@ -115,6 +115,11 @@ impl GreenNode {
         self.data.header.header.text_len
     }
 
+    #[inline]
+    pub(crate) fn iter(&self) -> slice::Iter<'_, PackedGreenElement> {
+        self.data.slice.iter()
+    }
+
     /// Iterator over all children of this node.
     #[inline]
     pub fn children(&self) -> Children<'_> {

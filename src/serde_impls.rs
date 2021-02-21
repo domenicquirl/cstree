@@ -1,6 +1,9 @@
 //! Serialization and Deserialization for syntax trees.
 
-use crate::{interning::Resolver, GreenNodeBuilder, Language, NodeOrToken, SyntaxKind, SyntaxNode, WalkEvent};
+use crate::{
+    interning::{IntoResolver, Resolver},
+    GreenNodeBuilder, Language, NodeOrToken, SyntaxKind, SyntaxNode, WalkEvent,
+};
 use serde::{
     de::{Error, SeqAccess, Visitor},
     ser::SerializeTuple,

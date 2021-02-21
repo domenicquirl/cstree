@@ -2,6 +2,9 @@ use cstree::{GreenNode, GreenNodeBuilder, Language, NodeCache, SyntaxKind};
 use lasso::Interner;
 
 pub type SyntaxNode<D = (), R = ()> = cstree::SyntaxNode<TestLang, D, R>;
+pub type SyntaxToken<D = (), R = ()> = cstree::SyntaxToken<TestLang, D, R>;
+pub type SyntaxElement<D = (), R = ()> = cstree::SyntaxElement<TestLang, D, R>;
+pub type SyntaxElementRef<'a, D = (), R = ()> = cstree::SyntaxElementRef<'a, TestLang, D, R>;
 
 #[derive(Debug)]
 pub enum Element<'s> {

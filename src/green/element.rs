@@ -13,7 +13,7 @@ pub(super) type GreenElement = NodeOrToken<GreenNode, GreenToken>;
 pub(crate) type GreenElementRef<'a> = NodeOrToken<&'a GreenNode, &'a GreenToken>;
 
 #[repr(transparent)]
-pub(super) struct PackedGreenElement {
+pub(crate) struct PackedGreenElement {
     ptr: ErasedPtr,
 }
 
@@ -113,7 +113,7 @@ impl From<PackedGreenElement> for GreenElement {
 }
 
 impl PackedGreenElement {
-    fn is_node(&self) -> bool {
+    pub(crate) fn is_node(&self) -> bool {
         self.ptr as usize & 1 == 0
     }
 

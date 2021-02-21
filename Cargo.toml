@@ -1,7 +1,7 @@
 [package]
 edition = "2018"
 name = "cstree"
-version = "0.0.2"
+version = "0.2.0"
 authors = ["Domenic Quirl <DomenicQuirl@pm.me>", "Aleksey Kladov <aleksey.kladov@gmail.com>"]
 description = "Library for generic lossless syntax trees"
 license = "MIT OR Apache-2.0"
@@ -9,7 +9,7 @@ repository = "https://github.com/domenicquirl/cstree"
 readme = "README.md"
 
 [dependencies]
-lasso = "0.4.1"
+lasso = "0.5"
 text-size = "1.0.0"
 fxhash= "0.2.1"
 servo_arc = { path = "vendor/servo_arc" }

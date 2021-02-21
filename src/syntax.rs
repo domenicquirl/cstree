@@ -443,7 +443,7 @@ impl<L: Language, D, R> SyntaxNode<L, D, R> {
     ///
     /// # Example
     /// ```
-    /// # use cstree::*;
+    /// # use cstree::{*, interning::TokenInterner};
     /// # #[allow(non_camel_case_types)]
     /// #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
     /// #[repr(u16)]
@@ -468,7 +468,7 @@ impl<L: Language, D, R> SyntaxNode<L, D, R> {
     /// }
     /// # const ROOT: cstree::SyntaxKind = cstree::SyntaxKind(0);
     /// # const TOKEN: cstree::SyntaxKind = cstree::SyntaxKind(1);
-    /// # type SyntaxNode<L> = cstree::SyntaxNode<L, (), lasso::Rodeo<lasso::Spur, fxhash::FxBuildHasher>>;
+    /// # type SyntaxNode<L> = cstree::SyntaxNode<L, (), TokenInterner>;
     /// let mut builder = GreenNodeBuilder::new();
     /// builder.start_node(ROOT);
     /// builder.token(TOKEN, "content");
@@ -693,6 +693,20 @@ impl<L: Language, D, R> SyntaxNode<L, D, R> {
             Kind::Root(_, _) => None,
             Kind::Child { parent, .. } => Some(parent),
         }
+    }
+
+    /// The number of child nodes (!) of this node.
+    ///
+    /// If you want to also consider leafs, see [`arity_with_tokens`](SyntaxNode::arity_with_tokens).
+    #[inline]
+    pub fn arity(&self) -> usize {
+        self.green().iter().filter(|&child| child.is_node()).count()
+    }
+
+    /// The number of children of this node.
+    #[inline]
+    pub fn arity_with_tokens(&self) -> usize {
+        self.data().children.len()
     }
 
     /// Returns an iterator along the chain of parents of this node.

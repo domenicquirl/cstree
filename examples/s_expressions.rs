@@ -59,7 +59,10 @@ impl cstree::Language for Lang {
 /// offsets and parent pointers.
 /// cstree also deduplicates the actual source string in addition to the tree nodes, so we will need
 /// the Resolver to get the real text back from the interned representation.
-use cstree::{interning::Resolver, GreenNode};
+use cstree::{
+    interning::{IntoResolver, Resolver},
+    GreenNode,
+};
 
 /// You can construct GreenNodes by hand, but a builder is helpful for top-down parsers: it maintains
 /// a stack of currently in-progress nodes.

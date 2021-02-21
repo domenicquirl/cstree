@@ -4,6 +4,7 @@
 
 mod builder;
 mod element;
+mod interner;
 mod node;
 mod token;
 
@@ -12,6 +13,7 @@ use self::element::{GreenElement, PackedGreenElement};
 
 pub use self::{
     builder::{Checkpoint, GreenNodeBuilder, NodeCache},
+    interner::TokenInterner,
     node::{Children, GreenNode},
     token::GreenToken,
 };
