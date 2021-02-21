@@ -5,9 +5,9 @@ use std::{
 };
 
 use fxhash::FxHasher32;
-use servo_arc::{Arc, HeaderWithLength, ThinArc};
 
 use crate::{
+    arc::{Arc, HeaderWithLength, ThinArc},
     green::{GreenElement, GreenElementRef, PackedGreenElement, SyntaxKind},
     TextSize,
 };
