@@ -63,7 +63,8 @@ mod utility_types;
 
 /// Types and Traits for efficient String storage and deduplication.
 pub mod interning {
-    pub use lasso::{Interner, Reader, Resolver};
+    pub use crate::green::TokenInterner;
+    pub use lasso::{Interner, IntoReader, IntoReaderAndResolver, IntoResolver, Reader, Resolver};
 }
 use std::fmt;
 

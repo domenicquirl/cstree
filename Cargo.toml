@@ -9,7 +9,7 @@ repository = "https://github.com/domenicquirl/cstree"
 readme = "README.md"
 
 [dependencies]
-lasso = "0.4.1"
+lasso = "0.5"
 text-size = "1.0.0"
 fxhash= "0.2.1"
 servo_arc = { path = "vendor/servo_arc" }

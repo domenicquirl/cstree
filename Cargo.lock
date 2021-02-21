@@ -95,9 +95,9 @@ checksum = "dd25036021b0de88a0aff6b850051563c6516d0bf53f8638938edbb9de732736"
 
 [[package]]
 name = "lasso"
-version = "0.4.1"
+version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "17823787ed7c3f2ce99d4865d41edd4407b2fb6d9e71d534ec69d832a3ec2df3"
+checksum = "4efb7b456e95cc1ae2de7b18b1e4d791467b46f0a3d02464e5a16ea502091640"
 dependencies = [
  "hashbrown",
 ]

@@ -7,8 +7,10 @@ use crossbeam_utils::thread::scope;
 use std::{thread, time::Duration};
 
 use common::{build_recursive, Element, SyntaxNode};
-use cstree::GreenNodeBuilder;
-use lasso::Resolver;
+use cstree::{
+    interning::{IntoResolver, Resolver},
+    GreenNodeBuilder,
+};
 
 fn build_tree<D>(root: &Element<'_>) -> SyntaxNode<D, impl Resolver> {
     let mut builder = GreenNodeBuilder::new();

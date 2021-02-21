@@ -13,7 +13,10 @@
 //!     - "+" Token(Add)
 //!     - "4" Token(Number)
 
-use cstree::{interning::Resolver, GreenNodeBuilder, NodeOrToken};
+use cstree::{
+    interning::{IntoResolver, Resolver},
+    GreenNodeBuilder, NodeOrToken,
+};
 use std::iter::Peekable;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]

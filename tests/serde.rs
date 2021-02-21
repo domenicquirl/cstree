@@ -1,10 +1,13 @@
 #![cfg(feature = "serde1")]
 
+#[allow(unused)]
 mod common;
 
 use common::{Element, SyntaxNode};
-use cstree::{GreenNodeBuilder, NodeCache, NodeOrToken};
-use lasso::Resolver;
+use cstree::{
+    interning::{IntoResolver, Resolver},
+    GreenNodeBuilder, NodeCache, NodeOrToken,
+};
 use serde_test::Token;
 use std::fmt;
 

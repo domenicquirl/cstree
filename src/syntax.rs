@@ -443,7 +443,7 @@ impl<L: Language, D, R> SyntaxNode<L, D, R> {
     ///
     /// # Example
     /// ```
-    /// # use cstree::*;
+    /// # use cstree::{*, interning::TokenInterner};
     /// # #[allow(non_camel_case_types)]
     /// #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
     /// #[repr(u16)]
@@ -468,7 +468,7 @@ impl<L: Language, D, R> SyntaxNode<L, D, R> {
     /// }
     /// # const ROOT: cstree::SyntaxKind = cstree::SyntaxKind(0);
     /// # const TOKEN: cstree::SyntaxKind = cstree::SyntaxKind(1);
-    /// # type SyntaxNode<L> = cstree::SyntaxNode<L, (), lasso::Rodeo<lasso::Spur, fxhash::FxBuildHasher>>;
+    /// # type SyntaxNode<L> = cstree::SyntaxNode<L, (), TokenInterner>;
     /// let mut builder = GreenNodeBuilder::new();
     /// builder.start_node(ROOT);
     /// builder.token(TOKEN, "content");

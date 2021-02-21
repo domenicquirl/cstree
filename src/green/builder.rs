@@ -1,11 +1,10 @@
-use std::{convert::TryFrom, num::NonZeroUsize};
+use std::convert::TryFrom;
 
-use fxhash::{FxBuildHasher, FxHashMap};
-use lasso::{Capacity, Rodeo, Spur};
+use fxhash::FxHashMap;
 use text_size::TextSize;
 
 use crate::{
-    green::{GreenElement, GreenNode, GreenToken, SyntaxKind},
+    green::{interner::TokenInterner, GreenElement, GreenNode, GreenToken, SyntaxKind},
     interning::Interner,
     NodeOrToken,
 };
@@ -21,13 +20,13 @@ const CHILDREN_CACHE_THRESHOLD: usize = 3;
 /// A `NodeCache` deduplicates identical tokens and small nodes during tree construction.
 /// You can re-use the same cache for multiple similar trees with [`GreenNodeBuilder::with_cache`].
 #[derive(Debug)]
-pub struct NodeCache<'i, I = Rodeo<Spur, FxBuildHasher>> {
+pub struct NodeCache<'i, I = TokenInterner> {
     nodes:    FxHashMap<GreenNodeHead, GreenNode>,
     tokens:   FxHashMap<GreenTokenData, GreenToken>,
     interner: MaybeOwned<'i, I>,
 }
 
-impl NodeCache<'static, Rodeo<Spur, FxBuildHasher>> {
+impl NodeCache<'static> {
     /// Constructs a new, empty cache.
     ///
     /// By default, this will also create a default interner to deduplicate source text (strings) across
@@ -53,11 +52,7 @@ impl NodeCache<'static, Rodeo<Spur, FxBuildHasher>> {
         Self {
             nodes:    FxHashMap::default(),
             tokens:   FxHashMap::default(),
-            interner: MaybeOwned::Owned(Rodeo::with_capacity_and_hasher(
-                // capacity values suggested by author of `lasso`
-                Capacity::new(512, unsafe { NonZeroUsize::new_unchecked(4096) }),
-                FxBuildHasher::default(),
-            )),
+            interner: MaybeOwned::Owned(TokenInterner::new()),
         }
     }
 }
@@ -77,7 +72,7 @@ where
     /// # Examples
     /// ```
     /// # use cstree::*;
-    /// # use lasso::Rodeo;
+    /// use lasso::Rodeo;
     /// # const ROOT: SyntaxKind = SyntaxKind(0);
     /// # const INT: SyntaxKind = SyntaxKind(1);
     /// # fn parse(b: &mut GreenNodeBuilder<Rodeo>, s: &str) {}
@@ -239,7 +234,7 @@ pub struct Checkpoint(usize);
 ///
 /// # Examples
 /// ```
-/// # use cstree::*;
+/// # use cstree::{*, interning::IntoResolver};
 /// # const ROOT: SyntaxKind = SyntaxKind(0);
 /// # const INT: SyntaxKind = SyntaxKind(1);
 /// let mut builder = GreenNodeBuilder::new();
@@ -254,13 +249,13 @@ pub struct Checkpoint(usize);
 /// assert_eq!(int.as_token().unwrap().text(&resolver), "42");
 /// ```
 #[derive(Debug)]
-pub struct GreenNodeBuilder<'cache, 'interner, I = Rodeo<Spur, FxBuildHasher>> {
+pub struct GreenNodeBuilder<'cache, 'interner, I = TokenInterner> {
     cache:    MaybeOwned<'cache, NodeCache<'interner, I>>,
     parents:  Vec<(SyntaxKind, usize)>,
     children: Vec<GreenElement>,
 }
 
-impl GreenNodeBuilder<'static, 'static, Rodeo<Spur, FxBuildHasher>> {
+impl GreenNodeBuilder<'static, 'static> {
     /// Creates new builder with an empty [`NodeCache`].
     pub fn new() -> Self {
         Self {

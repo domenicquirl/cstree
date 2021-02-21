@@ -13,7 +13,7 @@ use crate::{interning::Resolver, Language, SyntaxNode, SyntaxToken, TextRange, T
 ///
 /// # Example
 /// ```
-/// # use cstree::*;
+/// # use cstree::{*, interning::IntoResolver};
 /// # #[allow(non_camel_case_types)]
 /// # #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 /// # #[repr(u16)]
