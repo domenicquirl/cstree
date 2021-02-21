@@ -1,6 +1,8 @@
 mod common;
 
-use common::{build_recursive, build_tree_with_cache, Element, SyntaxNode};
+use common::{
+    build_recursive, build_tree_with_cache, Element, SyntaxElement, SyntaxElementRef, SyntaxNode, SyntaxToken,
+};
 use cstree::{GreenNodeBuilder, NodeCache, SyntaxKind, TextRange};
 use lasso::{Resolver, Rodeo};
 
@@ -128,4 +130,16 @@ fn inline_resolver() {
 "#
         );
     }
+}
+
+#[test]
+fn assert_debug_display() {
+    use std::fmt;
+    fn f<T: fmt::Debug + fmt::Display>() {}
+
+    f::<SyntaxNode<(), lasso::Rodeo>>();
+    f::<SyntaxToken<(), lasso::Rodeo>>();
+    f::<SyntaxElement<(), lasso::Rodeo>>();
+    f::<SyntaxElementRef<'static, (), lasso::Rodeo>>();
+    f::<cstree::NodeOrToken<String, u128>>();
 }

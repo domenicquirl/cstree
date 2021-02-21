@@ -1,3 +1,5 @@
+use std::fmt;
+
 /// Convenience type to represent tree elements which may either be a node or a token.
 ///
 /// Used for both red and green tree, references to elements, ...
@@ -49,6 +51,15 @@ impl<N: Clone, T: Clone> NodeOrToken<&N, &T> {
         match *self {
             NodeOrToken::Node(node) => NodeOrToken::Node(node.clone()),
             NodeOrToken::Token(token) => NodeOrToken::Token(token.clone()),
+        }
+    }
+}
+
+impl<N: fmt::Display, T: fmt::Display> fmt::Display for NodeOrToken<N, T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            NodeOrToken::Node(node) => node.fmt(f),
+            NodeOrToken::Token(token) => token.fmt(f),
         }
     }
 }
