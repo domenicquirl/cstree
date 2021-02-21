@@ -48,7 +48,7 @@
     unconditional_recursion,
     future_incompatible,
 )]
-#![deny(unsafe_code)] //, missing_docs)]
+#![deny(unsafe_code, missing_docs)]
 
 #[allow(unsafe_code)]
 mod green;

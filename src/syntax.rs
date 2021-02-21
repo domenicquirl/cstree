@@ -659,7 +659,7 @@ impl<L: Language, D, R> SyntaxNode<L, D, R> {
         L::kind_from_raw(self.syntax_kind())
     }
 
-    /// The range this node covers in the source text.
+    /// The range this node covers in the source text, in bytes.
     #[inline]
     pub fn text_range(&self) -> TextRange {
         let offset = match self.data().kind.as_child() {
@@ -1132,7 +1132,7 @@ impl<L: Language, D, R> SyntaxToken<L, D, R> {
         L::kind_from_raw(self.syntax_kind())
     }
 
-    /// The range this token covers in the source text.
+    /// The range this token covers in the source text, in bytes.
     #[inline]
     pub fn text_range(&self) -> TextRange {
         TextRange::at(self.offset, self.green().text_len())
@@ -1266,7 +1266,7 @@ impl<L: Language, D, R> SyntaxElement<L, D, R> {
         }
     }
 
-    /// The range this element covers in the source text.
+    /// The range this element covers in the source text, in bytes.
     #[inline]
     pub fn text_range(&self) -> TextRange {
         match self {
@@ -1349,7 +1349,7 @@ impl<L: Language, D, R> SyntaxElement<L, D, R> {
 }
 
 impl<'a, L: Language, D, R> SyntaxElementRef<'a, L, D, R> {
-    /// The range this element covers in the source text.
+    /// The range this element covers in the source text, in bytes.
     #[inline]
     pub fn text_range(&self) -> TextRange {
         match self {

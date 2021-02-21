@@ -1,7 +1,61 @@
+//! Efficient representation of the source text that is covered by a [`SyntaxNode`].
+
 use std::fmt;
 
 use crate::{interning::Resolver, Language, SyntaxNode, SyntaxToken, TextRange, TextSize};
 
+/// An efficient representation of the text that is covered by a [`SyntaxNode`], i.e. the combined
+/// source text of all tokens that are descendants of the node.
+///
+/// Offers methods to work with the text distributed across multiple [`SyntaxToken`]s while avoiding
+/// the construction of intermediate strings where possible.
+/// This includes efficient comparisons with itself and with strings and conversion `to_string()`.
+///
+/// # Example
+/// ```
+/// # use cstree::*;
+/// # #[allow(non_camel_case_types)]
+/// # #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+/// # #[repr(u16)]
+/// # enum SyntaxKind {
+/// #     TOKEN,
+/// #     ROOT,
+/// # }
+/// # #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+/// # enum Lang {}
+/// # impl cstree::Language for Lang {
+/// #     type Kind = SyntaxKind;
+/// #
+/// #     fn kind_from_raw(raw: cstree::SyntaxKind) -> Self::Kind {
+/// #         assert!(raw.0 <= SyntaxKind::ROOT as u16);
+/// #         unsafe { std::mem::transmute::<u16, SyntaxKind>(raw.0) }
+/// #     }
+/// #
+/// #     fn kind_to_raw(kind: Self::Kind) -> cstree::SyntaxKind {
+/// #         cstree::SyntaxKind(kind as u16)
+/// #     }
+/// # }
+/// # type SyntaxNode = cstree::SyntaxNode<Lang, (), lasso::RodeoResolver<lasso::Spur>>;
+/// #
+/// # fn parse_float_literal(s: &str) -> SyntaxNode {
+/// #     const LITERAL: cstree::SyntaxKind = cstree::SyntaxKind(0);
+/// #     let mut builder = GreenNodeBuilder::new();
+/// #     builder.start_node(LITERAL);
+/// #     builder.token(LITERAL, s);
+/// #     builder.finish_node();
+/// #     let (root, interner) = builder.finish();
+/// #     let resolver = interner.unwrap().into_resolver();
+/// #     SyntaxNode::new_root_with_resolver(root, resolver)
+/// # }
+/// let node = parse_float_literal("2.748E2");
+/// let text = node.text();
+/// assert_eq!(text.len(), 7.into());
+/// assert!(text.contains_char('E'));
+/// assert_eq!(text.find_char('E'), Some(5.into()));
+/// assert_eq!(text.char_at(1.into()), Some('.'));
+/// let sub = text.slice(2.into()..5.into());
+/// assert_eq!(sub, "748");
+/// ```
 #[derive(Clone)]
 pub struct SyntaxText<'n, 'i, I: ?Sized, L: Language, D: 'static = (), R: 'static = ()> {
     node:     &'n SyntaxNode<L, D, R>,
@@ -15,19 +69,24 @@ impl<'n, 'i, I: Resolver + ?Sized, L: Language, D, R> SyntaxText<'n, 'i, I, L, D
         SyntaxText { node, range, resolver }
     }
 
+    /// The combined length of this text, in bytes.
     pub fn len(&self) -> TextSize {
         self.range.len()
     }
 
+    /// Returns `true` if [`self.len()`](SyntaxText::len) is zero.
     pub fn is_empty(&self) -> bool {
         self.range.is_empty()
     }
 
+    /// Returns `true` if `c` appears anywhere in this text.
     pub fn contains_char(&self, c: char) -> bool {
         self.try_for_each_chunk(|chunk| if chunk.contains(c) { Err(()) } else { Ok(()) })
             .is_err()
     }
 
+    /// If `self.contains_char(c)`, returns `Some(pos)`, where `pos` is the byte position of the
+    /// first appearance of `c`. Otherwise, returns `None`.
     pub fn find_char(&self, c: char) -> Option<TextSize> {
         let mut acc: TextSize = 0.into();
         let res = self.try_for_each_chunk(|chunk| {
@@ -41,6 +100,8 @@ impl<'n, 'i, I: Resolver + ?Sized, L: Language, D, R> SyntaxText<'n, 'i, I, L, D
         found(res)
     }
 
+    /// If `offset < self.len()`, returns `Some(c)`, where `c` is the first `char` at or after
+    /// `offset` (in bytes). Otherwise, returns `None`.
     pub fn char_at(&self, offset: TextSize) -> Option<char> {
         let mut start: TextSize = 0.into();
         let res = self.try_for_each_chunk(|chunk| {
@@ -55,6 +116,12 @@ impl<'n, 'i, I: Resolver + ?Sized, L: Language, D, R> SyntaxText<'n, 'i, I, L, D
         found(res)
     }
 
+    /// Indexes this text by the given `range` and returns a `SyntaxText` that represents the
+    /// corresponding slice of this text.
+    ///
+    /// # Panics
+    /// The end of `range` must be equal of higher than its start.
+    /// Further, `range` must be contained within `0..self.len()`.
     pub fn slice<Ra: private::SyntaxTextRange>(&self, range: Ra) -> Self {
         let start = range.start().unwrap_or_default();
         let end = range.end().unwrap_or_else(|| self.len());
@@ -82,6 +149,12 @@ impl<'n, 'i, I: Resolver + ?Sized, L: Language, D, R> SyntaxText<'n, 'i, I, L, D
         }
     }
 
+    /// Applies the given function to text chunks (from [`SyntaxToken`]s) that are part of this text
+    /// as long as it returns `Ok`, starting from the initial value `init`.
+    ///
+    /// If `f` returns `Err`, the error is propagated immediately.
+    /// Otherwise, the result of the current call to `f` will be passed to the invocation of `f` on
+    /// the next token, producing a final value if `f` succeeds on all chunks.
     pub fn try_fold_chunks<T, F, E>(&self, init: T, mut f: F) -> Result<T, E>
     where
         F: FnMut(T, &str) -> Result<T, E>,
@@ -91,10 +164,21 @@ impl<'n, 'i, I: Resolver + ?Sized, L: Language, D, R> SyntaxText<'n, 'i, I, L, D
         })
     }
 
+    /// Applies the given function to all text chunks that this text is comprised of, in order,
+    /// as long as `f` completes successfully.
+    ///
+    /// If `f` returns `Err`, this method returns immediately and will not apply `f` to any further
+    /// chunks.
+    ///
+    /// See also [`try_fold_chunks`](SyntaxText::try_fold_chunks).
     pub fn try_for_each_chunk<F: FnMut(&str) -> Result<(), E>, E>(&self, mut f: F) -> Result<(), E> {
         self.try_fold_chunks((), move |(), chunk| f(chunk))
     }
 
+    /// Applies the given function to all text chunks that this text is comprised of, in order.
+    ///
+    /// See also [`try_fold_chunks`](SyntaxText::try_fold_chunks),
+    /// [`try_for_each_chunk`](SyntaxText::try_for_each_chunk).
     pub fn for_each_chunk<F: FnMut(&str)>(&self, mut f: F) {
         enum Void {}
         match self.try_for_each_chunk(|chunk| {
