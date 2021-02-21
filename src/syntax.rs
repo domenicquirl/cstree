@@ -695,6 +695,20 @@ impl<L: Language, D, R> SyntaxNode<L, D, R> {
         }
     }
 
+    /// The number of child nodes (!) of this node.
+    ///
+    /// If you want to also consider leafs, see [`arity_with_tokens`](SyntaxNode::arity_with_tokens).
+    #[inline]
+    pub fn arity(&self) -> usize {
+        self.green().iter().filter(|&child| child.is_node()).count()
+    }
+
+    /// The number of children of this node.
+    #[inline]
+    pub fn arity_with_tokens(&self) -> usize {
+        self.data().children.len()
+    }
+
     /// Returns an iterator along the chain of parents of this node.
     #[inline]
     pub fn ancestors(&self) -> impl Iterator<Item = &SyntaxNode<L, D, R>> {
