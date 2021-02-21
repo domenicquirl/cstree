@@ -6,6 +6,8 @@
 
   <p>
     <a href="https://github.com/domenicquirl/cstree/actions?query=workflow%3ACI"> <img src="https://github.com/domenicquirl/cstree/workflows/CI/badge.svg" alt="build status" /></a>
+    <a href="https://docs.rs/cstree/"> <img src="https://docs.rs/cstree/badge.svg" alt="documentation" /></a>
+    <a href="https://crates.io/crates/cstree"> <img src="https://img.shields.io/crates/v/cstree.svg" alt="crates.io" /></a>
   </p>
 </div>
 
