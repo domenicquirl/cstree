@@ -4,6 +4,7 @@ use fxhash::FxBuildHasher;
 use lasso::{Capacity, Interner, IntoReader, IntoReaderAndResolver, IntoResolver, Reader, Resolver, Rodeo, Spur};
 
 /// The default [`Interner`] used to deduplicate green token strings.
+#[derive(Debug)]
 pub struct TokenInterner {
     rodeo: Rodeo<Spur, FxBuildHasher>,
 }

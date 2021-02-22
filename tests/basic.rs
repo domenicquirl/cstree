@@ -142,4 +142,7 @@ fn assert_debug_display() {
     f::<SyntaxElement<(), lasso::Rodeo>>();
     f::<SyntaxElementRef<'static, (), lasso::Rodeo>>();
     f::<cstree::NodeOrToken<String, u128>>();
+
+    fn dbg<T: fmt::Debug>() {}
+    dbg::<GreenNodeBuilder<'static, 'static>>();
 }
