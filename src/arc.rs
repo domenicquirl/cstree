@@ -96,7 +96,7 @@ const MAX_REFCOUNT: usize = (isize::MAX) as usize;
 
 /// See [`std::sync::Arc`].
 #[repr(C)]
-pub struct Arc<T: ?Sized + 'static> {
+pub struct Arc<T: ?Sized> {
     p: NonNull<ArcInner<T>>,
 }
 
@@ -104,7 +104,7 @@ pub struct Arc<T: ?Sized + 'static> {
 ///
 /// This lets us build arcs that we can mutate before
 /// freezing, without needing to change the allocation
-pub struct UniqueArc<T: ?Sized + 'static>(Arc<T>);
+pub struct UniqueArc<T: ?Sized>(Arc<T>);
 
 impl<T> UniqueArc<T> {
     #[inline]
@@ -601,7 +601,7 @@ impl<H> HeaderWithLength<H> {
 }
 
 type HeaderSliceWithLength<H, T> = HeaderSlice<HeaderWithLength<H>, T>;
-pub struct ThinArc<H: 'static, T: 'static> {
+pub struct ThinArc<H, T> {
     ptr: *mut ArcInner<HeaderSliceWithLength<H, [T; 1]>>,
 }
 
@@ -620,7 +620,7 @@ fn thin_to_thick<H, T>(
     fake_slice as *mut ArcInner<HeaderSliceWithLength<H, [T]>>
 }
 
-impl<H: 'static, T: 'static> ThinArc<H, T> {
+impl<H, T> ThinArc<H, T> {
     /// Temporarily converts |self| into a bonafide Arc and exposes it to the
     /// provided callback. The refcount is not modified.
     #[inline]
@@ -663,21 +663,21 @@ impl<H, T> Deref for ThinArc<H, T> {
     }
 }
 
-impl<H: 'static, T: 'static> Clone for ThinArc<H, T> {
+impl<H, T> Clone for ThinArc<H, T> {
     #[inline]
     fn clone(&self) -> Self {
         ThinArc::with_arc(self, |a| Arc::into_thin(a.clone()))
     }
 }
 
-impl<H: 'static, T: 'static> Drop for ThinArc<H, T> {
+impl<H, T> Drop for ThinArc<H, T> {
     #[inline]
     fn drop(&mut self) {
         let _ = Arc::from_thin(ThinArc { ptr: self.ptr });
     }
 }
 
-impl<H: 'static, T: 'static> Arc<HeaderSliceWithLength<H, [T]>> {
+impl<H, T> Arc<HeaderSliceWithLength<H, [T]>> {
     /// Converts an Arc into a ThinArc. This consumes the Arc, so the refcount
     /// is not modified.
     #[inline]
@@ -708,14 +708,14 @@ impl<H: 'static, T: 'static> Arc<HeaderSliceWithLength<H, [T]>> {
     }
 }
 
-impl<H: PartialEq + 'static, T: PartialEq + 'static> PartialEq for ThinArc<H, T> {
+impl<H: PartialEq, T: PartialEq> PartialEq for ThinArc<H, T> {
     #[inline]
     fn eq(&self, other: &ThinArc<H, T>) -> bool {
         ThinArc::with_arc(self, |a| ThinArc::with_arc(other, |b| *a == *b))
     }
 }
 
-impl<H: Eq + 'static, T: Eq + 'static> Eq for ThinArc<H, T> {}
+impl<H: Eq, T: Eq> Eq for ThinArc<H, T> {}
 
 /// An Arc, except it holds a pointer to the T instead of to the
 /// entire ArcInner.
@@ -734,14 +734,14 @@ impl<H: Eq + 'static, T: Eq + 'static> Eq for ThinArc<H, T> {}
 /// but we can also convert it to a "regular" Arc<T> by removing the offset
 #[derive(Eq)]
 #[repr(C)]
-pub struct RawOffsetArc<T: 'static> {
+pub struct RawOffsetArc<T> {
     ptr: NonNull<T>,
 }
 
-unsafe impl<T: 'static + Sync + Send> Send for RawOffsetArc<T> {}
-unsafe impl<T: 'static + Sync + Send> Sync for RawOffsetArc<T> {}
+unsafe impl<T: Sync + Send> Send for RawOffsetArc<T> {}
+unsafe impl<T: Sync + Send> Sync for RawOffsetArc<T> {}
 
-impl<T: 'static> Deref for RawOffsetArc<T> {
+impl<T> Deref for RawOffsetArc<T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
@@ -749,20 +749,20 @@ impl<T: 'static> Deref for RawOffsetArc<T> {
     }
 }
 
-impl<T: 'static> Clone for RawOffsetArc<T> {
+impl<T> Clone for RawOffsetArc<T> {
     #[inline]
     fn clone(&self) -> Self {
         Arc::into_raw_offset(self.clone_arc())
     }
 }
 
-impl<T: 'static> Drop for RawOffsetArc<T> {
+impl<T> Drop for RawOffsetArc<T> {
     fn drop(&mut self) {
         let _ = Arc::from_raw_offset(RawOffsetArc { ptr: self.ptr.clone() });
     }
 }
 
-impl<T: fmt::Debug + 'static> fmt::Debug for RawOffsetArc<T> {
+impl<T: fmt::Debug> fmt::Debug for RawOffsetArc<T> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         fmt::Debug::fmt(&**self, f)
     }
@@ -778,7 +778,7 @@ impl<T: PartialEq> PartialEq for RawOffsetArc<T> {
     }
 }
 
-impl<T: 'static> RawOffsetArc<T> {
+impl<T> RawOffsetArc<T> {
     /// Temporarily converts |self| into a bonafide Arc and exposes it to the
     /// provided callback. The refcount is not modified.
     #[inline]
@@ -837,7 +837,7 @@ impl<T: 'static> RawOffsetArc<T> {
     }
 }
 
-impl<T: 'static> Arc<T> {
+impl<T> Arc<T> {
     /// Converts an Arc into a RawOffsetArc. This consumes the Arc, so the refcount
     /// is not modified.
     #[inline]
@@ -903,7 +903,6 @@ impl<'a, T> ArcBorrow<'a, T> {
     pub fn with_arc<F, U>(&self, f: F) -> U
     where
         F: FnOnce(&Arc<T>) -> U,
-        T: 'static,
     {
         // Synthesize transient Arc, which never touches the refcount.
         let transient = unsafe { NoDrop::new(Arc::from_raw(self.0)) };
