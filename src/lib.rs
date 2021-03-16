@@ -59,7 +59,6 @@ pub mod syntax;
 
 #[cfg(feature = "serde1")]
 mod serde_impls;
-mod syntax_text;
 #[allow(missing_docs)]
 mod utility_types;
 
@@ -76,8 +75,9 @@ pub use text_size::{TextLen, TextRange, TextSize};
 pub use crate::{
     arc::Arc,
     green::{Checkpoint, Children, GreenNode, GreenNodeBuilder, GreenToken, NodeCache, SyntaxKind},
-    syntax::{SyntaxElement, SyntaxElementChildren, SyntaxElementRef, SyntaxNode, SyntaxNodeChildren, SyntaxToken},
-    syntax_text::SyntaxText,
+    syntax::{
+        SyntaxElement, SyntaxElementChildren, SyntaxElementRef, SyntaxNode, SyntaxNodeChildren, SyntaxText, SyntaxToken,
+    },
     utility_types::{Direction, NodeOrToken, TokenAtOffset, WalkEvent},
 };
 
