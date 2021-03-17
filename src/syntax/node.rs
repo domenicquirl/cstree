@@ -92,12 +92,16 @@ impl<L: Language, D> SyntaxNode<L, D> {
         }
     }
 
+    /// Turns this node into a [`ResolvedNode`], but only if there is a resolver associated with this tree.
     #[inline]
     pub fn try_resolved(&self) -> Option<&ResolvedNode<L, D>> {
         // safety: we only coerce if `resolver` exists
         self.resolver().map(|_| unsafe { ResolvedNode::coerce_ref(self) })
     }
 
+    /// Turns this node into a [`ResolvedNode`].
+    /// # Panics
+    /// If there is no resolver associated with this tree.
     #[inline]
     pub fn resolved(&self) -> &ResolvedNode<L, D> {
         self.try_resolved().expect("tried to resolve a node without resolver")
@@ -159,6 +163,9 @@ impl<L: Language, D> SyntaxNode<L, D> {
         Self { data: self.data }
     }
 
+    /// The root of the tree this node belongs to.
+    ///
+    /// If this node is the root, returns `self`.
     pub fn root(&self) -> &SyntaxNode<L, D> {
         let mut current = self;
         while let Some(parent) = current.parent() {

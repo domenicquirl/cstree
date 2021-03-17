@@ -74,6 +74,7 @@ impl<L: Language, D> SyntaxToken<L, D> {
         self.resolve_text(resolver).to_string()
     }
 
+    /// Turns this token into a [`ResolvedToken`], but only if there is a resolver associated with this tree.
     #[inline]
     pub fn try_resolved(&self) -> Option<&ResolvedToken<L, D>> {
         // safety: we only coerce if `resolver` exists
@@ -82,6 +83,9 @@ impl<L: Language, D> SyntaxToken<L, D> {
             .map(|_| unsafe { ResolvedToken::coerce_ref(self) })
     }
 
+    /// Turns this token into a [`ResolvedToken`].
+    /// # Panics
+    /// If there is no resolver associated with this tree.
     #[inline]
     pub fn resolved(&self) -> &ResolvedToken<L, D> {
         self.try_resolved().expect("tried to resolve a node without resolver")

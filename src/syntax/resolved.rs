@@ -1,3 +1,8 @@
+//! Nodes, tokens, elements and their references which are guaranteed to belong to trees with
+//! associated [`Resolver`]s(lasso::Resolver).
+//!
+//! This means they can implement `Debug` and `Display` and be (de-)serializable by default.
+
 use std::{
     fmt,
     ops::{Deref, DerefMut},
@@ -12,6 +17,11 @@ use crate::{
     TokenAtOffset, WalkEvent,
 };
 
+/// Syntax tree node that is guaranteed to belong to a tree that contains an associated
+/// [`Resolver`](lasso::Resolver).
+/// # See also
+/// [`SyntaxNode`]
+/// [`SyntaxNode::new_root_with_resolver`]
 #[derive(Clone)]
 #[repr(transparent)]
 pub struct ResolvedNode<L: Language, D: 'static = ()> {
@@ -25,6 +35,7 @@ impl<L: Language, D> ResolvedNode<L, D> {
         &*(syntax as *const _ as *const Self)
     }
 
+    /// Returns this node as a [`SyntaxNode`].
     pub fn syntax(&self) -> &SyntaxNode<L, D> {
         &self.syntax
     }
@@ -44,6 +55,10 @@ impl<L: Language, D> DerefMut for ResolvedNode<L, D> {
     }
 }
 
+/// Syntax tree token that is guaranteed to belong to a tree that contains an associated
+/// [`Resolver`](lasso::Resolver).
+/// # See also
+/// [`SyntaxToken`]]
 #[repr(transparent)]
 pub struct ResolvedToken<L: Language, D: 'static = ()> {
     syntax: SyntaxToken<L, D>,
@@ -56,6 +71,7 @@ impl<L: Language, D> ResolvedToken<L, D> {
         &*(syntax as *const _ as *const Self)
     }
 
+    /// Returns this token as a [`SyntaxToken`].
     pub fn syntax(&self) -> &SyntaxToken<L, D> {
         &self.syntax
     }
@@ -75,6 +91,10 @@ impl<L: Language, D> DerefMut for ResolvedToken<L, D> {
     }
 }
 
+/// An element of the tree that is guaranteed to belong to a tree that contains an associated
+/// [`Resolver`](lasso::Resolver), can be either a node or a token.
+/// # See also
+/// [`SyntaxElement`]
 pub type ResolvedElement<L, D = ()> = NodeOrToken<ResolvedNode<L, D>, ResolvedToken<L, D>>;
 
 impl<L: Language, D> From<ResolvedNode<L, D>> for ResolvedElement<L, D> {
@@ -99,6 +119,10 @@ impl<L: Language, D> ResolvedElement<L, D> {
     }
 }
 
+/// A reference to an element of the tree that is guaranteed to belong to a tree that contains an
+/// associated [`Resolver`](lasso::Resolver), can be either a reference to a node or one to a token.
+/// # See also
+/// [`SyntaxElementRef`]
 pub type ResolvedElementRef<'a, L, D = ()> = NodeOrToken<&'a ResolvedNode<L, D>, &'a ResolvedToken<L, D>>;
 
 impl<'a, L: Language, D> ResolvedElementRef<'a, L, D> {
@@ -228,21 +252,31 @@ impl<L: Language, D> ResolvedNode<L, D> {
         self.syntax.resolver().unwrap()
     }
 
+    /// See [`SyntaxNode::new_root_with_resolver`].
     #[inline]
     pub fn new_root_with_resolver(green: GreenNode, resolver: impl Resolver + 'static) -> Self {
         SyntaxNode::new_root_with_resolver(green, resolver)
     }
 
+    /// Always returns `Some(self)`.
+    ///
+    /// This method mostly exists to allow the convenience of being agnostic over [`SyntaxNode`] vs [`ResolvedNode`].
     #[inline]
     pub fn try_resolved(&self) -> Option<&ResolvedNode<L, D>> {
         Some(self)
     }
 
+    /// Always returns `self`.
+    ///
+    /// This method mostly exists to allow the convenience of being agnostic over [`SyntaxNode`] vs [`ResolvedNode`].
     #[inline]
     pub fn resolved(&self) -> &ResolvedNode<L, D> {
         self
     }
 
+    /// The root of the tree this node belongs to.
+    ///
+    /// If this node is the root, returns `self`.
     #[inline]
     pub fn root(&self) -> &SyntaxNode<L, D> {
         unsafe { Self::coerce_ref(self.syntax.root()) }
@@ -445,11 +479,17 @@ impl<L: Language, D> ResolvedNode<L, D> {
 }
 
 impl<L: Language, D> ResolvedToken<L, D> {
+    /// Always returns `Some(self)`.
+    ///
+    /// This method mostly exists to allow the convenience of being agnostic over [`SyntaxToken`] vs [`ResolvedToken`].
     #[inline]
     pub fn try_resolved(&self) -> Option<&ResolvedToken<L, D>> {
         Some(self)
     }
 
+    /// Always returns `self`.
+    ///
+    /// This method mostly exists to allow the convenience of being agnostic over [`SyntaxToken`] vs [`ResolvedToken`].
     #[inline]
     pub fn resolved(&self) -> &ResolvedToken<L, D> {
         self
