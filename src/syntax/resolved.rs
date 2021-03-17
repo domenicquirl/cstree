@@ -8,8 +8,8 @@ use lasso::Resolver;
 use text_size::{TextRange, TextSize};
 
 use crate::{
-    Direction, GreenNode, Language, NodeOrToken, SyntaxElementRef, SyntaxNode, SyntaxText, SyntaxToken, TokenAtOffset,
-    WalkEvent,
+    Direction, GreenNode, Language, NodeOrToken, SyntaxElementRef, SyntaxKind, SyntaxNode, SyntaxText, SyntaxToken,
+    TokenAtOffset, WalkEvent,
 };
 
 #[derive(Clone)]
@@ -501,6 +501,33 @@ impl<L: Language, D> ResolvedToken<L, D> {
 }
 
 impl<L: Language, D> ResolvedElement<L, D> {
+    /// The range this element covers in the source text, in bytes.
+    #[inline]
+    pub fn text_range(&self) -> TextRange {
+        match self {
+            NodeOrToken::Node(it) => it.text_range(),
+            NodeOrToken::Token(it) => it.text_range(),
+        }
+    }
+
+    /// The internal representation of the kind of this element.
+    #[inline]
+    pub fn syntax_kind(&self) -> SyntaxKind {
+        match self {
+            NodeOrToken::Node(it) => it.syntax_kind(),
+            NodeOrToken::Token(it) => it.syntax_kind(),
+        }
+    }
+
+    /// The kind of this element in terms of your language.
+    #[inline]
+    pub fn kind(&self) -> L::Kind {
+        match self {
+            NodeOrToken::Node(it) => it.kind(),
+            NodeOrToken::Token(it) => it.kind(),
+        }
+    }
+
     /// The parent node of this element, except if this element is the root.
     #[inline]
     pub fn parent(&self) -> Option<&ResolvedNode<L, D>> {
@@ -557,6 +584,33 @@ impl<L: Language, D> ResolvedElement<L, D> {
 }
 
 impl<'a, L: Language, D> ResolvedElementRef<'a, L, D> {
+    /// The range this element covers in the source text, in bytes.
+    #[inline]
+    pub fn text_range(&self) -> TextRange {
+        match self {
+            NodeOrToken::Node(it) => it.text_range(),
+            NodeOrToken::Token(it) => it.text_range(),
+        }
+    }
+
+    /// The internal representation of the kind of this element.
+    #[inline]
+    pub fn syntax_kind(&self) -> SyntaxKind {
+        match self {
+            NodeOrToken::Node(it) => it.syntax_kind(),
+            NodeOrToken::Token(it) => it.syntax_kind(),
+        }
+    }
+
+    /// The kind of this element in terms of your language.
+    #[inline]
+    pub fn kind(&self) -> L::Kind {
+        match self {
+            NodeOrToken::Node(it) => it.kind(),
+            NodeOrToken::Token(it) => it.kind(),
+        }
+    }
+
     /// The parent node of this element, except if this element is the root.
     #[inline]
     pub fn parent(&self) -> Option<&'a ResolvedNode<L, D>> {
