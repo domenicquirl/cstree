@@ -11,6 +11,8 @@ mod node;
 pub use node::{SyntaxElementChildren, SyntaxNode, SyntaxNodeChildren};
 mod token;
 pub use token::SyntaxToken;
+mod resolved;
+pub use resolved::{ResolvedElement, ResolvedElementRef, ResolvedNode, ResolvedToken};
 
 mod text;
 pub use text::SyntaxText;

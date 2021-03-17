@@ -1,5 +1,5 @@
 use std::{
-    fmt::{self, Write},
+    fmt::Write,
     hash::{Hash, Hasher},
     iter,
 };
@@ -11,13 +11,13 @@ use super::*;
 use crate::{Direction, GreenNode, GreenToken, Language, SyntaxKind};
 
 /// Syntax tree token.
-pub struct SyntaxToken<L: Language, D: 'static = (), R: 'static = ()> {
-    parent: SyntaxNode<L, D, R>,
+pub struct SyntaxToken<L: Language, D: 'static = ()> {
+    parent: SyntaxNode<L, D>,
     index:  u32,
     offset: TextSize,
 }
 
-impl<L: Language, D, R> Clone for SyntaxToken<L, D, R> {
+impl<L: Language, D> Clone for SyntaxToken<L, D> {
     fn clone(&self) -> Self {
         Self {
             parent: self.parent.clone(),
@@ -27,7 +27,7 @@ impl<L: Language, D, R> Clone for SyntaxToken<L, D, R> {
     }
 }
 
-impl<L: Language, D, R> Hash for SyntaxToken<L, D, R> {
+impl<L: Language, D> Hash for SyntaxToken<L, D> {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.parent.hash(state);
         self.index.hash(state);
@@ -35,17 +35,20 @@ impl<L: Language, D, R> Hash for SyntaxToken<L, D, R> {
     }
 }
 
-impl<L: Language, D, R> PartialEq for SyntaxToken<L, D, R> {
-    fn eq(&self, other: &SyntaxToken<L, D, R>) -> bool {
+impl<L: Language, D> PartialEq for SyntaxToken<L, D> {
+    fn eq(&self, other: &SyntaxToken<L, D>) -> bool {
         self.parent == other.parent && self.index == other.index && self.offset == other.offset
     }
 }
 
-impl<L: Language, D, R> Eq for SyntaxToken<L, D, R> {}
+impl<L: Language, D> Eq for SyntaxToken<L, D> {}
 
-impl<L: Language, D, R> SyntaxToken<L, D, R> {
+impl<L: Language, D> SyntaxToken<L, D> {
     #[allow(missing_docs)]
-    pub fn debug(&self, resolver: &impl Resolver) -> String {
+    pub fn debug<R>(&self, resolver: &R) -> String
+    where
+        R: Resolver + ?Sized,
+    {
         let mut res = String::new();
         write!(res, "{:?}@{:?}", self.kind(), self.text_range()).unwrap();
         if self.resolve_text(resolver).len() < 25 {
@@ -64,13 +67,29 @@ impl<L: Language, D, R> SyntaxToken<L, D, R> {
     }
 
     #[allow(missing_docs)]
-    pub fn display(&self, resolver: &impl Resolver) -> String {
+    pub fn display<R>(&self, resolver: &R) -> String
+    where
+        R: Resolver + ?Sized,
+    {
         self.resolve_text(resolver).to_string()
+    }
+
+    #[inline]
+    pub fn try_resolved(&self) -> Option<&ResolvedToken<L, D>> {
+        // safety: we only coerce if `resolver` exists
+        self.parent()
+            .resolver()
+            .map(|_| unsafe { ResolvedToken::coerce_ref(self) })
+    }
+
+    #[inline]
+    pub fn resolved(&self) -> &ResolvedToken<L, D> {
+        self.try_resolved().expect("tried to resolve a node without resolver")
     }
 }
 
-impl<L: Language, D, R> SyntaxToken<L, D, R> {
-    pub(super) fn new(parent: &SyntaxNode<L, D, R>, index: u32, offset: TextSize) -> SyntaxToken<L, D, R> {
+impl<L: Language, D> SyntaxToken<L, D> {
+    pub(super) fn new(parent: &SyntaxNode<L, D>, index: u32, offset: TextSize) -> SyntaxToken<L, D> {
         Self {
             parent: parent.clone_uncounted(),
             index,
@@ -138,26 +157,26 @@ impl<L: Language, D, R> SyntaxToken<L, D, R> {
 
     /// The parent node of this token.
     #[inline]
-    pub fn parent(&self) -> &SyntaxNode<L, D, R> {
+    pub fn parent(&self) -> &SyntaxNode<L, D> {
         &self.parent
     }
 
     /// Returns an iterator along the chain of parents of this token.
     #[inline]
-    pub fn ancestors(&self) -> impl Iterator<Item = &SyntaxNode<L, D, R>> {
+    pub fn ancestors(&self) -> impl Iterator<Item = &SyntaxNode<L, D>> {
         self.parent().ancestors()
     }
 
     /// The tree element to the right of this one, i.e. the next child of this token's parent after this token.
     #[inline]
-    pub fn next_sibling_or_token(&self) -> Option<SyntaxElementRef<'_, L, D, R>> {
+    pub fn next_sibling_or_token(&self) -> Option<SyntaxElementRef<'_, L, D>> {
         self.parent()
             .next_child_or_token_after(self.index as usize, self.text_range().end())
     }
 
     /// The tree element to the left of this one, i.e. the previous child of this token's parent after this token.
     #[inline]
-    pub fn prev_sibling_or_token(&self) -> Option<SyntaxElementRef<'_, L, D, R>> {
+    pub fn prev_sibling_or_token(&self) -> Option<SyntaxElementRef<'_, L, D>> {
         self.parent()
             .prev_child_or_token_before(self.index as usize, self.text_range().start())
     }
@@ -166,8 +185,8 @@ impl<L: Language, D, R> SyntaxToken<L, D, R> {
     /// token's parent's children from this token on to the left or the right.
     /// The first item in the iterator will always be this token.
     #[inline]
-    pub fn siblings_with_tokens(&self, direction: Direction) -> impl Iterator<Item = SyntaxElementRef<'_, L, D, R>> {
-        let me: SyntaxElementRef<'_, L, D, R> = self.into();
+    pub fn siblings_with_tokens(&self, direction: Direction) -> impl Iterator<Item = SyntaxElementRef<'_, L, D>> {
+        let me: SyntaxElementRef<'_, L, D> = self.into();
         iter::successors(Some(me), move |el| match direction {
             Direction::Next => el.next_sibling_or_token(),
             Direction::Prev => el.prev_sibling_or_token(),
@@ -176,7 +195,7 @@ impl<L: Language, D, R> SyntaxToken<L, D, R> {
 
     /// Returns the next token in the tree.
     /// This is not necessary a direct sibling of this token, but will always be further right in the tree.
-    pub fn next_token(&self) -> Option<&SyntaxToken<L, D, R>> {
+    pub fn next_token(&self) -> Option<&SyntaxToken<L, D>> {
         match self.next_sibling_or_token() {
             Some(element) => element.first_token(),
             None => self
@@ -189,7 +208,7 @@ impl<L: Language, D, R> SyntaxToken<L, D, R> {
 
     /// Returns the previous token in the tree.
     /// This is not necessary a direct sibling of this token, but will always be further left in the tree.
-    pub fn prev_token(&self) -> Option<&SyntaxToken<L, D, R>> {
+    pub fn prev_token(&self) -> Option<&SyntaxToken<L, D>> {
         match self.prev_sibling_or_token() {
             Some(element) => element.last_token(),
             None => self
@@ -198,34 +217,5 @@ impl<L: Language, D, R> SyntaxToken<L, D, R> {
                 .find_map(|it| it.prev_sibling_or_token())
                 .and_then(|element| element.last_token()),
         }
-    }
-}
-
-impl<L: Language, D, R> SyntaxToken<L, D, R>
-where
-    R: Resolver,
-{
-    /// Uses the resolver associated with this tree to return the source text of this token.
-    #[inline]
-    pub fn text(&self) -> &str {
-        self.green().text(self.parent().resolver().as_ref())
-    }
-}
-
-impl<L: Language, D, R> fmt::Debug for SyntaxToken<L, D, R>
-where
-    R: Resolver,
-{
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", Self::debug(self, self.parent().resolver().as_ref()))
-    }
-}
-
-impl<L: Language, D, R> fmt::Display for SyntaxToken<L, D, R>
-where
-    R: Resolver,
-{
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", Self::display(self, self.parent().resolver().as_ref()))
     }
 }

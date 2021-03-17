@@ -48,7 +48,7 @@
     unconditional_recursion,
     future_incompatible,
 )]
-#![deny(unsafe_code, missing_docs)]
+#![deny(unsafe_code)] //, missing_docs)]
 
 #[allow(unsafe_code)]
 mod arc;
@@ -75,9 +75,7 @@ pub use text_size::{TextLen, TextRange, TextSize};
 pub use crate::{
     arc::Arc,
     green::{Checkpoint, Children, GreenNode, GreenNodeBuilder, GreenToken, NodeCache, SyntaxKind},
-    syntax::{
-        SyntaxElement, SyntaxElementChildren, SyntaxElementRef, SyntaxNode, SyntaxNodeChildren, SyntaxText, SyntaxToken,
-    },
+    syntax::*,
     utility_types::{Direction, NodeOrToken, TokenAtOffset, WalkEvent},
 };
 
