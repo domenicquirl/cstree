@@ -1,18 +1,11 @@
-#![cfg(feature = "serde1")]
+use crate::{build_recursive, build_tree_with_cache, ResolvedNode};
 
-#[allow(unused)]
-mod common;
-
-use common::{Element, SyntaxNode};
-use cstree::{
-    interning::{IntoResolver, Resolver},
-    GreenNodeBuilder, NodeCache, NodeOrToken,
-};
+use super::{Element, SyntaxNode};
+use cstree::{interning::IntoResolver, GreenNodeBuilder, NodeCache, NodeOrToken};
 use serde_test::Token;
 use std::fmt;
 
 type Rodeo = lasso::Rodeo<lasso::Spur, fxhash::FxBuildHasher>;
-type RodeoResolver = lasso::RodeoResolver<lasso::Spur>;
 
 /// Macro for generating a list of `serde_test::Token`s using a simpler DSL.
 macro_rules! event_tokens {
@@ -142,28 +135,28 @@ struct NonSerializable;
 
 /// Serializable SyntaxNode that doesn't have a identity `PartialEq` implementation,
 /// but checks if both trees have equal nodes and tokens.
-struct TestNode<R: 'static> {
-    node:      SyntaxNode<String, R>,
+struct TestNode {
+    node:      ResolvedNode<String>,
     with_data: bool,
 }
 
-impl<R> TestNode<R> {
-    fn new(node: SyntaxNode<String, R>) -> Self {
+impl TestNode {
+    fn new(node: ResolvedNode<String>) -> Self {
         Self { node, with_data: false }
     }
 
-    fn with_data(node: SyntaxNode<String, R>) -> Self {
+    fn with_data(node: ResolvedNode<String>) -> Self {
         Self { node, with_data: true }
     }
 }
 
-impl<R: Resolver> fmt::Debug for TestNode<R> {
+impl fmt::Debug for TestNode {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt::Debug::fmt(&self.node, f)
     }
 }
 
-impl<R: Resolver> serde::Serialize for TestNode<R> {
+impl serde::Serialize for TestNode {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
@@ -176,20 +169,20 @@ impl<R: Resolver> serde::Serialize for TestNode<R> {
     }
 }
 
-impl<'de> serde::Deserialize<'de> for TestNode<RodeoResolver> {
+impl<'de> serde::Deserialize<'de> for TestNode {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
     {
         Ok(Self {
-            node:      SyntaxNode::deserialize(deserializer)?,
+            node:      ResolvedNode::deserialize(deserializer)?,
             with_data: true,
         })
     }
 }
 
-impl<R1: Resolver, R2: Resolver> PartialEq<TestNode<R2>> for TestNode<R1> {
-    fn eq(&self, other: &TestNode<R2>) -> bool {
+impl PartialEq for TestNode {
+    fn eq(&self, other: &TestNode) -> bool {
         self.node.kind() == other.node.kind()
             && self.node.get_data() == other.node.get_data()
             && self.node.text_range() == other.node.text_range()
@@ -229,14 +222,14 @@ fn three_level_tree() -> Element<'static> {
     ])
 }
 
-fn build_tree(root: Element<'_>) -> SyntaxNode<String, RodeoResolver> {
+fn build_tree(root: Element<'_>) -> ResolvedNode<String> {
     let mut builder = GreenNodeBuilder::new();
-    common::build_recursive(&root, &mut builder, 0);
+    build_recursive(&root, &mut builder, 0);
     let (node, interner) = builder.finish();
     SyntaxNode::new_root_with_resolver(node, interner.unwrap().into_resolver())
 }
 
-fn attach_data<R>(node: &SyntaxNode<String, R>) {
+fn attach_data(node: &SyntaxNode<String>) {
     node.descendants().enumerate().for_each(|(idx, node)| {
         node.set_data(format!("{}", idx + 1));
     });
@@ -248,12 +241,12 @@ fn serialize_tree_with_data_with_resolver() {
     let mut cache = NodeCache::with_interner(&mut interner);
 
     let root = three_level_tree();
-    let root = common::build_tree_with_cache(&root, &mut cache);
-    let tree = SyntaxNode::<String, ()>::new_root(root.clone());
+    let root = build_tree_with_cache(&root, &mut cache);
+    let tree = SyntaxNode::<String>::new_root(root.clone());
     attach_data(&tree);
 
     let serialized = serde_json::to_string(&tree.as_serialize_with_data_with_resolver(&interner)).unwrap();
-    let deserialized: TestNode<_> = serde_json::from_str(&serialized).unwrap();
+    let deserialized: TestNode = serde_json::from_str(&serialized).unwrap();
 
     let expected = SyntaxNode::new_root_with_resolver(root, interner);
     attach_data(&expected);
@@ -266,11 +259,11 @@ fn serialize_tree_with_resolver() {
     let mut cache = NodeCache::with_interner(&mut interner);
 
     let root = three_level_tree();
-    let root = common::build_tree_with_cache(&root, &mut cache);
+    let root = build_tree_with_cache(&root, &mut cache);
     let tree = SyntaxNode::<NonSerializable>::new_root(root.clone());
 
     let serialized = serde_json::to_string(&tree.as_serialize_with_resolver(&interner)).unwrap();
-    let deserialized: TestNode<_> = serde_json::from_str(&serialized).unwrap();
+    let deserialized: TestNode = serde_json::from_str(&serialized).unwrap();
 
     let expected = SyntaxNode::new_root_with_resolver(root, interner);
     assert_eq!(TestNode::new(expected), deserialized);

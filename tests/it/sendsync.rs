@@ -1,18 +1,12 @@
 #![allow(clippy::redundant_clone)]
 
-#[allow(unused)]
-mod common;
-
 use crossbeam_utils::thread::scope;
 use std::{thread, time::Duration};
 
-use common::{build_recursive, Element, SyntaxNode};
-use cstree::{
-    interning::{IntoResolver, Resolver},
-    GreenNodeBuilder,
-};
+use super::{build_recursive, Element, ResolvedNode, SyntaxNode};
+use cstree::{interning::IntoResolver, GreenNodeBuilder};
 
-fn build_tree<D>(root: &Element<'_>) -> SyntaxNode<D, impl Resolver> {
+fn build_tree<D>(root: &Element<'_>) -> ResolvedNode<D> {
     let mut builder = GreenNodeBuilder::new();
     build_recursive(root, &mut builder, 0);
     let (node, interner) = builder.finish();
@@ -43,7 +37,7 @@ fn send() {
             .next()
             .unwrap();
         let leaf1_0 = leaf1_0.into_token().unwrap();
-        leaf1_0.resolve_text(thread_tree.resolver().as_ref()).to_string()
+        leaf1_0.text().to_string()
     });
     assert_eq!(thread.join().unwrap(), "1.0");
 }

@@ -1,8 +1,4 @@
-mod common;
-
-use common::{
-    build_recursive, build_tree_with_cache, Element, SyntaxElement, SyntaxElementRef, SyntaxNode, SyntaxToken,
-};
+use super::*;
 use cstree::{GreenNodeBuilder, NodeCache, SyntaxKind, TextRange};
 use lasso::{Resolver, Rodeo};
 
@@ -105,7 +101,7 @@ fn inline_resolver() {
     let mut cache = NodeCache::with_interner(&mut interner);
     let tree = two_level_tree();
     let tree = build_tree_with_cache(&tree, &mut cache);
-    let tree: SyntaxNode<(), Rodeo> = SyntaxNode::new_root_with_resolver(tree, interner);
+    let tree: ResolvedNode = SyntaxNode::new_root_with_resolver(tree, interner);
     {
         let leaf1_0 = tree.children().nth(1).unwrap().children_with_tokens().next().unwrap();
         let leaf1_0 = leaf1_0.into_token().unwrap();
@@ -137,10 +133,10 @@ fn assert_debug_display() {
     use std::fmt;
     fn f<T: fmt::Debug + fmt::Display>() {}
 
-    f::<SyntaxNode<(), lasso::Rodeo>>();
-    f::<SyntaxToken<(), lasso::Rodeo>>();
-    f::<SyntaxElement<(), lasso::Rodeo>>();
-    f::<SyntaxElementRef<'static, (), lasso::Rodeo>>();
+    f::<ResolvedNode>();
+    f::<ResolvedToken>();
+    f::<ResolvedElement>();
+    f::<ResolvedElementRef<'static>>();
     f::<cstree::NodeOrToken<String, u128>>();
 
     fn dbg<T: fmt::Debug>() {}

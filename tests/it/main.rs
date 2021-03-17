@@ -1,10 +1,20 @@
+mod basic;
+mod sendsync;
+#[cfg(feature = "serde1")]
+mod serde;
+
 use cstree::{GreenNode, GreenNodeBuilder, Language, NodeCache, SyntaxKind};
 use lasso::Interner;
 
-pub type SyntaxNode<D = (), R = ()> = cstree::SyntaxNode<TestLang, D, R>;
-pub type SyntaxToken<D = (), R = ()> = cstree::SyntaxToken<TestLang, D, R>;
-pub type SyntaxElement<D = (), R = ()> = cstree::SyntaxElement<TestLang, D, R>;
-pub type SyntaxElementRef<'a, D = (), R = ()> = cstree::SyntaxElementRef<'a, TestLang, D, R>;
+pub type SyntaxNode<D = ()> = cstree::SyntaxNode<TestLang, D>;
+pub type SyntaxToken<D = ()> = cstree::SyntaxToken<TestLang, D>;
+pub type SyntaxElement<D = ()> = cstree::SyntaxElement<TestLang, D>;
+pub type SyntaxElementRef<'a, D = ()> = cstree::SyntaxElementRef<'a, TestLang, D>;
+
+pub type ResolvedNode<D = ()> = cstree::ResolvedNode<TestLang, D>;
+pub type ResolvedToken<D = ()> = cstree::ResolvedToken<TestLang, D>;
+pub type ResolvedElement<D = ()> = cstree::ResolvedElement<TestLang, D>;
+pub type ResolvedElementRef<'a, D = ()> = cstree::ResolvedElementRef<'a, TestLang, D>;
 
 #[derive(Debug)]
 pub enum Element<'s> {

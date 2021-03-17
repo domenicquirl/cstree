@@ -2,7 +2,7 @@
 
 use crate::{
     interning::{IntoResolver, Resolver},
-    GreenNodeBuilder, Language, NodeOrToken, SyntaxKind, SyntaxNode, WalkEvent,
+    GreenNodeBuilder, Language, NodeOrToken, ResolvedNode, SyntaxKind, SyntaxNode, WalkEvent,
 };
 use serde::{
     de::{Error, SeqAccess, Visitor},
@@ -10,9 +10,6 @@ use serde::{
     Deserialize, Serialize,
 };
 use std::{collections::VecDeque, fmt, marker::PhantomData};
-
-type Rodeo = lasso::Rodeo<lasso::Spur, fxhash::FxBuildHasher>;
-type RodeoResolver = lasso::RodeoResolver<lasso::Spur>;
 
 /// Expands to the first expression, if there's
 /// no expression following, otherwise return the second expression.
@@ -86,21 +83,21 @@ enum Event<'text> {
 }
 
 /// Make a `SyntaxNode` serializable but without serializing the data.
-pub(crate) struct SerializeWithResolver<'node, 'resolver, L: Language, D: 'static, RN: 'static, R> {
-    pub(crate) node:     &'node SyntaxNode<L, D, RN>,
+pub(crate) struct SerializeWithResolver<'node, 'resolver, L: Language, D: 'static, R: ?Sized> {
+    pub(crate) node:     &'node SyntaxNode<L, D>,
     pub(crate) resolver: &'resolver R,
 }
 
 /// Make a `SyntaxNode` serializable which will include the data for serialization.
-pub(crate) struct SerializeWithData<'node, 'resolver, L: Language, D: 'static, RN: 'static, R> {
-    pub(crate) node:     &'node SyntaxNode<L, D, RN>,
+pub(crate) struct SerializeWithData<'node, 'resolver, L: Language, D: 'static, R: ?Sized> {
+    pub(crate) node:     &'node SyntaxNode<L, D>,
     pub(crate) resolver: &'resolver R,
 }
 
-impl<L, D, RN, R> Serialize for SerializeWithData<'_, '_, L, D, RN, R>
+impl<L, D, R> Serialize for SerializeWithData<'_, '_, L, D, R>
 where
     L: Language,
-    R: Resolver,
+    R: Resolver + ?Sized,
     D: Serialize,
 {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -112,10 +109,10 @@ where
     }
 }
 
-impl<L, D, RN, R> Serialize for SerializeWithResolver<'_, '_, L, D, RN, R>
+impl<L, D, R> Serialize for SerializeWithResolver<'_, '_, L, D, R>
 where
     L: Language,
-    R: Resolver,
+    R: Resolver + ?Sized,
 {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -125,11 +122,10 @@ where
     }
 }
 
-impl<L, D, R> Serialize for SyntaxNode<L, D, R>
+impl<L, D> Serialize for ResolvedNode<L, D>
 where
     L: Language,
     D: Serialize,
-    R: Resolver,
 {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -143,7 +139,7 @@ where
     }
 }
 
-impl<'de, L, D> Deserialize<'de> for SyntaxNode<L, D, RodeoResolver>
+impl<'de, L, D> Deserialize<'de> for ResolvedNode<L, D>
 where
     L: Language,
     D: Deserialize<'de>,
@@ -163,7 +159,7 @@ where
         DE: serde::Deserializer<'de>,
     {
         struct EventVisitor<L: Language, D: 'static> {
-            _marker: PhantomData<SyntaxNode<L, D, Rodeo>>,
+            _marker: PhantomData<fn() -> ResolvedNode<L, D>>,
         }
 
         impl<'de, L, D> Visitor<'de> for EventVisitor<L, D>
@@ -171,7 +167,7 @@ where
             L: Language,
             D: Deserialize<'de>,
         {
-            type Value = (SyntaxNode<L, D, RodeoResolver>, VecDeque<bool>);
+            type Value = (ResolvedNode<L, D>, VecDeque<bool>);
 
             fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
                 formatter.write_str("a list of tree events")
@@ -196,12 +192,12 @@ where
                 }
 
                 let (tree, resolver) = builder.finish();
-                let tree = SyntaxNode::new_root_with_resolver(tree, resolver.unwrap().into_resolver());
+                let tree = ResolvedNode::new_root_with_resolver(tree, resolver.unwrap().into_resolver());
                 Ok((tree, data_indices))
             }
         }
 
-        struct ProcessedEvents<L: Language, D: 'static>(SyntaxNode<L, D, RodeoResolver>, VecDeque<bool>);
+        struct ProcessedEvents<L: Language, D: 'static>(ResolvedNode<L, D>, VecDeque<bool>);
         impl<'de, L, D> Deserialize<'de> for ProcessedEvents<L, D>
         where
             L: Language,
