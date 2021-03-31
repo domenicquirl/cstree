@@ -9,19 +9,18 @@
 
 /// Let's start with defining all kinds of tokens and composite nodes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[allow(non_camel_case_types)]
 #[repr(u16)]
-enum SyntaxKind {
-    L_PAREN = 0, // '('
-    R_PAREN,     // ')'
-    WORD,        // '+', '15'
-    WHITESPACE,  // whitespaces is explicit
-    ERROR,       // as well as errors
+pub enum SyntaxKind {
+    LParen = 0, // '('
+    RParen,     // ')'
+    Word,       // '+', '15'
+    Whitespace, // whitespaces is explicit
+    Error,      // as well as errors
 
     // composite nodes
-    LIST, // `(+ 2 3)`
-    ATOM, // `+`, `15`, wraps a WORD token
-    ROOT, // top-level node: a list of s-expressions
+    List, // `(+ 2 3)`
+    Atom, // `+`, `15`, wraps a WORD token
+    Root, // top-level node: a list of s-expressions
 }
 use std::collections::VecDeque;
 
@@ -41,12 +40,12 @@ impl From<SyntaxKind> for cstree::SyntaxKind {
 /// types, allowing for a nicer SyntaxNode API where "kinds" are values from our `enum SyntaxKind`,
 /// instead of plain u16 values.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-enum Lang {}
+pub enum Lang {}
 impl cstree::Language for Lang {
     type Kind = SyntaxKind;
 
     fn kind_from_raw(raw: cstree::SyntaxKind) -> Self::Kind {
-        assert!(raw.0 <= ROOT as u16);
+        assert!(raw.0 <= Root as u16);
         unsafe { std::mem::transmute::<u16, SyntaxKind>(raw.0) }
     }
 
@@ -103,13 +102,13 @@ fn parse(text: &str) -> Parse<impl Resolver> {
     impl Parser<'_> {
         fn parse(mut self) -> Parse<impl Resolver> {
             // Make sure that the root node covers all source
-            self.builder.start_node(ROOT.into());
+            self.builder.start_node(Root.into());
             // Parse zero or more S-expressions
             loop {
                 match self.sexp() {
                     SexpRes::Eof => break,
                     SexpRes::RParen => {
-                        self.builder.start_node(ERROR.into());
+                        self.builder.start_node(Error.into());
                         self.errors.push("unmatched `)`".to_string());
                         self.bump(); // be sure to advance even in case of an error, so as to not get stuck
                         self.builder.finish_node();
@@ -134,9 +133,9 @@ fn parse(text: &str) -> Parse<impl Resolver> {
         }
 
         fn list(&mut self) {
-            assert_eq!(self.current(), Some(L_PAREN));
+            assert_eq!(self.current(), Some(LParen));
             // Start the list node
-            self.builder.start_node(LIST.into());
+            self.builder.start_node(List.into());
             self.bump(); // '('
             loop {
                 match self.sexp() {
@@ -161,17 +160,17 @@ fn parse(text: &str) -> Parse<impl Resolver> {
             // Either a list, an atom, a closing paren, or an eof.
             let t = match self.current() {
                 None => return SexpRes::Eof,
-                Some(R_PAREN) => return SexpRes::RParen,
+                Some(RParen) => return SexpRes::RParen,
                 Some(t) => t,
             };
             match t {
-                L_PAREN => self.list(),
-                WORD => {
-                    self.builder.start_node(ATOM.into());
+                LParen => self.list(),
+                Word => {
+                    self.builder.start_node(Atom.into());
                     self.bump();
                     self.builder.finish_node();
                 }
-                ERROR => self.bump(),
+                Error => self.bump(),
                 _ => unreachable!(),
             }
             SexpRes::Ok
@@ -189,7 +188,7 @@ fn parse(text: &str) -> Parse<impl Resolver> {
         }
 
         fn skip_ws(&mut self) {
-            while self.current() == Some(WHITESPACE) {
+            while self.current() == Some(Whitespace) {
                 self.bump()
             }
         }
@@ -232,7 +231,7 @@ fn test_parser() {
     assert_eq!(
         // note how, since we didn't attach the resolver in `syntax`, we now need to provide it
         node.debug(resolver, false),
-        "ROOT@0..15", // root node, spanning 15 bytes
+        "Root@0..15", // root node, spanning 15 bytes
     );
     assert_eq!(node.children().count(), 1);
     let list = node.children().next().unwrap();
@@ -244,13 +243,13 @@ fn test_parser() {
     assert_eq!(
         children,
         vec![
-            "L_PAREN@0..1".to_string(),
-            "ATOM@1..2".to_string(),
-            "WHITESPACE@2..3".to_string(), // note, explicit whitespace!
-            "LIST@3..11".to_string(),
-            "WHITESPACE@11..12".to_string(),
-            "ATOM@12..14".to_string(),
-            "R_PAREN@14..15".to_string(),
+            "LParen@0..1".to_string(),
+            "Atom@1..2".to_string(),
+            "Whitespace@2..3".to_string(), // note, explicit whitespace!
+            "List@3..11".to_string(),
+            "Whitespace@11..12".to_string(),
+            "Atom@12..14".to_string(),
+            "RParen@14..15".to_string(),
         ]
     );
 }
@@ -263,27 +262,30 @@ fn test_parser() {
 /// For that, let's define AST nodes.
 /// It'll be quite a bunch of repetitive code, so we'll use a macro.
 /// For a real language, you may want to automatically generate the AST implementations with a task.
-macro_rules! ast_node {
-    ($ast:ident, $kind:ident) => {
-        #[derive(PartialEq, Eq, Hash)]
-        #[repr(transparent)]
-        struct $ast(SyntaxNode);
-        impl $ast {
-            #[allow(unused)]
-            fn cast(node: SyntaxNode) -> Option<Self> {
-                if node.kind() == $kind {
-                    Some(Self(node))
-                } else {
-                    None
+mod ast {
+    use super::*;
+    macro_rules! ast_node {
+        ($ast:ident, $kind:ident) => {
+            #[derive(PartialEq, Eq, Hash)]
+            #[repr(transparent)]
+            pub struct $ast(pub(crate) SyntaxNode);
+            impl $ast {
+                #[allow(unused)]
+                pub fn cast(node: SyntaxNode) -> Option<Self> {
+                    if node.kind() == SyntaxKind::$kind {
+                        Some(Self(node))
+                    } else {
+                        None
+                    }
                 }
             }
-        }
-    };
-}
+        };
+    }
 
-ast_node!(Root, ROOT);
-ast_node!(Atom, ATOM);
-ast_node!(List, LIST);
+    ast_node!(Root, Root);
+    ast_node!(Atom, Atom);
+    ast_node!(List, List);
+}
 
 // Sexp is slightly different because it can be both an atom and a list, so let's do it by hand.
 #[derive(PartialEq, Eq, Hash)]
@@ -291,12 +293,13 @@ ast_node!(List, LIST);
 struct Sexp(SyntaxNode);
 
 enum SexpKind {
-    Atom(Atom),
-    List(List),
+    Atom(ast::Atom),
+    List(ast::List),
 }
 
 impl Sexp {
     fn cast(node: SyntaxNode) -> Option<Self> {
+        use ast::*;
         if Atom::cast(node.clone()).is_some() || List::cast(node.clone()).is_some() {
             Some(Sexp(node))
         } else {
@@ -305,6 +308,7 @@ impl Sexp {
     }
 
     fn kind(&self) -> SexpKind {
+        use ast::*;
         Atom::cast(self.0.clone())
             .map(SexpKind::Atom)
             .or_else(|| List::cast(self.0.clone()).map(SexpKind::List))
@@ -313,7 +317,7 @@ impl Sexp {
 }
 
 // Let's enhance AST nodes with ancillary functions and eval.
-impl Root {
+impl ast::Root {
     fn sexps(&self) -> impl Iterator<Item = Sexp> + '_ {
         self.0.children().cloned().filter_map(Sexp::cast)
     }
@@ -326,7 +330,7 @@ enum Op {
     Mul,
 }
 
-impl Atom {
+impl ast::Atom {
     fn eval(&self, resolver: &impl Resolver) -> Option<i64> {
         self.text(resolver).parse().ok()
     }
@@ -350,7 +354,7 @@ impl Atom {
     }
 }
 
-impl List {
+impl ast::List {
     fn sexps(&self) -> impl Iterator<Item = Sexp> + '_ {
         self.0.children().cloned().filter_map(Sexp::cast)
     }
@@ -383,8 +387,8 @@ impl Sexp {
 }
 
 impl<I> Parse<I> {
-    fn root(&self) -> Root {
-        Root::cast(self.syntax()).unwrap()
+    fn root(&self) -> ast::Root {
+        ast::Root::cast(self.syntax()).unwrap()
     }
 }
 
@@ -412,22 +416,22 @@ fn lex(text: &str) -> VecDeque<(SyntaxKind, &str)> {
     }
     fn kind(t: m_lexer::TokenKind) -> SyntaxKind {
         match t.0 {
-            0 => L_PAREN,
-            1 => R_PAREN,
-            2 => WORD,
-            3 => WHITESPACE,
-            4 => ERROR,
+            0 => LParen,
+            1 => RParen,
+            2 => Word,
+            3 => Whitespace,
+            4 => Error,
             _ => unreachable!(),
         }
     }
 
     let lexer = m_lexer::LexerBuilder::new()
-        .error_token(tok(ERROR))
+        .error_token(tok(Error))
         .tokens(&[
-            (tok(L_PAREN), r"\("),
-            (tok(R_PAREN), r"\)"),
-            (tok(WORD), r"[^\s()]+"),
-            (tok(WHITESPACE), r"\s+"),
+            (tok(LParen), r"\("),
+            (tok(RParen), r"\)"),
+            (tok(Word), r"[^\s()]+"),
+            (tok(Whitespace), r"\s+"),
         ])
         .build();
 
