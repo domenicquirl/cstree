@@ -7,10 +7,10 @@ use std::{
 use fxhash::FxHasher32;
 
 use crate::{
-    arc::{Arc, HeaderWithLength, ThinArc},
     green::{GreenElement, GreenElementRef, PackedGreenElement, SyntaxKind},
     TextSize,
 };
+use triomphe::{Arc, HeaderWithLength, ThinArc};
 
 #[repr(align(2))] //to use 1 bit for pointer tagging. NB: this is an at-least annotation
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

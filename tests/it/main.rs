@@ -1,4 +1,5 @@
 mod basic;
+mod regressions;
 mod sendsync;
 #[cfg(feature = "serde1")]
 mod serde;

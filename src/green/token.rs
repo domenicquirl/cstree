@@ -1,7 +1,8 @@
 use std::{fmt, hash, mem::ManuallyDrop, ptr};
 
-use crate::{arc::Arc, green::SyntaxKind, interning::Resolver, TextSize};
+use crate::{green::SyntaxKind, interning::Resolver, TextSize};
 use lasso::Spur;
+use triomphe::Arc;
 
 #[repr(align(2))] // to use 1 bit for pointer tagging. NB: this is an at-least annotation
 #[derive(Debug, PartialEq, Eq, Hash, Copy, Clone)]
@@ -87,7 +88,7 @@ impl Clone for GreenToken {
             let arc = ManuallyDrop::new(Arc::from_raw(ptr.as_ptr()));
             Arc::into_raw(Arc::clone(&arc))
         };
-        let ptr = ptr::NonNull::new(ptr as *mut _).unwrap();
+        let ptr = unsafe { ptr::NonNull::new_unchecked(ptr as *mut _) };
         GreenToken {
             ptr: Self::add_tag(ptr),
         }
