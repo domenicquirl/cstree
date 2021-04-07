@@ -24,6 +24,9 @@ pub struct SyntaxKind(pub u16);
 
 #[cfg(test)]
 mod tests {
+    use node::GreenNodeHead;
+    use token::GreenTokenData;
+
     use super::*;
 
     #[test]
@@ -36,12 +39,15 @@ mod tests {
     }
 
     #[test]
-    fn test_size_of() {
+    #[rustfmt::skip]
+    fn assert_green_sizes() {
         use std::mem::size_of;
 
-        eprintln!("GreenNode          {}", size_of::<GreenNode>());
-        eprintln!("GreenToken         {}", size_of::<GreenToken>());
-        eprintln!("GreenElement       {}", size_of::<GreenElement>());
-        eprintln!("PackedGreenElement {}", size_of::<PackedGreenElement>());
+        assert_eq!(size_of::<GreenNode>(),          size_of::<*const u8>());
+        assert_eq!(size_of::<GreenToken>(),         size_of::<*const u8>());
+        assert_eq!(size_of::<GreenNodeHead>(),      size_of::<u32>() * 3);
+        assert_eq!(size_of::<GreenTokenData>(),     size_of::<u32>() * 3);
+        assert_eq!(size_of::<GreenElement>(),       size_of::<*const u8>() * 2);
+        assert_eq!(size_of::<PackedGreenElement>(), size_of::<*const u8>());
     }
 }
