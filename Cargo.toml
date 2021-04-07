@@ -17,6 +17,7 @@ parking_lot= "0.11.1"
 # Arc
 stable_deref_trait = "1.0.0"
 nodrop = "0.1.8"
+triomphe = "0.1.2"
 
 [dependencies.serde]
 version = "1.0"

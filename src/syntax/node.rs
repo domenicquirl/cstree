@@ -2,7 +2,6 @@ use super::*;
 #[cfg(feature = "serde1")]
 use crate::serde_impls::{SerializeWithData, SerializeWithResolver};
 use crate::{
-    arc::Arc,
     green::{GreenElementRef, SyntaxKind},
     interning::Resolver,
     *,
@@ -18,6 +17,7 @@ use std::{
         Arc as StdArc,
     },
 };
+use triomphe::Arc;
 
 /// Inner syntax tree node.
 /// Syntax nodes can be shared between threads.
