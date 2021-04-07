@@ -1,7 +1,7 @@
 [package]
 edition = "2018"
 name = "cstree"
-version = "0.3.0"
+version = "0.4.0"
 authors = ["Domenic Quirl <DomenicQuirl@pm.me>", "Aleksey Kladov <aleksey.kladov@gmail.com>"]
 description = "Library for generic lossless syntax trees"
 license = "MIT OR Apache-2.0"
@@ -15,8 +15,6 @@ fxhash= "0.2.1"
 parking_lot= "0.11.1"
 
 # Arc
-stable_deref_trait = "1.0.0"
-nodrop = "0.1.8"
 triomphe = "0.1.2"
 
 [dependencies.serde]
