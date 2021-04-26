@@ -6,7 +6,7 @@ on:
   pull_request:
   # Daily
   schedule:
-    - cron: "0 4 * * *"
+    - cron: "0 4 1/7 * *"
 
   # Allows to run this workflow manually from the Actions tab
   workflow_dispatch:
@@ -101,7 +101,9 @@ jobs:
         with:
           rust-version: nightly
           components: miri
-      - run: cargo miri test --verbose --all-features -- -Zmiri-disable-isolation
+        env: 
+          MIRIFLAGS: -Zmiri-disable-isolation
+      - run: cargo miri test --verbose --all-features
         
   sanitizers:
     name: ${{ matrix.sanitizer }} sanitizer
