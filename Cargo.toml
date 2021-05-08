@@ -1,7 +1,7 @@
 [package]
 edition = "2018"
 name = "cstree"
-version = "0.4.0"
+version = "0.5.0"
 authors = ["Domenic Quirl <DomenicQuirl@pm.me>", "Aleksey Kladov <aleksey.kladov@gmail.com>"]
 description = "Library for generic lossless syntax trees"
 license = "MIT OR Apache-2.0"
