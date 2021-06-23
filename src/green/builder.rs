@@ -1,6 +1,9 @@
-use std::convert::TryFrom;
+use std::{
+    convert::TryFrom,
+    hash::{Hash, Hasher},
+};
 
-use fxhash::FxHashMap;
+use fxhash::{FxHashMap, FxHasher32};
 use text_size::TextSize;
 
 use crate::{
@@ -132,11 +135,11 @@ where
         }
 
         impl ChildrenIter {
-            fn new(data: [Option<GreenElement>; CHILDREN_CACHE_THRESHOLD], count: usize) -> Self {
+            fn new() -> Self {
                 ChildrenIter {
-                    data,
-                    idx: 0,
-                    len: count,
+                    data: [None, None, None],
+                    idx:  0,
+                    len:  0,
                 }
             }
         }
@@ -157,19 +160,24 @@ where
             }
         }
 
-        let mut data: [Option<GreenElement>; CHILDREN_CACHE_THRESHOLD] = [None, None, None];
-        let mut count = 0;
-
-        for child in children {
-            data[count] = Some(child);
-            count += 1;
+        let mut new_children = ChildrenIter::new();
+        let mut hasher = FxHasher32::default();
+        let mut text_len: TextSize = 0.into();
+        for (i, child) in children.into_iter().enumerate() {
+            text_len += child.text_len();
+            child.hash(&mut hasher);
+            new_children.data[i] = Some(child);
+            new_children.len += 1;
         }
-        let children = ChildrenIter::new(data, count);
 
-        let head = GreenNodeHead::from_child_iter(kind, children.clone());
+        let head = GreenNodeHead {
+            kind,
+            text_len,
+            child_hash: hasher.finish() as u32,
+        };
         self.nodes
-            .entry(head.clone())
-            .or_insert_with(|| GreenNode::from_head_and_children(head, children))
+            .entry(head)
+            .or_insert_with_key(|head| GreenNode::from_head_and_children(head.clone(), new_children))
             .clone()
     }
 
