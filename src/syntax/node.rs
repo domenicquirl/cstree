@@ -23,6 +23,7 @@ use triomphe::Arc;
 /// Syntax nodes can be shared between threads.
 /// Every syntax tree is reference counted as a whole and nodes are pointer-sized, so copying
 /// individual nodes is relatively cheap.
+#[derive(Debug)]
 #[repr(transparent)]
 pub struct SyntaxNode<L: Language, D: 'static = ()> {
     data: *mut NodeData<L, D>,
@@ -983,7 +984,7 @@ impl<'n> Iter<'n> {
 }
 
 /// An iterator over the child nodes of a [`SyntaxNode`].
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct SyntaxNodeChildren<'n, L: Language, D: 'static = ()> {
     inner:  Iter<'n>,
     parent: &'n SyntaxNode<L, D>,
@@ -1014,7 +1015,7 @@ impl<'n, L: Language, D> Iterator for SyntaxNodeChildren<'n, L, D> {
 }
 
 /// An iterator over the children of a [`SyntaxNode`].
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct SyntaxElementChildren<'n, L: Language, D: 'static = ()> {
     inner:  Iter<'n>,
     parent: &'n SyntaxNode<L, D>,

@@ -11,6 +11,7 @@ use super::*;
 use crate::{Direction, GreenNode, GreenToken, Language, SyntaxKind};
 
 /// Syntax tree token.
+#[derive(Debug)]
 pub struct SyntaxToken<L: Language, D: 'static = ()> {
     parent: SyntaxNode<L, D>,
     index:  u32,
