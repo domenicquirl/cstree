@@ -22,7 +22,6 @@ use crate::{
 /// # See also
 /// [`SyntaxNode`]
 /// [`SyntaxNode::new_root_with_resolver`]
-#[derive(Clone)]
 #[repr(transparent)]
 pub struct ResolvedNode<L: Language, D: 'static = ()> {
     pub(super) syntax: SyntaxNode<L, D>,
@@ -38,6 +37,14 @@ impl<L: Language, D> ResolvedNode<L, D> {
     /// Returns this node as a [`SyntaxNode`].
     pub fn syntax(&self) -> &SyntaxNode<L, D> {
         &self.syntax
+    }
+}
+
+impl<L: Language, D> Clone for ResolvedNode<L, D> {
+    fn clone(&self) -> Self {
+        Self {
+            syntax: self.syntax.clone(),
+        }
     }
 }
 
@@ -74,6 +81,14 @@ impl<L: Language, D> ResolvedToken<L, D> {
     /// Returns this token as a [`SyntaxToken`].
     pub fn syntax(&self) -> &SyntaxToken<L, D> {
         &self.syntax
+    }
+}
+
+impl<L: Language, D> Clone for ResolvedToken<L, D> {
+    fn clone(&self) -> Self {
+        Self {
+            syntax: self.syntax.clone(),
+        }
     }
 }
 
