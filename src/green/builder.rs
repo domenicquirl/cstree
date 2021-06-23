@@ -99,12 +99,14 @@ where
         }
     }
 
-    fn node<It>(&mut self, kind: SyntaxKind, children: It) -> GreenNode
-    where
-        It: IntoIterator<Item = GreenElement>,
-        It::IntoIter: ExactSizeIterator,
-    {
-        let children = children.into_iter();
+    fn node(&mut self, kind: SyntaxKind, children: &[GreenElement]) -> GreenNode {
+        let mut hasher = FxHasher32::default();
+        let mut text_len: TextSize = 0.into();
+        for child in children {
+            text_len += child.text_len();
+            child.hash(&mut hasher);
+        }
+        let child_hash = hasher.finish() as u32;
 
         // Green nodes are fully immutable, so it's ok to deduplicate them.
         // This is the same optimization that Roslyn does
@@ -114,70 +116,30 @@ where
         // For `libsyntax/parse/parser.rs`, measurements show that deduping saves
         // 17% of the memory for green nodes!
         if children.len() <= CHILDREN_CACHE_THRESHOLD {
-            self.get_cached_node(kind, children)
+            self.get_cached_node(kind, children, text_len, child_hash)
         } else {
-            GreenNode::new(kind, children)
+            GreenNode::new_with_len_and_hash(kind, children.iter().cloned(), text_len, child_hash)
         }
     }
 
     /// Creates a [`GreenNode`] by looking inside the cache or inserting
     /// a new node into the cache if it's a cache miss.
-    fn get_cached_node<It>(&mut self, kind: SyntaxKind, children: It) -> GreenNode
-    where
-        It: IntoIterator<Item = GreenElement>,
-        It::IntoIter: ExactSizeIterator,
-    {
-        #[derive(Clone)]
-        struct ChildrenIter {
-            data: [Option<GreenElement>; CHILDREN_CACHE_THRESHOLD],
-            idx:  usize,
-            len:  usize,
-        }
-
-        impl ChildrenIter {
-            fn new() -> Self {
-                ChildrenIter {
-                    data: [None, None, None],
-                    idx:  0,
-                    len:  0,
-                }
-            }
-        }
-
-        impl Iterator for ChildrenIter {
-            type Item = GreenElement;
-
-            fn next(&mut self) -> Option<Self::Item> {
-                let item = self.data.get_mut(self.idx)?;
-                self.idx += 1;
-                item.take()
-            }
-        }
-
-        impl ExactSizeIterator for ChildrenIter {
-            fn len(&self) -> usize {
-                self.len - self.idx
-            }
-        }
-
-        let mut new_children = ChildrenIter::new();
-        let mut hasher = FxHasher32::default();
-        let mut text_len: TextSize = 0.into();
-        for (i, child) in children.into_iter().enumerate() {
-            text_len += child.text_len();
-            child.hash(&mut hasher);
-            new_children.data[i] = Some(child);
-            new_children.len += 1;
-        }
-
+    #[inline]
+    fn get_cached_node(
+        &mut self,
+        kind: SyntaxKind,
+        children: &[GreenElement],
+        text_len: TextSize,
+        child_hash: u32,
+    ) -> GreenNode {
         let head = GreenNodeHead {
             kind,
             text_len,
-            child_hash: hasher.finish() as u32,
+            child_hash,
         };
         self.nodes
             .entry(head)
-            .or_insert_with_key(|head| GreenNode::from_head_and_children(head.clone(), new_children))
+            .or_insert_with_key(|head| GreenNode::from_head_and_children(head.clone(), children.iter().cloned()))
             .clone()
     }
 
@@ -315,8 +277,8 @@ where
     #[inline]
     pub fn finish_node(&mut self) {
         let (kind, first_child) = self.parents.pop().unwrap();
-        let children = self.children.drain(first_child..);
-        let node = self.cache.node(kind, children);
+        let node = self.cache.node(kind, &self.children[first_child..]);
+        self.children.truncate(first_child);
         self.children.push(node.into());
     }
 
