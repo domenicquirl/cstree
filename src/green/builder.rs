@@ -185,7 +185,10 @@ where
         let text_len = TextSize::try_from(text.len()).unwrap();
         let text = self.interner.get_or_intern(text);
         let data = GreenTokenData { kind, text, text_len };
-        self.tokens.entry(data).or_insert_with(|| GreenToken::new(data)).clone()
+        self.tokens
+            .entry(data)
+            .or_insert_with_key(|data| GreenToken::new(*data))
+            .clone()
     }
 }
 
