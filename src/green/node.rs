@@ -70,6 +70,39 @@ impl GreenNode {
         }
     }
 
+    /// Creates a new Node.
+    #[inline]
+    pub(super) fn new_with_len_and_hash<I>(
+        kind: SyntaxKind,
+        children: I,
+        text_len: TextSize,
+        child_hash: u32,
+    ) -> GreenNode
+    where
+        I: IntoIterator<Item = GreenElement>,
+        I::IntoIter: ExactSizeIterator,
+    {
+        let children = children.into_iter().map(PackedGreenElement::from);
+        let header = HeaderWithLength::new(
+            GreenNodeHead {
+                kind,
+                text_len: 0.into(),
+                child_hash: 0,
+            },
+            children.len(),
+        );
+        let mut data = Arc::from_header_and_iter(header, children);
+
+        // XXX: fixup `text_len` and `child_hash` after construction, because
+        // we can't iterate `children` twice.
+        let header = &mut Arc::get_mut(&mut data).unwrap().header.header;
+        header.text_len = text_len;
+        header.child_hash = child_hash;
+        GreenNode {
+            data: Arc::into_thin(data),
+        }
+    }
+
     #[inline]
     pub(super) fn from_head_and_children<I>(header: GreenNodeHead, children: I) -> GreenNode
     where

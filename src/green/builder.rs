@@ -100,6 +100,14 @@ where
     }
 
     fn node(&mut self, kind: SyntaxKind, children: &[GreenElement]) -> GreenNode {
+        let mut hasher = FxHasher32::default();
+        let mut text_len: TextSize = 0.into();
+        for child in children {
+            text_len += child.text_len();
+            child.hash(&mut hasher);
+        }
+        let child_hash = hasher.finish() as u32;
+
         // Green nodes are fully immutable, so it's ok to deduplicate them.
         // This is the same optimization that Roslyn does
         // https://github.com/KirillOsenkov/Bliki/wiki/Roslyn-Immutable-Trees
@@ -108,26 +116,26 @@ where
         // For `libsyntax/parse/parser.rs`, measurements show that deduping saves
         // 17% of the memory for green nodes!
         if children.len() <= CHILDREN_CACHE_THRESHOLD {
-            self.get_cached_node(kind, children)
+            self.get_cached_node(kind, children, text_len, child_hash)
         } else {
-            GreenNode::new(kind, children.iter().cloned())
+            GreenNode::new_with_len_and_hash(kind, children.iter().cloned(), text_len, child_hash)
         }
     }
 
     /// Creates a [`GreenNode`] by looking inside the cache or inserting
     /// a new node into the cache if it's a cache miss.
-    fn get_cached_node(&mut self, kind: SyntaxKind, children: &[GreenElement]) -> GreenNode {
-        let mut hasher = FxHasher32::default();
-        let mut text_len: TextSize = 0.into();
-        for child in children {
-            text_len += child.text_len();
-            child.hash(&mut hasher);
-        }
-
+    #[inline]
+    fn get_cached_node(
+        &mut self,
+        kind: SyntaxKind,
+        children: &[GreenElement],
+        text_len: TextSize,
+        child_hash: u32,
+    ) -> GreenNode {
         let head = GreenNodeHead {
             kind,
             text_len,
-            child_hash: hasher.finish() as u32,
+            child_hash,
         };
         self.nodes
             .entry(head)
