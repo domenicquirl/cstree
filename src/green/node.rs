@@ -15,29 +15,9 @@ use triomphe::{Arc, HeaderWithLength, ThinArc};
 #[repr(align(2))] //to use 1 bit for pointer tagging. NB: this is an at-least annotation
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub(super) struct GreenNodeHead {
-    kind:       SyntaxKind,
-    text_len:   TextSize,
-    child_hash: u32,
-}
-
-impl GreenNodeHead {
-    #[inline]
-    pub(super) fn from_child_iter<I>(kind: SyntaxKind, children: I) -> Self
-    where
-        I: Iterator<Item = GreenElement>,
-    {
-        let mut hasher = FxHasher32::default();
-        let mut text_len: TextSize = 0.into();
-        for child in children {
-            text_len += child.text_len();
-            child.hash(&mut hasher);
-        }
-        Self {
-            kind,
-            text_len,
-            child_hash: hasher.finish() as u32,
-        }
-    }
+    pub(super) kind:       SyntaxKind,
+    pub(super) text_len:   TextSize,
+    pub(super) child_hash: u32,
 }
 
 /// Internal node in the immutable "green" tree.
