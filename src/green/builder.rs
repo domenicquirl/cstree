@@ -133,6 +133,27 @@ where
         }
     }
 
+    /// Get a reference to the interner used to deduplicate source text (strings).
+    ///
+    /// See also [`interner_mut`](NodeCache::interner_mut).
+    pub fn interner(&self) -> &I {
+        &*self.interner
+    }
+
+    /// Get a mutable reference to the interner used to deduplicate source text (strings).
+    /// # Examples
+    /// ```
+    /// # use cstree::*;
+    /// # use cstree::interning::*;
+    /// let mut cache = NodeCache::new();
+    /// let interner = cache.interner_mut();
+    /// let key = interner.get_or_intern("foo");
+    /// assert_eq!(interner.resolve(&key), "foo");
+    /// ```
+    pub fn interner_mut(&mut self) -> &mut I {
+        &mut *self.interner
+    }
+
     /// If this node cache was constructed with [`new`](NodeCache::new) or
     /// [`from_interner`](NodeCache::from_interner), returns the interner used to deduplicate source
     /// text (strings) to allow resolving tree tokens back to text and re-using the interner to build
