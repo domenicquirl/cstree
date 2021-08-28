@@ -184,13 +184,13 @@ impl<L: Language, D> ResolvedNode<L, D> {
 
 impl<L: Language, D> fmt::Debug for ResolvedNode<L, D> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.debug(&**self.resolver(), f.alternate()))
+        self.write_debug(&**self.resolver(), f, f.alternate())
     }
 }
 
 impl<L: Language, D> fmt::Display for ResolvedNode<L, D> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.display(&**self.resolver()))
+        self.write_display(&**self.resolver(), f)
     }
 }
 
@@ -198,19 +198,19 @@ impl<L: Language, D> ResolvedToken<L, D> {
     /// Uses the resolver associated with this tree to return the source text of this token.
     #[inline]
     pub fn text(&self) -> &str {
-        self.green().text(&**self.parent().resolver())
+        self.green().text(&**self.resolver())
     }
 }
 
 impl<L: Language, D> fmt::Debug for ResolvedToken<L, D> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.debug(&**self.parent().resolver()))
+        self.write_debug(&**self.resolver(), f)
     }
 }
 
 impl<L: Language, D> fmt::Display for ResolvedToken<L, D> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.display(&**self.parent().resolver()))
+        self.write_display(&**self.resolver(), f)
     }
 }
 
@@ -262,7 +262,7 @@ macro_rules! forward_node {
 }
 
 impl<L: Language, D> ResolvedNode<L, D> {
-    /// If there is a resolver associated with this tree, returns it.
+    /// Returns the [`Resolver`] associated with this tree.
     pub fn resolver(&self) -> &StdArc<dyn Resolver> {
         self.syntax.resolver().unwrap()
     }
@@ -494,6 +494,11 @@ impl<L: Language, D> ResolvedNode<L, D> {
 }
 
 impl<L: Language, D> ResolvedToken<L, D> {
+    /// Returns the [`Resolver`] associated with this tree.
+    pub fn resolver(&self) -> &StdArc<dyn Resolver> {
+        self.syntax.resolver().unwrap()
+    }
+
     /// Always returns `Some(self)`.
     ///
     /// This method mostly exists to allow the convenience of being agnostic over [`SyntaxToken`] vs [`ResolvedToken`].

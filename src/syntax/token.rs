@@ -1,7 +1,8 @@
 use std::{
-    fmt::Write,
+    fmt,
     hash::{Hash, Hasher},
     iter,
+    sync::Arc as StdArc,
 };
 
 use lasso::Resolver;
@@ -45,29 +46,51 @@ impl<L: Language, D> PartialEq for SyntaxToken<L, D> {
 impl<L: Language, D> Eq for SyntaxToken<L, D> {}
 
 impl<L: Language, D> SyntaxToken<L, D> {
-    #[allow(missing_docs)]
-    pub fn debug<R>(&self, resolver: &R) -> String
+    /// Writes this token's [`Debug`](fmt::Debug) representation into the given `target`.
+    pub fn write_debug<R>(&self, resolver: &R, target: &mut impl fmt::Write) -> fmt::Result
     where
         R: Resolver + ?Sized,
     {
-        let mut res = String::new();
-        write!(res, "{:?}@{:?}", self.kind(), self.text_range()).unwrap();
-        if self.resolve_text(resolver).len() < 25 {
-            write!(res, " {:?}", self.resolve_text(resolver)).unwrap();
-            return res;
-        }
+        write!(target, "{:?}@{:?}", self.kind(), self.text_range())?;
         let text = self.resolve_text(resolver);
+        if text.len() < 25 {
+            return write!(target, " {:?}", text);
+        }
+
         for idx in 21..25 {
             if text.is_char_boundary(idx) {
-                let text = format!("{} ...", &text[..idx]);
-                write!(res, " {:?}", text).unwrap();
-                return res;
+                return write!(target, r#" "{} ...""#, &text[..idx]);
             }
         }
         unreachable!()
     }
 
-    #[allow(missing_docs)]
+    /// Returns this token's [`Debug`](fmt::Debug) representation as a string.
+    ///
+    /// To avoid allocating for every token, see [`write_debug`](SyntaxToken::write_debug).
+    pub fn debug<R>(&self, resolver: &R) -> String
+    where
+        R: Resolver + ?Sized,
+    {
+        // NOTE: `fmt::Write` methods on `String` never fail
+        let mut res = String::new();
+        self.write_debug(resolver, &mut res).unwrap();
+        res
+    }
+
+    /// Writes this token's [`Display`](fmt::Display) representation into the given `target`.
+    #[inline]
+    pub fn write_display<R>(&self, resolver: &R, target: &mut impl fmt::Write) -> fmt::Result
+    where
+        R: Resolver + ?Sized,
+    {
+        write!(target, "{}", self.resolve_text(resolver))
+    }
+
+    /// Returns this token's [`Display`](fmt::Display) representation as a string.
+    ///
+    /// To avoid allocating for every token, see [`write_display`](SyntaxToken::write_display).
+    #[inline]
     pub fn display<R>(&self, resolver: &R) -> String
     where
         R: Resolver + ?Sized,
@@ -75,13 +98,17 @@ impl<L: Language, D> SyntaxToken<L, D> {
         self.resolve_text(resolver).to_string()
     }
 
+    /// If there is a resolver associated with this tree, returns it.
+    #[inline]
+    pub fn resolver(&self) -> Option<&StdArc<dyn Resolver>> {
+        self.parent.resolver()
+    }
+
     /// Turns this token into a [`ResolvedToken`], but only if there is a resolver associated with this tree.
     #[inline]
     pub fn try_resolved(&self) -> Option<&ResolvedToken<L, D>> {
         // safety: we only coerce if `resolver` exists
-        self.parent()
-            .resolver()
-            .map(|_| unsafe { ResolvedToken::coerce_ref(self) })
+        self.resolver().map(|_| unsafe { ResolvedToken::coerce_ref(self) })
     }
 
     /// Turns this token into a [`ResolvedToken`].

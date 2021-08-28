@@ -9,7 +9,7 @@ use crate::{
 use parking_lot::RwLock;
 use std::{
     cell::UnsafeCell,
-    fmt::Write,
+    fmt,
     hash::{Hash, Hasher},
     iter, ptr,
     sync::{
@@ -33,55 +33,75 @@ unsafe impl<L: Language, D: 'static> Send for SyntaxNode<L, D> {}
 unsafe impl<L: Language, D: 'static> Sync for SyntaxNode<L, D> {}
 
 impl<L: Language, D> SyntaxNode<L, D> {
-    #[allow(missing_docs)]
-    pub fn debug<R>(&self, resolver: &R, recursive: bool) -> String
+    /// Writes this node's [`Debug`](fmt::Debug) representation into the given `target`.
+    /// If `recursive` is `true`, prints the entire subtree rooted in this node.
+    /// Otherwise, only this node's kind and range are written.
+    pub fn write_debug<R>(&self, resolver: &R, target: &mut impl fmt::Write, recursive: bool) -> fmt::Result
     where
         R: Resolver + ?Sized,
     {
-        // NOTE: `fmt::Write` methods on `String` never fail
-        let mut res = String::new();
         if recursive {
             let mut level = 0;
             for event in self.preorder_with_tokens() {
                 match event {
                     WalkEvent::Enter(element) => {
                         for _ in 0..level {
-                            write!(res, "  ").unwrap();
+                            write!(target, "  ")?;
                         }
-                        writeln!(
-                            res,
-                            "{}",
-                            match element {
-                                NodeOrToken::Node(node) => node.debug(resolver, false),
-                                NodeOrToken::Token(token) => token.debug(resolver),
-                            },
-                        )
-                        .unwrap();
+                        element.write_debug(resolver, target, false)?;
+                        writeln!(target)?;
                         level += 1;
                     }
                     WalkEvent::Leave(_) => level -= 1,
                 }
             }
             assert_eq!(level, 0);
+            Ok(())
         } else {
-            write!(res, "{:?}@{:?}", self.kind(), self.text_range()).unwrap();
+            write!(target, "{:?}@{:?}", self.kind(), self.text_range())
         }
-        res
     }
 
-    #[allow(missing_docs)]
-    pub fn display<R>(&self, resolver: &R) -> String
+    /// Returns this node's [`Debug`](fmt::Debug) representation as a string.
+    /// If `recursive` is `true`, prints the entire subtree rooted in this node.
+    /// Otherwise, only this node's kind and range are written.
+    ///
+    /// To avoid allocating for every node, see [`write_debug`](SyntaxNode::write_debug).
+    #[inline]
+    pub fn debug<R>(&self, resolver: &R, recursive: bool) -> String
     where
         R: Resolver + ?Sized,
     {
+        // NOTE: `fmt::Write` methods on `String` never fail
         let mut res = String::new();
+        self.write_debug(resolver, &mut res, recursive).unwrap();
+        res
+    }
+
+    /// Writes this node's [`Display`](fmt::Display) representation into the given `target`.
+    pub fn write_display<R>(&self, resolver: &R, target: &mut impl fmt::Write) -> fmt::Result
+    where
+        R: Resolver + ?Sized,
+    {
         self.preorder_with_tokens()
             .filter_map(|event| match event {
                 WalkEvent::Enter(NodeOrToken::Token(token)) => Some(token),
                 _ => None,
             })
-            .try_for_each(|it| write!(res, "{}", it.display(resolver)))
-            .unwrap();
+            .try_for_each(|it| it.write_display(resolver, target))
+    }
+
+    /// Returns this node's [`Display`](fmt::Display) representation as a string.
+    ///
+    /// To avoid allocating for every node, see [`write_display`](SyntaxNode::write_display).
+    #[inline]
+    pub fn display<R>(&self, resolver: &R) -> String
+    where
+        R: Resolver + ?Sized,
+    {
+        // NOTE: `fmt::Write` methods on `String` never fail
+        let mut res = String::new();
+        self.write_display(resolver, &mut res).unwrap();
         res
     }
 

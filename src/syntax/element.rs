@@ -1,4 +1,4 @@
-use std::sync::atomic::AtomicU32;
+use std::{fmt, sync::atomic::AtomicU32};
 
 use lasso::Resolver;
 use text_size::{TextRange, TextSize};
@@ -22,11 +22,55 @@ impl<L: Language, D> From<SyntaxToken<L, D>> for SyntaxElement<L, D> {
 }
 
 impl<L: Language, D> SyntaxElement<L, D> {
-    #[allow(missing_docs)]
-    pub fn display(&self, resolver: &impl Resolver) -> String {
+    /// Returns this element's [`Display`](fmt::Display) representation as a string.
+    ///
+    /// To avoid allocating for every element, see [`write_display`](type.SyntaxElement.html#method.write_display).
+    pub fn display<R>(&self, resolver: &R) -> String
+    where
+        R: Resolver + ?Sized,
+    {
         match self {
             NodeOrToken::Node(it) => it.display(resolver),
             NodeOrToken::Token(it) => it.display(resolver),
+        }
+    }
+
+    /// Writes this element's [`Display`](fmt::Display) representation into the given `target`.
+    pub fn write_display<R>(&self, resolver: &R, target: &mut impl fmt::Write) -> fmt::Result
+    where
+        R: Resolver + ?Sized,
+    {
+        match self {
+            NodeOrToken::Node(it) => it.write_display(resolver, target),
+            NodeOrToken::Token(it) => it.write_display(resolver, target),
+        }
+    }
+
+    /// Returns this element's [`Debug`](fmt::Debug) representation as a string.
+    /// If `recursive` is `true`, prints the entire subtree rooted in this element.
+    /// Otherwise, only this element's kind and range are written.
+    ///
+    /// To avoid allocating for every element, see [`write_debug`](type.SyntaxElement.html#method.write_debug).
+    pub fn debug<R>(&self, resolver: &R, recursive: bool) -> String
+    where
+        R: Resolver + ?Sized,
+    {
+        match self {
+            NodeOrToken::Node(it) => it.debug(resolver, recursive),
+            NodeOrToken::Token(it) => it.debug(resolver),
+        }
+    }
+
+    /// Writes this element's [`Debug`](fmt::Debug) representation into the given `target`.
+    /// If `recursive` is `true`, prints the entire subtree rooted in this element.
+    /// Otherwise, only this element's kind and range are written.
+    pub fn write_debug<R>(&self, resolver: &R, target: &mut impl fmt::Write, recursive: bool) -> fmt::Result
+    where
+        R: Resolver + ?Sized,
+    {
+        match self {
+            NodeOrToken::Node(it) => it.write_debug(resolver, target, recursive),
+            NodeOrToken::Token(it) => it.write_debug(resolver, target),
         }
     }
 }
@@ -56,11 +100,55 @@ impl<'a, L: Language, D> From<&'a SyntaxElement<L, D>> for SyntaxElementRef<'a, 
 }
 
 impl<'a, L: Language, D> SyntaxElementRef<'a, L, D> {
-    #[allow(missing_docs)]
-    pub fn display(&self, resolver: &impl Resolver) -> String {
+    /// Returns this element's [`Display`](fmt::Display) representation as a string.
+    ///
+    /// To avoid allocating for every element, see [`write_display`](type.SyntaxElementRef.html#method.write_display).
+    pub fn display<R>(&self, resolver: &R) -> String
+    where
+        R: Resolver + ?Sized,
+    {
         match self {
             NodeOrToken::Node(it) => it.display(resolver),
             NodeOrToken::Token(it) => it.display(resolver),
+        }
+    }
+
+    /// Writes this element's [`Display`](fmt::Display) representation into the given `target`.
+    pub fn write_display<R>(&self, resolver: &R, target: &mut impl fmt::Write) -> fmt::Result
+    where
+        R: Resolver + ?Sized,
+    {
+        match self {
+            NodeOrToken::Node(it) => it.write_display(resolver, target),
+            NodeOrToken::Token(it) => it.write_display(resolver, target),
+        }
+    }
+
+    /// Returns this element's [`Debug`](fmt::Debug) representation as a string.
+    /// If `recursive` is `true`, prints the entire subtree rooted in this element.
+    /// Otherwise, only this element's kind and range are written.
+    ///
+    /// To avoid allocating for every element, see [`write_debug`](type.SyntaxElementRef.html#method.write_debug).
+    pub fn debug<R>(&self, resolver: &R, recursive: bool) -> String
+    where
+        R: Resolver + ?Sized,
+    {
+        match self {
+            NodeOrToken::Node(it) => it.debug(resolver, recursive),
+            NodeOrToken::Token(it) => it.debug(resolver),
+        }
+    }
+
+    /// Writes this element's [`Debug`](fmt::Debug) representation into the given `target`.
+    /// If `recursive` is `true`, prints the entire subtree rooted in this element.
+    /// Otherwise, only this element's kind and range are written.
+    pub fn write_debug<R>(&self, resolver: &R, target: &mut impl fmt::Write, recursive: bool) -> fmt::Result
+    where
+        R: Resolver + ?Sized,
+    {
+        match self {
+            NodeOrToken::Node(it) => it.write_debug(resolver, target, recursive),
+            NodeOrToken::Token(it) => it.write_debug(resolver, target),
         }
     }
 }
