@@ -124,10 +124,10 @@ fn parse(text: &str) -> Parse<impl Resolver> {
             // Get the green tree from the builder.
             // Note that, since we didn't provide our own interner to the builder, it has
             // instantiated one for us and now returns it together with the tree.
-            let (tree, interner) = self.builder.finish();
+            let (tree, cache) = self.builder.finish();
             Parse {
                 green_node: tree,
-                resolver:   interner.unwrap().into_resolver(),
+                resolver:   cache.unwrap().into_interner().unwrap().into_resolver(),
                 errors:     self.errors,
             }
         }

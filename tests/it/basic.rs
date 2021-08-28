@@ -5,8 +5,8 @@ use lasso::{Resolver, Rodeo};
 fn build_tree<D>(root: &Element<'_>) -> (SyntaxNode<D>, impl Resolver) {
     let mut builder = GreenNodeBuilder::new();
     build_recursive(root, &mut builder, 0);
-    let (node, interner) = builder.finish();
-    (SyntaxNode::new_root(node), interner.unwrap())
+    let (node, cache) = builder.finish();
+    (SyntaxNode::new_root(node), cache.unwrap().into_interner().unwrap())
 }
 
 fn two_level_tree() -> Element<'static> {

@@ -43,8 +43,8 @@ where
 {
     let mut builder = GreenNodeBuilder::with_cache(cache);
     build_recursive(root, &mut builder, 0);
-    let (node, interner) = builder.finish();
-    assert!(interner.is_none());
+    let (node, cache) = builder.finish();
+    assert!(cache.is_none());
     node
 }
 

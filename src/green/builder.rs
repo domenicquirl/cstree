@@ -90,13 +90,56 @@ where
     /// assert_eq!(tree.kind(), ROOT);
     /// let int = tree.children().next().unwrap();
     /// assert_eq!(int.kind(), INT);
+    /// assert_eq!(int.as_token().unwrap().text(&interner), "42");
     /// ```
+    #[inline]
     pub fn with_interner(interner: &'i mut I) -> Self {
         Self {
             nodes:    FxHashMap::default(),
             tokens:   FxHashMap::default(),
             interner: MaybeOwned::Borrowed(interner),
         }
+    }
+
+    /// Constructs a new, empty cache that will use the given interner to deduplicate source text
+    /// (strings) across tokens.
+    /// # Examples
+    /// ```
+    /// # use cstree::*;
+    /// use lasso::Rodeo;
+    /// # const ROOT: SyntaxKind = SyntaxKind(0);
+    /// # const INT: SyntaxKind = SyntaxKind(1);
+    /// # fn parse(b: &mut GreenNodeBuilder<Rodeo>, s: &str) {}
+    /// let mut interner = Rodeo::new();
+    /// let cache = NodeCache::from_interner(interner);
+    /// let mut builder = GreenNodeBuilder::from_cache(cache);
+    /// # builder.start_node(ROOT);
+    /// # builder.token(INT, "42");
+    /// # builder.finish_node();
+    /// parse(&mut builder, "42");
+    /// let (tree, cache) = builder.finish();
+    /// let interner = cache.unwrap().into_interner().unwrap();
+    /// assert_eq!(tree.kind(), ROOT);
+    /// let int = tree.children().next().unwrap();
+    /// assert_eq!(int.kind(), INT);
+    /// assert_eq!(int.as_token().unwrap().text(&interner), "42");
+    /// ```
+    #[inline]
+    pub fn from_interner(interner: I) -> Self {
+        Self {
+            nodes:    FxHashMap::default(),
+            tokens:   FxHashMap::default(),
+            interner: MaybeOwned::Owned(interner),
+        }
+    }
+
+    /// If this node cache was constructed with [`new`](NodeCache::new) or
+    /// [`from_interner`](NodeCache::from_interner), returns the interner used to deduplicate source
+    /// text (strings) to allow resolving tree tokens back to text and re-using the interner to build
+    /// additonal trees.
+    #[inline]
+    pub fn into_interner(self) -> Option<I> {
+        self.interner.into_owned()
     }
 
     fn node(&mut self, kind: SyntaxKind, children: &[GreenElement]) -> GreenNode {
@@ -200,10 +243,11 @@ impl<T: Default> Default for MaybeOwned<'_, T> {
 pub struct Checkpoint(usize);
 
 /// A builder for green trees.
-/// Construct with [`new`](GreenNodeBuilder::new) or [`with_cache`](GreenNodeBuilder::with_cache). To
-/// add tree nodes, start them with [`start_node`](GreenNodeBuilder::start_node), add
-/// [`token`](GreenNodeBuilder::token)s and then [`finish_node`](GreenNodeBuilder::finish_node). When
-/// the whole tree is constructed, call [`finish`](GreenNodeBuilder::finish) to obtain the root.
+/// Construct with [`new`](GreenNodeBuilder::new), [`with_cache`](GreenNodeBuilder::with_cache), or
+/// [`from_cache`](GreenNodeBuilder::from_cache). To add tree nodes, start them with
+/// [`start_node`](GreenNodeBuilder::start_node), add [`token`](GreenNodeBuilder::token)s and then
+/// [`finish_node`](GreenNodeBuilder::finish_node). When the whole tree is constructed, call
+/// [`finish`](GreenNodeBuilder::finish) to obtain the root.
 ///
 /// # Examples
 /// ```
@@ -214,11 +258,11 @@ pub struct Checkpoint(usize);
 /// builder.start_node(ROOT);
 /// builder.token(INT, "42");
 /// builder.finish_node();
-/// let (tree, interner) = builder.finish();
+/// let (tree, cache) = builder.finish();
 /// assert_eq!(tree.kind(), ROOT);
 /// let int = tree.children().next().unwrap();
 /// assert_eq!(int.kind(), INT);
-/// let resolver = interner.unwrap().into_resolver();
+/// let resolver = cache.unwrap().into_interner().unwrap().into_resolver();
 /// assert_eq!(int.as_token().unwrap().text(&resolver), "42");
 /// ```
 #[derive(Debug)]
@@ -254,6 +298,36 @@ where
     pub fn with_cache(cache: &'cache mut NodeCache<'interner, I>) -> Self {
         Self {
             cache:    MaybeOwned::Borrowed(cache),
+            parents:  Vec::with_capacity(8),
+            children: Vec::with_capacity(8),
+        }
+    }
+
+    /// Reusing a [`NodeCache`] between multiple builders saves memory, as it allows to structurally
+    /// share underlying trees.
+    /// The `cache` given will be returned on [`finish`](GreenNodeBuilder::finish).
+    /// # Examples
+    /// ```
+    /// # use cstree::*;
+    /// # const ROOT: SyntaxKind = SyntaxKind(0);
+    /// # const INT: SyntaxKind = SyntaxKind(1);
+    /// # fn parse(b: &mut GreenNodeBuilder, s: &str) {}
+    /// let cache = NodeCache::new();
+    /// let mut builder = GreenNodeBuilder::from_cache(cache);
+    /// # builder.start_node(ROOT);
+    /// # builder.token(INT, "42");
+    /// # builder.finish_node();
+    /// parse(&mut builder, "42");
+    /// let (tree, cache) = builder.finish();
+    /// let interner = cache.unwrap().into_interner().unwrap();
+    /// assert_eq!(tree.kind(), ROOT);
+    /// let int = tree.children().next().unwrap();
+    /// assert_eq!(int.kind(), INT);
+    /// assert_eq!(int.as_token().unwrap().text(&interner), "42");
+    /// ```
+    pub fn from_cache(cache: NodeCache<'interner, I>) -> Self {
+        Self {
+            cache:    MaybeOwned::Owned(cache),
             parents:  Vec::with_capacity(8),
             children: Vec::with_capacity(8),
         }
@@ -340,15 +414,16 @@ where
     /// [`finish_node`](GreenNodeBuilder::finish_node) are balanced, i.e. that every started node has
     /// been completed!
     ///
-    /// If this builder was constructed with [`new`](GreenNodeBuilder::new), this method returns the
-    /// interner used to deduplicate source text (strings) as its second return value to allow
-    /// resolving tree tokens back to text and re-using the interner to build additonal trees.
+    /// If this builder was constructed with [`new`](GreenNodeBuilder::new) or
+    /// [`from_cache`](GreenNodeBuilder::from_cache), this method returns the cache used to deduplicate tree nodes
+    /// (strings) as its second return value to allow re-using the cache or extracting the underlying string
+    /// [`Interner`]. See also [`NodeCache::into_interner`].
     #[inline]
-    pub fn finish(mut self) -> (GreenNode, Option<I>) {
+    pub fn finish(mut self) -> (GreenNode, Option<NodeCache<'interner, I>>) {
         assert_eq!(self.children.len(), 1);
-        let resolver = self.cache.into_owned().and_then(|cache| cache.interner.into_owned());
+        let cache = self.cache.into_owned();
         match self.children.pop().unwrap() {
-            NodeOrToken::Node(node) => (node, resolver),
+            NodeOrToken::Node(node) => (node, cache),
             NodeOrToken::Token(_) => panic!("called `finish` on a `GreenNodeBuilder` which only contained a token"),
         }
     }

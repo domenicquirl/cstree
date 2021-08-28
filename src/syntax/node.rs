@@ -366,8 +366,8 @@ impl<L: Language, D> SyntaxNode<L, D> {
     /// builder.start_node(ROOT);
     /// builder.token(TOKEN, "content");
     /// builder.finish_node();
-    /// let (green, resolver) = builder.finish();
-    /// let root: ResolvedNode<Lang> = SyntaxNode::new_root_with_resolver(green, resolver.unwrap());
+    /// let (green, cache) = builder.finish();
+    /// let root: ResolvedNode<Lang> = SyntaxNode::new_root_with_resolver(green, cache.unwrap().into_interner().unwrap());
     /// assert_eq!(root.text(), "content");
     /// ```
     #[inline]

@@ -117,8 +117,11 @@ impl<'input, I: Iterator<Item = (SyntaxKind, &'input str)>> Parser<'input, I> {
         self.parse_add();
         self.builder.finish_node();
 
-        let (tree, resolver) = self.builder.finish();
-        (SyntaxNode::new_root(tree), resolver.unwrap().into_resolver())
+        let (tree, cache) = self.builder.finish();
+        (
+            SyntaxNode::new_root(tree),
+            cache.unwrap().into_interner().unwrap().into_resolver(),
+        )
     }
 }
 

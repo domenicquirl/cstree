@@ -191,8 +191,9 @@ where
                     }
                 }
 
-                let (tree, resolver) = builder.finish();
-                let tree = ResolvedNode::new_root_with_resolver(tree, resolver.unwrap().into_resolver());
+                let (tree, cache) = builder.finish();
+                let tree =
+                    ResolvedNode::new_root_with_resolver(tree, cache.unwrap().into_interner().unwrap().into_resolver());
                 Ok((tree, data_indices))
             }
         }

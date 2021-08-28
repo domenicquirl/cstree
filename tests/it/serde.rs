@@ -225,8 +225,8 @@ fn three_level_tree() -> Element<'static> {
 fn build_tree(root: Element<'_>) -> ResolvedNode<String> {
     let mut builder = GreenNodeBuilder::new();
     build_recursive(&root, &mut builder, 0);
-    let (node, interner) = builder.finish();
-    SyntaxNode::new_root_with_resolver(node, interner.unwrap().into_resolver())
+    let (node, cache) = builder.finish();
+    SyntaxNode::new_root_with_resolver(node, cache.unwrap().into_interner().unwrap().into_resolver())
 }
 
 fn attach_data(node: &SyntaxNode<String>) {

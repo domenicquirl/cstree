@@ -9,8 +9,8 @@ use cstree::{interning::IntoResolver, GreenNodeBuilder};
 fn build_tree<D>(root: &Element<'_>) -> ResolvedNode<D> {
     let mut builder = GreenNodeBuilder::new();
     build_recursive(root, &mut builder, 0);
-    let (node, interner) = builder.finish();
-    SyntaxNode::new_root_with_resolver(node, interner.unwrap().into_resolver())
+    let (node, cache) = builder.finish();
+    SyntaxNode::new_root_with_resolver(node, cache.unwrap().into_interner().unwrap().into_resolver())
 }
 
 fn two_level_tree() -> Element<'static> {

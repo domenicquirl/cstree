@@ -44,8 +44,8 @@ use crate::{interning::Resolver, Language, SyntaxNode, SyntaxToken, TextRange, T
 /// #     builder.start_node(LITERAL);
 /// #     builder.token(LITERAL, s);
 /// #     builder.finish_node();
-/// #     let (root, interner) = builder.finish();
-/// #     let resolver = interner.unwrap().into_resolver();
+/// #     let (root, cache) = builder.finish();
+/// #     let resolver = cache.unwrap().into_interner().unwrap().into_resolver();
 /// #     SyntaxNode::new_root_with_resolver(root, resolver)
 /// # }
 /// let node = parse_float_literal("2.748E2");
@@ -407,8 +407,8 @@ mod tests {
             builder.token(SyntaxKind(92), chunk);
         }
         builder.finish_node();
-        let (node, interner) = builder.finish();
-        (SyntaxNode::new_root(node), interner.unwrap())
+        let (node, cache) = builder.finish();
+        (SyntaxNode::new_root(node), cache.unwrap().into_interner().unwrap())
     }
 
     #[test]
