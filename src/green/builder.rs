@@ -136,6 +136,7 @@ where
     /// Get a reference to the interner used to deduplicate source text (strings).
     ///
     /// See also [`interner_mut`](NodeCache::interner_mut).
+    #[inline]
     pub fn interner(&self) -> &I {
         &*self.interner
     }
@@ -150,6 +151,7 @@ where
     /// let key = interner.get_or_intern("foo");
     /// assert_eq!(interner.resolve(&key), "foo");
     /// ```
+    #[inline]
     pub fn interner_mut(&mut self) -> &mut I {
         &mut *self.interner
     }
@@ -354,6 +356,32 @@ where
         }
     }
 
+    /// Get a reference to the interner used to deduplicate source text (strings).
+    ///
+    /// This is the same interner as used by the underlying [`NodeCache`].
+    /// See also [`interner_mut`](GreenNodeBuilder::interner_mut).
+    #[inline]
+    pub fn interner(&self) -> &I {
+        &*self.cache.interner
+    }
+
+    /// Get a mutable reference to the interner used to deduplicate source text (strings).
+    ///
+    /// This is the same interner as used by the underlying [`NodeCache`].
+    /// # Examples
+    /// ```
+    /// # use cstree::*;
+    /// # use cstree::interning::*;
+    /// let mut builder = GreenNodeBuilder::new();
+    /// let interner = builder.interner_mut();
+    /// let key = interner.get_or_intern("foo");
+    /// assert_eq!(interner.resolve(&key), "foo");
+    /// ```
+    #[inline]
+    pub fn interner_mut(&mut self) -> &mut I {
+        &mut *self.cache.interner
+    }
+
     /// Add new token to the current branch.
     #[inline]
     pub fn token(&mut self, kind: SyntaxKind, text: &str) {
@@ -437,8 +465,8 @@ where
     ///
     /// If this builder was constructed with [`new`](GreenNodeBuilder::new) or
     /// [`from_cache`](GreenNodeBuilder::from_cache), this method returns the cache used to deduplicate tree nodes
-    /// (strings) as its second return value to allow re-using the cache or extracting the underlying string
-    /// [`Interner`]. See also [`NodeCache::into_interner`].
+    ///  as its second return value to allow re-using the cache or extracting the underlying string
+    ///  [`Interner`]. See also [`NodeCache::into_interner`].
     #[inline]
     pub fn finish(mut self) -> (GreenNode, Option<NodeCache<'interner, I>>) {
         assert_eq!(self.children.len(), 1);
