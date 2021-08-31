@@ -1,48 +1,48 @@
 [package]
-edition   = "2018"
-name      = "cstree"
-version   = "0.6.1"
-authors   = [
+edition = "2018"
+name = "cstree"
+version = "0.7.0"
+authors = [
     "Domenic Quirl <DomenicQuirl@pm.me>",
     "Aleksey Kladov <aleksey.kladov@gmail.com>",
 ]
 description = "Library for generic lossless syntax trees"
-license   = "MIT OR Apache-2.0"
+license = "MIT OR Apache-2.0"
 repository = "https://github.com/domenicquirl/cstree"
-readme    = "README.md"
+readme = "README.md"
 
 [profile.release]
 debug = true
 
 [dependencies]
-lasso     = { version="0.5", features=["inline-more"] }
-text-size = "1.0.0"
-fxhash    = "0.2.1"
+lasso       = { version = "0.5", features = ["inline-more"] }
+text-size   = "1.0.0"
+fxhash      = "0.2.1"
 parking_lot = "0.11.1"
 
 # Arc
 triomphe = "0.1.2"
 
 [dependencies.serde]
-version        = "1.0"
-optional       = true
+version          = "1.0"
+optional         = true
 default-features = false
-features       = ["derive"]
+features         = ["derive"]
 
 [dev-dependencies]
-m_lexer       = "0.0.4"
-serde_json    = "1.0.61"
-serde_test    = "1.0.119"
+m_lexer         = "0.0.4"
+serde_json      = "1.0.61"
+serde_test      = "1.0.119"
 crossbeam-utils = "0.8"
-criterion     = "0.3"
+criterion       = "0.3"
 
 [[bench]]
-name  = "main"
+name    = "main"
 harness = false
 
 [features]
 default = []
-serde1 = ["serde"]
+serde1  = ["serde"]
 
 [package.metadata.docs.rs]
 features = ["serde1"]
