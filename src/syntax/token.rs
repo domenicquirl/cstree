@@ -176,6 +176,20 @@ impl<L: Language, D> SyntaxToken<L, D> {
         self.green().text(resolver)
     }
 
+    /// Returns `true` if `self` and `other` represent equal source text.
+    ///
+    /// This method is different from the `PartialEq` and `Eq` implementations in that it compares
+    /// the text and not the token position.
+    /// It is more efficient than comparing the result of
+    /// [`resolve_text`](SyntaxToken::resolve_text) because it compares the tokens' interned string
+    /// keys.
+    /// Therefore, it also does not require a [`Resolver`].
+    /// **Note** that the result of the comparison may be wrong when comparing two tokens from
+    /// different trees that use different interners.
+    pub fn text_eq(&self, other: &Self) -> bool {
+        self.green().text_key() == other.green().text_key()
+    }
+
     /// Returns the unterlying green tree token of this token.
     pub fn green(&self) -> &GreenToken {
         self.parent

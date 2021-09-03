@@ -69,6 +69,11 @@ impl GreenToken {
     pub fn text_len(&self) -> TextSize {
         self.data().text_len
     }
+
+    #[inline]
+    pub(crate) fn text_key(&self) -> Spur {
+        self.data().text
+    }
 }
 
 impl fmt::Debug for GreenToken {

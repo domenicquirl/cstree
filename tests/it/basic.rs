@@ -18,6 +18,15 @@ fn two_level_tree() -> Element<'static> {
     ])
 }
 
+fn tree_with_eq_tokens() -> Element<'static> {
+    use Element::*;
+    Node(vec![
+        Node(vec![Token("a"), Token("b")]),
+        Node(vec![Token("c")]),
+        Node(vec![Token("a"), Token("b"), Token("c")]),
+    ])
+}
+
 #[test]
 fn create() {
     let tree = two_level_tree();
@@ -39,6 +48,35 @@ fn create() {
         assert_eq!(node2.children_with_tokens().count(), 3);
         assert_eq!(node2.resolve_text(&resolver), "2.02.12.2");
     }
+}
+
+#[test]
+fn token_text_eq() {
+    let tree = tree_with_eq_tokens();
+    let (tree, _) = build_tree::<()>(&tree);
+    assert_eq!(tree.kind(), SyntaxKind(0));
+
+    let leaf0_0 = tree.children().next().unwrap().children_with_tokens().next().unwrap();
+    let leaf0_0 = leaf0_0.into_token().unwrap();
+    let leaf0_1 = tree.children().next().unwrap().children_with_tokens().nth(1).unwrap();
+    let leaf0_1 = leaf0_1.into_token().unwrap();
+
+    let leaf1_0 = tree.children().nth(1).unwrap().children_with_tokens().next().unwrap();
+    let leaf1_0 = leaf1_0.into_token().unwrap();
+
+    let leaf2_0 = tree.children().nth(2).unwrap().children_with_tokens().next().unwrap();
+    let leaf2_0 = leaf2_0.into_token().unwrap();
+    let leaf2_1 = tree.children().nth(2).unwrap().children_with_tokens().nth(1).unwrap();
+    let leaf2_1 = leaf2_1.into_token().unwrap();
+    let leaf2_2 = tree.children().nth(2).unwrap().children_with_tokens().nth(2).unwrap();
+    let leaf2_2 = leaf2_2.into_token().unwrap();
+
+    assert!(leaf0_0.text_eq(leaf2_0));
+    assert!(leaf0_1.text_eq(leaf2_1));
+    assert!(leaf1_0.text_eq(leaf2_2));
+    assert!(!leaf0_0.text_eq(leaf0_1));
+    assert!(!leaf2_1.text_eq(leaf2_2));
+    assert!(!leaf1_0.text_eq(leaf2_0));
 }
 
 #[test]
