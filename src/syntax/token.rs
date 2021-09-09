@@ -59,7 +59,8 @@ impl<L: Language, D> SyntaxToken<L, D> {
 
         for idx in 21..25 {
             if text.is_char_boundary(idx) {
-                return write!(target, r#" "{} ...""#, &text[..idx]);
+                let text = format!("{} ...", &text[..idx]);
+                return write!(target, " {:?}", text);
             }
         }
         unreachable!()
