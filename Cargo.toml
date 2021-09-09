@@ -1,7 +1,7 @@
 [package]
 edition = "2018"
 name = "cstree"
-version = "0.8.0"
+version = "0.8.1"
 authors = [
     "Domenic Quirl <DomenicQuirl@pm.me>",
     "Aleksey Kladov <aleksey.kladov@gmail.com>",
