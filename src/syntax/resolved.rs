@@ -214,7 +214,7 @@ impl<L: Language, D> fmt::Display for ResolvedToken<L, D> {
     }
 }
 
-#[cfg(feature = "serde1")]
+#[cfg(feature = "serialize")]
 impl<L, D> ResolvedNode<L, D>
 where
     L: Language,

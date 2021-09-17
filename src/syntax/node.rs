@@ -1,5 +1,5 @@
 use super::*;
-#[cfg(feature = "serde1")]
+#[cfg(feature = "serialize")]
 use crate::serde_impls::{SerializeWithData, SerializeWithResolver};
 use crate::{
     green::{GreenElementRef, SyntaxKind},
@@ -507,7 +507,12 @@ impl<L: Language, D> SyntaxNode<L, D> {
     }
 
     #[inline(always)]
-    fn get_or_add_node(&self, node: &GreenNode, index: usize, offset: TextSize) -> SyntaxElementRef<'_, L, D> {
+    pub(super) fn get_or_add_node(
+        &self,
+        node: &GreenNode,
+        index: usize,
+        offset: TextSize,
+    ) -> SyntaxElementRef<'_, L, D> {
         if let Some(elem) = self.read(index) {
             debug_assert_eq!(elem.text_range().start(), offset);
             return elem;
@@ -520,7 +525,7 @@ impl<L: Language, D> SyntaxNode<L, D> {
     }
 
     #[inline(always)]
-    fn get_or_add_element(
+    pub(super) fn get_or_add_element(
         &self,
         element: GreenElementRef<'_>,
         index: usize,
@@ -946,7 +951,7 @@ impl<L: Language, D> SyntaxNode<L, D> {
     }
 }
 
-#[cfg(feature = "serde1")]
+#[cfg(feature = "serialize")]
 impl<L, D> SyntaxNode<L, D>
 where
     L: Language,
@@ -970,96 +975,6 @@ where
         resolver: &'node impl Resolver,
     ) -> impl serde::Serialize + 'node {
         SerializeWithResolver { node: self, resolver }
-    }
-}
-
-#[derive(Clone, Debug)]
-struct Iter<'n> {
-    green:  GreenNodeChildren<'n>,
-    offset: TextSize,
-    index:  usize,
-}
-
-impl<'n> Iter<'n> {
-    fn new<L: Language, D>(parent: &'n SyntaxNode<L, D>) -> Self {
-        let offset = parent.text_range().start();
-        let green: GreenNodeChildren<'_> = parent.green().children();
-        Iter {
-            green,
-            offset,
-            index: 0,
-        }
-    }
-
-    #[inline(always)]
-    fn next(&mut self) -> Option<(GreenElementRef, usize, TextSize)> {
-        self.green.next().map(|element| {
-            let offset = self.offset;
-            let index = self.index;
-            self.offset += element.text_len();
-            self.index += 1;
-            (element, index, offset)
-        })
-    }
-}
-
-/// An iterator over the child nodes of a [`SyntaxNode`].
-#[derive(Clone, Debug)]
-pub struct SyntaxNodeChildren<'n, L: Language, D: 'static = ()> {
-    inner:  Iter<'n>,
-    parent: &'n SyntaxNode<L, D>,
-}
-
-impl<'n, L: Language, D> SyntaxNodeChildren<'n, L, D> {
-    #[inline]
-    fn new(parent: &'n SyntaxNode<L, D>) -> Self {
-        Self {
-            inner: Iter::new(parent),
-            parent,
-        }
-    }
-}
-
-impl<'n, L: Language, D> Iterator for SyntaxNodeChildren<'n, L, D> {
-    type Item = &'n SyntaxNode<L, D>;
-
-    #[inline(always)]
-    fn next(&mut self) -> Option<Self::Item> {
-        while let Some((element, index, offset)) = self.inner.next() {
-            if let Some(&node) = element.as_node() {
-                return Some(self.parent.get_or_add_node(node, index, offset).as_node().unwrap());
-            }
-        }
-        None
-    }
-}
-
-/// An iterator over the children of a [`SyntaxNode`].
-#[derive(Clone, Debug)]
-pub struct SyntaxElementChildren<'n, L: Language, D: 'static = ()> {
-    inner:  Iter<'n>,
-    parent: &'n SyntaxNode<L, D>,
-}
-
-impl<'n, L: Language, D> SyntaxElementChildren<'n, L, D> {
-    #[inline]
-    fn new(parent: &'n SyntaxNode<L, D>) -> Self {
-        Self {
-            inner: Iter::new(parent),
-            parent,
-        }
-    }
-}
-
-impl<'n, L: Language, D> Iterator for SyntaxElementChildren<'n, L, D> {
-    type Item = SyntaxElementRef<'n, L, D>;
-
-    #[inline(always)]
-    fn next(&mut self) -> Option<Self::Item> {
-        let parent = self.parent;
-        self.inner
-            .next()
-            .map(|(green, index, offset)| parent.get_or_add_element(green, index, offset))
     }
 }
 

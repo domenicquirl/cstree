@@ -51,7 +51,7 @@ mod green;
 #[allow(unsafe_code)]
 mod syntax;
 
-#[cfg(feature = "serde1")]
+#[cfg(feature = "serialize")]
 mod serde_impls;
 #[allow(missing_docs)]
 mod utility_types;

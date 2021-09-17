@@ -2,7 +2,7 @@ use crate::{build_recursive, build_tree_with_cache, ResolvedNode};
 
 use super::{Element, SyntaxNode};
 use cstree::{
-    interning::{IntoResolver, Rodeo},
+    interning::{new_interner, IntoResolver},
     GreenNodeBuilder, NodeCache, NodeOrToken,
 };
 use serde_test::Token;
@@ -238,7 +238,7 @@ fn attach_data(node: &SyntaxNode<String>) {
 
 #[test]
 fn serialize_tree_with_data_with_resolver() {
-    let mut interner = Rodeo::with_hasher(Default::default());
+    let mut interner = new_interner();
     let mut cache = NodeCache::with_interner(&mut interner);
 
     let root = three_level_tree();
@@ -256,7 +256,7 @@ fn serialize_tree_with_data_with_resolver() {
 
 #[test]
 fn serialize_tree_with_resolver() {
-    let mut interner = Rodeo::with_hasher(Default::default());
+    let mut interner = new_interner();
     let mut cache = NodeCache::with_interner(&mut interner);
 
     let root = three_level_tree();
