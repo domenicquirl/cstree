@@ -65,7 +65,7 @@ pub use text_size::{TextLen, TextRange, TextSize};
 #[doc(inline)]
 pub use crate::syntax::*;
 pub use crate::{
-    green::{Checkpoint, Children, GreenNode, GreenNodeBuilder, GreenToken, NodeCache, SyntaxKind},
+    green::{Checkpoint, GreenNode, GreenNodeBuilder, GreenNodeChildren, GreenToken, NodeCache, SyntaxKind},
     utility_types::{Direction, NodeOrToken, TokenAtOffset, WalkEvent},
 };
 pub use triomphe::Arc;

@@ -975,7 +975,7 @@ where
 
 #[derive(Clone, Debug)]
 struct Iter<'n> {
-    green:  Children<'n>,
+    green:  GreenNodeChildren<'n>,
     offset: TextSize,
     index:  usize,
 }
@@ -983,7 +983,7 @@ struct Iter<'n> {
 impl<'n> Iter<'n> {
     fn new<L: Language, D>(parent: &'n SyntaxNode<L, D>) -> Self {
         let offset = parent.text_range().start();
-        let green: Children<'_> = parent.green().children();
+        let green: GreenNodeChildren<'_> = parent.green().children();
         Iter {
             green,
             offset,
