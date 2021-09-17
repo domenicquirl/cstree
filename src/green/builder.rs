@@ -356,6 +356,26 @@ where
         }
     }
 
+    /// Shortcut to construct a builder that uses an existing interner.
+    ///
+    /// This is equivalent to using [`from_cache`](GreenNodeBuilder::from_cache) with a node cache
+    /// obtained from [`NodeCache::with_interner`].
+    #[inline]
+    pub fn with_interner(interner: &'interner mut I) -> Self {
+        let cache = NodeCache::with_interner(interner);
+        Self::from_cache(cache)
+    }
+
+    /// Shortcut to construct a builder that uses an existing interner.
+    ///
+    /// This is equivalent to using [`from_cache`](GreenNodeBuilder::from_cache) with a node cache
+    /// obtained from [`NodeCache::from_interner`].
+    #[inline]
+    pub fn from_interner(interner: I) -> Self {
+        let cache = NodeCache::from_interner(interner);
+        Self::from_cache(cache)
+    }
+
     /// Get a reference to the interner used to deduplicate source text (strings).
     ///
     /// This is the same interner as used by the underlying [`NodeCache`].

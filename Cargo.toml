@@ -15,7 +15,7 @@ readme = "README.md"
 debug = true
 
 [dependencies]
-lasso       = { version = "0.6", features = ["inline-more"] }
+lasso       = { version = "0.6", features = ["inline-more", "multi-threaded"] }
 text-size   = "1.1.0"
 fxhash      = "0.2.1"
 parking_lot = "0.11.2"
@@ -41,8 +41,8 @@ name    = "main"
 harness = false
 
 [features]
-default = []
-serde1  = ["serde"]
+default   = []
+serialize = ["serde", "lasso/serialize"]
 
 [package.metadata.docs.rs]
-features = ["serde1"]
+features = ["serialize"]

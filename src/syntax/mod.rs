@@ -8,11 +8,13 @@
 mod element;
 pub use element::{SyntaxElement, SyntaxElementRef};
 mod node;
-pub use node::{SyntaxElementChildren, SyntaxNode, SyntaxNodeChildren};
+pub use node::SyntaxNode;
 mod token;
 pub use token::SyntaxToken;
 mod resolved;
 pub use resolved::{ResolvedElement, ResolvedElementRef, ResolvedNode, ResolvedToken};
+mod iter;
+pub use iter::{SyntaxElementChildren, SyntaxNodeChildren};
 
 mod text;
 pub use text::SyntaxText;

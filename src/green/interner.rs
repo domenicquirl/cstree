@@ -1,12 +1,14 @@
 use std::num::NonZeroUsize;
 
+use crate::interning::{
+    Capacity, Interner, IntoReader, IntoReaderAndResolver, IntoResolver, Key, Reader, Resolver, Rodeo,
+};
 use fxhash::FxBuildHasher;
-use lasso::{Capacity, Interner, IntoReader, IntoReaderAndResolver, IntoResolver, Reader, Resolver, Rodeo, Spur};
 
 /// The default [`Interner`] used to deduplicate green token strings.
 #[derive(Debug)]
 pub struct TokenInterner {
-    rodeo: Rodeo<Spur, FxBuildHasher>,
+    rodeo: Rodeo,
 }
 
 impl TokenInterner {
@@ -23,22 +25,22 @@ impl TokenInterner {
 
 impl Resolver for TokenInterner {
     #[inline]
-    fn resolve<'a>(&'a self, key: &Spur) -> &'a str {
+    fn resolve<'a>(&'a self, key: &Key) -> &'a str {
         self.rodeo.resolve(key)
     }
 
     #[inline]
-    fn try_resolve<'a>(&'a self, key: &Spur) -> Option<&'a str> {
+    fn try_resolve<'a>(&'a self, key: &Key) -> Option<&'a str> {
         self.rodeo.try_resolve(key)
     }
 
     #[inline]
-    unsafe fn resolve_unchecked<'a>(&'a self, key: &Spur) -> &'a str {
+    unsafe fn resolve_unchecked<'a>(&'a self, key: &Key) -> &'a str {
         self.rodeo.resolve_unchecked(key)
     }
 
     #[inline]
-    fn contains_key(&self, key: &Spur) -> bool {
+    fn contains_key(&self, key: &Key) -> bool {
         self.rodeo.contains_key(key)
     }
 
@@ -50,7 +52,7 @@ impl Resolver for TokenInterner {
 
 impl Reader for TokenInterner {
     #[inline]
-    fn get(&self, val: &str) -> Option<Spur> {
+    fn get(&self, val: &str) -> Option<Key> {
         self.rodeo.get(val)
     }
 
@@ -61,7 +63,7 @@ impl Reader for TokenInterner {
 }
 
 impl IntoResolver for TokenInterner {
-    type Resolver = <Rodeo<Spur, FxBuildHasher> as IntoResolver>::Resolver;
+    type Resolver = <Rodeo as IntoResolver>::Resolver;
 
     #[inline]
     fn into_resolver(self) -> Self::Resolver
@@ -76,34 +78,34 @@ impl IntoResolver for TokenInterner {
     where
         Self: 'static,
     {
-        Rodeo::<Spur, FxBuildHasher>::into_resolver_boxed(Box::new(self.rodeo))
+        Rodeo::into_resolver_boxed(Box::new(self.rodeo))
     }
 }
 
 impl Interner for TokenInterner {
     #[inline]
-    fn get_or_intern(&mut self, val: &str) -> Spur {
+    fn get_or_intern(&mut self, val: &str) -> Key {
         self.rodeo.get_or_intern(val)
     }
 
     #[inline]
-    fn try_get_or_intern(&mut self, val: &str) -> lasso::LassoResult<Spur> {
+    fn try_get_or_intern(&mut self, val: &str) -> lasso::LassoResult<Key> {
         self.rodeo.try_get_or_intern(val)
     }
 
     #[inline]
-    fn get_or_intern_static(&mut self, val: &'static str) -> Spur {
+    fn get_or_intern_static(&mut self, val: &'static str) -> Key {
         self.rodeo.get_or_intern_static(val)
     }
 
     #[inline]
-    fn try_get_or_intern_static(&mut self, val: &'static str) -> lasso::LassoResult<Spur> {
+    fn try_get_or_intern_static(&mut self, val: &'static str) -> lasso::LassoResult<Key> {
         self.rodeo.try_get_or_intern_static(val)
     }
 }
 
 impl IntoReader for TokenInterner {
-    type Reader = <Rodeo<Spur, FxBuildHasher> as IntoReader>::Reader;
+    type Reader = <Rodeo as IntoReader>::Reader;
 
     #[inline]
     fn into_reader(self) -> Self::Reader
@@ -117,7 +119,7 @@ impl IntoReader for TokenInterner {
     where
         Self: 'static,
     {
-        Rodeo::<Spur, FxBuildHasher>::into_reader_boxed(Box::new(self.rodeo))
+        Rodeo::into_reader_boxed(Box::new(self.rodeo))
     }
 }
 
