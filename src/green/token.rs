@@ -1,14 +1,17 @@
 use std::{fmt, hash, mem::ManuallyDrop, ptr};
 
-use crate::{green::SyntaxKind, interning::Resolver, TextSize};
-use lasso::Spur;
+use crate::{
+    green::SyntaxKind,
+    interning::{Key, Resolver},
+    TextSize,
+};
 use triomphe::Arc;
 
 #[repr(align(2))] // to use 1 bit for pointer tagging. NB: this is an at-least annotation
 #[derive(Debug, PartialEq, Eq, Hash, Copy, Clone)]
 pub(super) struct GreenTokenData {
     pub(super) kind:     SyntaxKind,
-    pub(super) text:     Spur,
+    pub(super) text:     Key,
     pub(super) text_len: TextSize,
 }
 
@@ -70,8 +73,12 @@ impl GreenToken {
         self.data().text_len
     }
 
+    /// Returns the interned key of text covered by this token.
+    /// This key may be used for comparisons with other keys of strings interned by the same interner.
+    ///
+    /// See also [`text`](GreenToken::text).
     #[inline]
-    pub(crate) fn text_key(&self) -> Spur {
+    pub fn text_key(&self) -> Key {
         self.data().text
     }
 }

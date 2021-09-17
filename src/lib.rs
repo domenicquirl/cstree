@@ -49,26 +49,23 @@
 #[allow(unsafe_code)]
 mod green;
 #[allow(unsafe_code)]
-pub mod syntax;
+mod syntax;
 
 #[cfg(feature = "serde1")]
 mod serde_impls;
 #[allow(missing_docs)]
 mod utility_types;
 
-/// Types and Traits for efficient String storage and deduplication.
-pub mod interning {
-    pub use crate::green::TokenInterner;
-    pub use lasso::{Interner, IntoReader, IntoReaderAndResolver, IntoResolver, Reader, Resolver};
-}
+pub mod interning;
 use std::fmt;
 
 // Reexport types for working with strings.
 pub use text_size::{TextLen, TextRange, TextSize};
 
+#[doc(inline)]
+pub use crate::syntax::*;
 pub use crate::{
     green::{Checkpoint, Children, GreenNode, GreenNodeBuilder, GreenToken, NodeCache, SyntaxKind},
-    syntax::*,
     utility_types::{Direction, NodeOrToken, TokenAtOffset, WalkEvent},
 };
 pub use triomphe::Arc;

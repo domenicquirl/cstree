@@ -9,7 +9,7 @@ use lasso::Resolver;
 use text_size::{TextRange, TextSize};
 
 use super::*;
-use crate::{Direction, GreenNode, GreenToken, Language, SyntaxKind};
+use crate::{interning::Key, Direction, GreenNode, GreenToken, Language, SyntaxKind};
 
 /// Syntax tree token.
 #[derive(Debug)]
@@ -69,6 +69,7 @@ impl<L: Language, D> SyntaxToken<L, D> {
     /// Returns this token's [`Debug`](fmt::Debug) representation as a string.
     ///
     /// To avoid allocating for every token, see [`write_debug`](SyntaxToken::write_debug).
+    #[inline]
     pub fn debug<R>(&self, resolver: &R) -> String
     where
         R: Resolver + ?Sized,
@@ -182,16 +183,86 @@ impl<L: Language, D> SyntaxToken<L, D> {
     /// This method is different from the `PartialEq` and `Eq` implementations in that it compares
     /// the text and not the token position.
     /// It is more efficient than comparing the result of
-    /// [`resolve_text`](SyntaxToken::resolve_text) because it compares the tokens' interned string
-    /// keys.
+    /// [`resolve_text`](SyntaxToken::resolve_text) because it compares the tokens' interned
+    /// [`text_key`s](SyntaxToken::text_key).
     /// Therefore, it also does not require a [`Resolver`].
     /// **Note** that the result of the comparison may be wrong when comparing two tokens from
     /// different trees that use different interners.
+    #[inline]
     pub fn text_eq(&self, other: &Self) -> bool {
-        self.green().text_key() == other.green().text_key()
+        self.text_key() == other.text_key()
+    }
+
+    /// Returns the interned key of text covered by this token.
+    /// This key may be used for comparisons with other keys of strings interned by the same interner.
+    ///
+    /// See also [`resolve_text`](SyntaxToken::resolve_text) and [`text_eq`](SyntaxToken::text_eq).
+    ///
+    /// # Examples
+    /// If you intern strings inside of your application, e.g. inside of a compiler, you can use
+    /// token's text keys to cross-reference between the syntax tree and the rest of your
+    /// implementation by re-using the interner in both.
+    /// ```
+    /// # use cstree::*;
+    /// # use cstree::interning::{Hasher, Rodeo, Key, new_interner};
+    /// # #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+    /// # #[repr(u16)]
+    /// # enum SyntaxKind {
+    /// #     ROOT,
+    /// #     INT,
+    /// # }
+    /// # #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+    /// # enum Lang {}
+    /// # impl cstree::Language for Lang {
+    /// #     type Kind = SyntaxKind;
+    /// #
+    /// #     fn kind_from_raw(raw: cstree::SyntaxKind) -> Self::Kind {
+    /// #         assert!(raw.0 <= SyntaxKind::INT as u16);
+    /// #         unsafe { std::mem::transmute::<u16, SyntaxKind>(raw.0) }
+    /// #     }
+    /// #
+    /// #     fn kind_to_raw(kind: Self::Kind) -> cstree::SyntaxKind {
+    /// #         cstree::SyntaxKind(kind as u16)
+    /// #     }
+    /// # }
+    /// # type SyntaxNode<L> = cstree::SyntaxNode<L, ()>;
+    /// # const ROOT:  cstree::SyntaxKind = cstree::SyntaxKind(0);
+    /// # const IDENT: cstree::SyntaxKind = cstree::SyntaxKind(1);
+    /// # fn parse(b: &mut GreenNodeBuilder<Rodeo>, s: &str) {}
+    /// #
+    /// struct TypeTable {
+    ///     // ...
+    /// }
+    /// impl TypeTable {
+    ///     fn type_of(&self, ident: Key) -> &str {
+    ///         // ...
+    /// #     ""
+    ///     }
+    /// }
+    /// # struct State {
+    /// #   interner: Rodeo,
+    /// #   type_table: TypeTable,
+    /// # }
+    /// # let interner = new_interner();
+    /// # let state = &mut State { interner, type_table: TypeTable{} };
+    /// let mut builder = GreenNodeBuilder::with_interner(&mut state.interner);
+    /// # let input = "";
+    /// # builder.start_node(ROOT);
+    /// # builder.token(IDENT, "x");
+    /// # builder.finish_node();
+    /// let tree = parse(&mut builder, "x");
+    /// # let tree = SyntaxNode::<Lang>::new_root(builder.finish().0);
+    /// let type_table = &state.type_table;
+    /// let ident = tree.children_with_tokens().next().unwrap().into_token().unwrap();
+    /// let typ = type_table.type_of(ident.text_key());
+    /// ```
+    #[inline]
+    pub fn text_key(&self) -> Key {
+        self.green().text_key()
     }
 
     /// Returns the unterlying green tree token of this token.
+    #[inline]
     pub fn green(&self) -> &GreenToken {
         self.parent
             .green()
@@ -242,6 +313,7 @@ impl<L: Language, D> SyntaxToken<L, D> {
 
     /// Returns the next token in the tree.
     /// This is not necessary a direct sibling of this token, but will always be further right in the tree.
+    #[inline]
     pub fn next_token(&self) -> Option<&SyntaxToken<L, D>> {
         match self.next_sibling_or_token() {
             Some(element) => element.first_token(),
@@ -255,6 +327,7 @@ impl<L: Language, D> SyntaxToken<L, D> {
 
     /// Returns the previous token in the tree.
     /// This is not necessary a direct sibling of this token, but will always be further left in the tree.
+    #[inline]
     pub fn prev_token(&self) -> Option<&SyntaxToken<L, D>> {
         match self.prev_sibling_or_token() {
             Some(element) => element.last_token(),

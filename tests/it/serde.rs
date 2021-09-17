@@ -1,11 +1,12 @@
 use crate::{build_recursive, build_tree_with_cache, ResolvedNode};
 
 use super::{Element, SyntaxNode};
-use cstree::{interning::IntoResolver, GreenNodeBuilder, NodeCache, NodeOrToken};
+use cstree::{
+    interning::{IntoResolver, Rodeo},
+    GreenNodeBuilder, NodeCache, NodeOrToken,
+};
 use serde_test::Token;
 use std::fmt;
-
-type Rodeo = lasso::Rodeo<lasso::Spur, fxhash::FxBuildHasher>;
 
 /// Macro for generating a list of `serde_test::Token`s using a simpler DSL.
 macro_rules! event_tokens {
