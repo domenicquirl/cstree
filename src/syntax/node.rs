@@ -445,7 +445,7 @@ impl<L: Language, D> SyntaxNode<L, D> {
     /// Returns the data associated with this node, if any.
     pub fn get_data(&self) -> Option<Arc<D>> {
         let ptr = self.data().data.read();
-        (*ptr).as_ref().map(|ptr| Arc::clone(ptr))
+        (*ptr).as_ref().map(Arc::clone)
     }
 
     /// Removes the data associated with this node.
