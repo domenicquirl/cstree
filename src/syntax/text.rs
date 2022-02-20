@@ -199,17 +199,10 @@ impl<'n, 'i, I: Resolver + ?Sized, L: Language, D> SyntaxText<'n, 'i, I, L, D> {
 
     /// Applies the given function to all text chunks that this text is comprised of, in order.
     ///
-    /// See also [`try_fold_chunks`](SyntaxText::try_fold_chunks),
+    /// See also [`fold_chunks`](SyntaxText::fold_chunks),
     /// [`try_for_each_chunk`](SyntaxText::try_for_each_chunk).
     pub fn for_each_chunk<F: FnMut(&str)>(&self, mut f: F) {
-        enum Void {}
-        match self.try_for_each_chunk(|chunk| {
-            f(chunk);
-            Ok::<(), Void>(())
-        }) {
-            Ok(()) => (),
-            Err(void) => match void {},
-        }
+        self.fold_chunks((), |(), chunk| f(chunk))
     }
 
     fn tokens_with_ranges(&self) -> impl Iterator<Item = (&SyntaxToken<L, D>, TextRange)> {
