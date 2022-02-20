@@ -156,6 +156,8 @@ impl<'n, 'i, I: Resolver + ?Sized, L: Language, D> SyntaxText<'n, 'i, I, L, D> {
     /// If `f` returns `Err`, the error is propagated immediately.
     /// Otherwise, the result of the current call to `f` will be passed to the invocation of `f` on
     /// the next token, producing a final value if `f` succeeds on all chunks.
+    ///
+    /// See also [`fold_chunks`](SyntaxText::fold_chunks) for folds that always succeed.
     pub fn try_fold_chunks<T, F, E>(&self, init: T, mut f: F) -> Result<T, E>
     where
         F: FnMut(T, &str) -> Result<T, E>,
@@ -163,6 +165,25 @@ impl<'n, 'i, I: Resolver + ?Sized, L: Language, D> SyntaxText<'n, 'i, I, L, D> {
         self.tokens_with_ranges().try_fold(init, move |acc, (token, range)| {
             f(acc, &token.resolve_text(self.resolver)[range])
         })
+    }
+
+    /// Applies the given function to all text chunks (from [`SyntaxToken`]s) that are part of this
+    /// text, starting from the initial value `init`.
+    ///
+    /// The result of the current call to `f` will be passed to the invocation of `f` on the next
+    /// token, producing a final value after `f` was called on all chunks.
+    ///
+    /// See also [`try_fold_chunks`](SyntaxText::try_fold_chunks), which performs the same operation
+    /// for fallible functions `f`.
+    pub fn fold_chunks<T, F>(&self, init: T, mut f: F) -> T
+    where
+        F: FnMut(T, &str) -> T,
+    {
+        enum Void {}
+        match self.try_fold_chunks(init, |acc, chunk| Ok::<T, Void>(f(acc, chunk))) {
+            Ok(t) => t,
+            Err(void) => match void {},
+        }
     }
 
     /// Applies the given function to all text chunks that this text is comprised of, in order,
@@ -178,17 +199,10 @@ impl<'n, 'i, I: Resolver + ?Sized, L: Language, D> SyntaxText<'n, 'i, I, L, D> {
 
     /// Applies the given function to all text chunks that this text is comprised of, in order.
     ///
-    /// See also [`try_fold_chunks`](SyntaxText::try_fold_chunks),
+    /// See also [`fold_chunks`](SyntaxText::fold_chunks),
     /// [`try_for_each_chunk`](SyntaxText::try_for_each_chunk).
     pub fn for_each_chunk<F: FnMut(&str)>(&self, mut f: F) {
-        enum Void {}
-        match self.try_for_each_chunk(|chunk| {
-            f(chunk);
-            Ok::<(), Void>(())
-        }) {
-            Ok(()) => (),
-            Err(void) => match void {},
-        }
+        self.fold_chunks((), |(), chunk| f(chunk))
     }
 
     fn tokens_with_ranges(&self) -> impl Iterator<Item = (&SyntaxToken<L, D>, TextRange)> {
