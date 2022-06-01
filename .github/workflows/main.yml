@@ -6,7 +6,7 @@ on:
   pull_request:
   # Daily
   schedule:
-    - cron: "0 4 1/7 * *"
+    - cron: "0 4 1/20 * *"
 
   # Allows to run this workflow manually from the Actions tab
   workflow_dispatch:
