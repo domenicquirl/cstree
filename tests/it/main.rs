@@ -35,21 +35,30 @@ impl Language for TestLang {
     fn kind_to_raw(kind: Self::Kind) -> SyntaxKind {
         kind
     }
+
+    fn static_text(kind: Self::Kind) -> Option<&'static str> {
+        None
+    }
 }
 
 pub fn build_tree_with_cache<'c, 'i, I>(root: &Element<'_>, cache: &'c mut NodeCache<'i, I>) -> GreenNode
 where
     I: Interner,
 {
-    let mut builder = GreenNodeBuilder::with_cache(cache);
+    let mut builder: GreenNodeBuilder<TestLang, I> = GreenNodeBuilder::with_cache(cache);
     build_recursive(root, &mut builder, 0);
     let (node, cache) = builder.finish();
     assert!(cache.is_none());
     node
 }
 
-pub fn build_recursive<'c, 'i, I>(root: &Element<'_>, builder: &mut GreenNodeBuilder<'c, 'i, I>, mut from: u16) -> u16
+pub fn build_recursive<'c, 'i, L, I>(
+    root: &Element<'_>,
+    builder: &mut GreenNodeBuilder<'c, 'i, L, I>,
+    mut from: u16,
+) -> u16
 where
+    L: Language<Kind = SyntaxKind>,
     I: Interner,
 {
     match root {
@@ -61,7 +70,7 @@ where
             builder.finish_node();
         }
         Element::Token(text) => {
-            builder.token(SyntaxKind(from), *text);
+            builder.token_with_text(SyntaxKind(from), *text);
         }
     }
     from

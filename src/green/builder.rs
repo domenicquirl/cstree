@@ -9,7 +9,7 @@ use text_size::TextSize;
 use crate::{
     green::{interner::TokenInterner, GreenElement, GreenNode, GreenToken, SyntaxKind},
     interning::Interner,
-    NodeOrToken,
+    Language, NodeOrToken,
 };
 
 use super::{node::GreenNodeHead, token::GreenTokenData};
@@ -39,7 +39,7 @@ impl NodeCache<'static> {
     /// # use cstree::*;
     /// # const ROOT: SyntaxKind = SyntaxKind(0);
     /// # const INT: SyntaxKind = SyntaxKind(1);
-    /// # fn parse(b: &mut GreenNodeBuilder, s: &str) {}
+    /// # fn parse<L>(b: &mut GreenNodeBuilder<L>, s: &str) {}
     /// let mut cache = NodeCache::new();
     /// let mut builder = GreenNodeBuilder::with_cache(&mut cache);
     /// # builder.start_node(ROOT);
@@ -165,7 +165,8 @@ where
         self.interner.into_owned()
     }
 
-    fn node(&mut self, kind: SyntaxKind, children: &[GreenElement]) -> GreenNode {
+    fn node<L: Language>(&mut self, kind: L::Kind, children: &[GreenElement]) -> GreenNode {
+        let kind = L::kind_to_raw(kind);
         let mut hasher = FxHasher32::default();
         let mut text_len: TextSize = 0.into();
         for child in children {
@@ -209,9 +210,20 @@ where
             .clone()
     }
 
-    fn token(&mut self, kind: SyntaxKind, text: &str) -> GreenToken {
-        let text_len = TextSize::try_from(text.len()).unwrap();
-        let text = self.interner.get_or_intern(text);
+    /// ## Panics
+    /// If both no `text` is supplied and there is no static text associated with `kind`.
+    fn token<L: Language>(&mut self, kind: L::Kind, text: Option<&str>) -> GreenToken {
+        let text_len = {
+            let text = text.or_else(|| L::static_text(kind)).unwrap_or_else(|| {
+                panic!(
+                    "Neither explicit nor static text present for token of kind '{:?}'",
+                    kind
+                )
+            });
+            TextSize::try_from(text.len()).unwrap()
+        };
+        let text = text.map(|s| self.interner.get_or_intern(s));
+        let kind = L::kind_to_raw(kind);
         let data = GreenTokenData { kind, text, text_len };
         self.tokens
             .entry(data)
@@ -289,13 +301,13 @@ pub struct Checkpoint(usize);
 /// assert_eq!(int.as_token().unwrap().text(&resolver), "42");
 /// ```
 #[derive(Debug)]
-pub struct GreenNodeBuilder<'cache, 'interner, I = TokenInterner> {
+pub struct GreenNodeBuilder<'cache, 'interner, L: Language, I = TokenInterner> {
     cache:    MaybeOwned<'cache, NodeCache<'interner, I>>,
-    parents:  Vec<(SyntaxKind, usize)>,
+    parents:  Vec<(L::Kind, usize)>,
     children: Vec<GreenElement>,
 }
 
-impl GreenNodeBuilder<'static, 'static> {
+impl<L: Language> GreenNodeBuilder<'static, 'static, L> {
     /// Creates new builder with an empty [`NodeCache`].
     pub fn new() -> Self {
         Self {
@@ -306,14 +318,15 @@ impl GreenNodeBuilder<'static, 'static> {
     }
 }
 
-impl Default for GreenNodeBuilder<'static, 'static> {
+impl<L: Language> Default for GreenNodeBuilder<'static, 'static, L> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<'cache, 'interner, I> GreenNodeBuilder<'cache, 'interner, I>
+impl<'cache, 'interner, L, I> GreenNodeBuilder<'cache, 'interner, L, I>
 where
+    L: Language,
     I: Interner,
 {
     /// Reusing a [`NodeCache`] between multiple builders saves memory, as it allows to structurally
@@ -392,6 +405,30 @@ where
     /// ```
     /// # use cstree::*;
     /// # use cstree::interning::*;
+    /// # #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+    /// # #[repr(u16)]
+    /// # enum SyntaxKind {
+    /// #     Root,
+    /// # }
+    /// # use SyntaxKind::*;
+    /// # #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+    /// # enum Lang {}
+    /// # impl cstree::Language for Lang {
+    /// #     type Kind = SyntaxKind;
+    /// #
+    /// #     fn kind_from_raw(raw: cstree::SyntaxKind) -> Self::Kind {
+    /// #         assert!(raw.0 <= SyntaxKind::Root as u16);
+    /// #         unsafe { std::mem::transmute::<u16, SyntaxKind>(raw.0) }
+    /// #     }
+    /// #
+    /// #     fn kind_to_raw(kind: Self::Kind) -> cstree::SyntaxKind {
+    /// #         cstree::SyntaxKind(kind as u16)
+    /// #     }
+    /// #
+    /// #     fn static_text(kind: Self::Kind) -> Option<&'static str> {
+    /// #         None
+    /// #     }
+    /// # }
     /// let mut builder = GreenNodeBuilder::new();
     /// let interner = builder.interner_mut();
     /// let key = interner.get_or_intern("foo");
@@ -402,16 +439,37 @@ where
         &mut *self.cache.interner
     }
 
-    /// Add new token to the current branch.
+    /// Add a new token to the current branch without storing an explicit section of text.
+    /// This is be useful if the text can always be inferred from the token's `kind`, for example when using kinds for
+    /// specific operators or punctuation.
+    ///
+    /// ## Panics
+    /// If there is no static text associated with `kind`.
     #[inline]
-    pub fn token(&mut self, kind: SyntaxKind, text: &str) {
-        let token = self.cache.token(kind, text);
+    pub fn token(&mut self, kind: L::Kind) {
+        let token = self.cache.token::<L>(kind, None);
+        self.children.push(token.into());
+    }
+
+    /// Add a new token with the given `text` to the current branch.
+    ///
+    /// ## Static Text
+    /// If the text of the given `kind` is supposed to be static (`L::static_text(kind)` returns
+    /// `Some`), the static text will override the given `text` parameter. This is because kinds
+    /// with static text must always represent the exact same text.
+    #[inline]
+    pub fn token_with_text(&mut self, kind: L::Kind, text: &str) {
+        if L::static_text(kind).is_some() {
+            self.token(kind);
+            return;
+        }
+        let token = self.cache.token::<L>(kind, Some(text));
         self.children.push(token.into());
     }
 
     /// Start new node of the given `kind` and make it current.
     #[inline]
-    pub fn start_node(&mut self, kind: SyntaxKind) {
+    pub fn start_node(&mut self, kind: L::Kind) {
         let len = self.children.len();
         self.parents.push((kind, len));
     }
@@ -420,7 +478,7 @@ where
     #[inline]
     pub fn finish_node(&mut self) {
         let (kind, first_child) = self.parents.pop().unwrap();
-        let node = self.cache.node(kind, &self.children[first_child..]);
+        let node = self.cache.node::<L>(kind, &self.children[first_child..]);
         self.children.truncate(first_child);
         self.children.push(node.into());
     }
@@ -432,21 +490,44 @@ where
     ///
     /// # Examples
     /// ```
-    /// # use cstree::{GreenNodeBuilder, SyntaxKind};
-    /// # const PLUS: SyntaxKind = SyntaxKind(0);
-    /// # const OPERATION: SyntaxKind = SyntaxKind(1);
+    /// # use cstree::{GreenNodeBuilder, Language};
+    /// # #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+    /// # #[repr(u16)]
+    /// # enum SyntaxKind {
+    /// #     Plus,
+    /// #     Operation
+    /// # }
+    /// # use SyntaxKind::*;
+    /// # #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+    /// # enum Lang {}
+    /// # impl cstree::Language for Lang {
+    /// #     type Kind = SyntaxKind;
+    /// #
+    /// #     fn kind_from_raw(raw: cstree::SyntaxKind) -> Self::Kind {
+    /// #         assert!(raw.0 <= SyntaxKind::Operation as u16);
+    /// #         unsafe { std::mem::transmute::<u16, SyntaxKind>(raw.0) }
+    /// #     }
+    /// #
+    /// #     fn kind_to_raw(kind: Self::Kind) -> cstree::SyntaxKind {
+    /// #         cstree::SyntaxKind(kind as u16)
+    /// #     }
+    /// #
+    /// #     fn static_text(kind: Self::Kind) -> Option<&'static str> {
+    /// #         None
+    /// #     }
+    /// # }
     /// # struct Parser;
     /// # impl Parser {
     /// #     fn peek(&self) -> Option<SyntaxKind> { None }
     /// #     fn parse_expr(&mut self) {}
     /// # }
-    /// # let mut builder = GreenNodeBuilder::new();
+    /// # let mut builder: GreenNodeBuilder<Lang> = GreenNodeBuilder::new();
     /// # let mut parser = Parser;
     /// let checkpoint = builder.checkpoint();
     /// parser.parse_expr();
-    /// if parser.peek() == Some(PLUS) {
+    /// if parser.peek() == Some(Plus) {
     ///     // 1 + 2 = Add(1, 2)
-    ///     builder.start_node_at(checkpoint, OPERATION);
+    ///     builder.start_node_at(checkpoint, Operation);
     ///     parser.parse_expr();
     ///     builder.finish_node();
     /// }
@@ -459,7 +540,7 @@ where
     /// Wrap the previous branch marked by [`checkpoint`](GreenNodeBuilder::checkpoint) in a new
     /// branch and make it current.
     #[inline]
-    pub fn start_node_at(&mut self, checkpoint: Checkpoint, kind: SyntaxKind) {
+    pub fn start_node_at(&mut self, checkpoint: Checkpoint, kind: L::Kind) {
         let Checkpoint(checkpoint) = checkpoint;
         assert!(
             checkpoint <= self.children.len(),

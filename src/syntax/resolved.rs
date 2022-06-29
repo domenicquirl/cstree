@@ -198,7 +198,10 @@ impl<L: Language, D> ResolvedToken<L, D> {
     /// Uses the resolver associated with this tree to return the source text of this token.
     #[inline]
     pub fn text(&self) -> &str {
-        self.green().text(&**self.resolver())
+        // one of the two must be present upon construction
+        self.static_text()
+            .or_else(|| self.green().text(&**self.resolver()))
+            .unwrap()
     }
 }
 
@@ -732,7 +735,7 @@ fn assert_send_sync() {
 
     #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
     enum L {}
-    #[derive(Debug)]
+    #[derive(Debug, Clone, Copy)]
     enum Kind {
         Var,
     }
@@ -745,6 +748,10 @@ fn assert_send_sync() {
 
         fn kind_to_raw(_: Self::Kind) -> SyntaxKind {
             SyntaxKind(0)
+        }
+
+        fn static_text(_kind: Self::Kind) -> Option<&'static str> {
+            None
         }
     }
     fn f<T: Send + Sync>() {}

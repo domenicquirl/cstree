@@ -55,6 +55,16 @@ impl cstree::Language for Lang {
     fn kind_to_raw(kind: Self::Kind) -> cstree::SyntaxKind {
         kind.into()
     }
+
+    fn static_text(kind: Self::Kind) -> Option<&'static str> {
+        match kind {
+            Add => Some("+"),
+            Sub => Some("-"),
+            Mul => Some("*"),
+            Div => Some("/"),
+            _ => None,
+        }
+    }
 }
 
 type SyntaxNode = cstree::SyntaxNode<Lang>;
@@ -65,7 +75,7 @@ type SyntaxElement = cstree::NodeOrToken<SyntaxNode, SyntaxToken>;
 type SyntaxElementRef<'a> = cstree::NodeOrToken<&'a SyntaxNode, &'a SyntaxToken>;
 
 struct Parser<'input, I: Iterator<Item = (SyntaxKind, &'input str)>> {
-    builder: GreenNodeBuilder<'static, 'static>,
+    builder: GreenNodeBuilder<'static, 'static, Lang>,
     iter:    Peekable<I>,
 }
 impl<'input, I: Iterator<Item = (SyntaxKind, &'input str)>> Parser<'input, I> {
@@ -78,7 +88,7 @@ impl<'input, I: Iterator<Item = (SyntaxKind, &'input str)>> Parser<'input, I> {
 
     fn bump(&mut self) {
         if let Some((token, string)) = self.iter.next() {
-            self.builder.token(token.into(), string);
+            self.builder.token_with_text(token, string);
         }
     }
 
@@ -86,7 +96,7 @@ impl<'input, I: Iterator<Item = (SyntaxKind, &'input str)>> Parser<'input, I> {
         match self.peek() {
             Some(Number) => self.bump(),
             _ => {
-                self.builder.start_node(Error.into());
+                self.builder.start_node(Error);
                 self.bump();
                 self.builder.finish_node();
             }
@@ -97,7 +107,7 @@ impl<'input, I: Iterator<Item = (SyntaxKind, &'input str)>> Parser<'input, I> {
         let checkpoint = self.builder.checkpoint();
         next(self);
         while self.peek().map(|t| tokens.contains(&t)).unwrap_or(false) {
-            self.builder.start_node_at(checkpoint, Operation.into());
+            self.builder.start_node_at(checkpoint, Operation);
             self.bump();
             next(self);
             self.builder.finish_node();
@@ -113,7 +123,7 @@ impl<'input, I: Iterator<Item = (SyntaxKind, &'input str)>> Parser<'input, I> {
     }
 
     fn parse(mut self) -> (SyntaxNode, impl Resolver) {
-        self.builder.start_node(Root.into());
+        self.builder.start_node(Root);
         self.parse_add();
         self.builder.finish_node();
 

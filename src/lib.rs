@@ -106,11 +106,17 @@ pub use triomphe::Arc;
 pub trait Language: Sized + Clone + Copy + fmt::Debug + Eq + Ord + std::hash::Hash {
     /// A type that represents what items in your Language can be.
     /// Typically, this is an `enum` with variants such as `Identifier`, `Literal`, ...
-    type Kind: fmt::Debug;
+    type Kind: Sized + Clone + Copy + fmt::Debug;
 
     /// Construct a semantic item kind from the compact representation.
     fn kind_from_raw(raw: SyntaxKind) -> Self::Kind;
 
     /// Convert a semantic item kind into a more compact representation.
     fn kind_to_raw(kind: Self::Kind) -> SyntaxKind;
+
+    /// Fixed text for a particular syntax kind.
+    ///
+    /// Implement for kinds that will only ever represent the same text, such as specific
+    /// punctuation (like a semicolon) or operators (like `<=`).
+    fn static_text(kind: Self::Kind) -> Option<&'static str>;
 }

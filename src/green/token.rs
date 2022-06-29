@@ -11,7 +11,7 @@ use triomphe::Arc;
 #[derive(Debug, PartialEq, Eq, Hash, Copy, Clone)]
 pub(super) struct GreenTokenData {
     pub(super) kind:     SyntaxKind,
-    pub(super) text:     Key,
+    pub(super) text:     Option<Key>,
     pub(super) text_len: TextSize,
 }
 
@@ -60,11 +60,11 @@ impl GreenToken {
 
     /// The original source text of this Token.
     #[inline]
-    pub fn text<'i, I>(&self, resolver: &'i I) -> &'i str
+    pub fn text<'i, I>(&self, resolver: &'i I) -> Option<&'i str>
     where
         I: Resolver + ?Sized,
     {
-        resolver.resolve(&self.data().text)
+        self.data().text.map(|key| resolver.resolve(&key))
     }
 
     /// Returns the length of text covered by this token.
@@ -78,7 +78,7 @@ impl GreenToken {
     ///
     /// See also [`text`](GreenToken::text).
     #[inline]
-    pub fn text_key(&self) -> Key {
+    pub fn text_key(&self) -> Option<Key> {
         self.data().text
     }
 }

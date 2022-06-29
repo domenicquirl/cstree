@@ -412,13 +412,30 @@ mod tests {
         fn kind_to_raw(kind: Self::Kind) -> SyntaxKind {
             kind
         }
+
+        fn static_text(kind: Self::Kind) -> Option<&'static str> {
+            let raw = Self::kind_to_raw(kind);
+            if raw == SyntaxKind(1) {
+                Some("{")
+            } else if raw == SyntaxKind(2) {
+                Some("}")
+            } else {
+                None
+            }
+        }
     }
 
     fn build_tree(chunks: &[&str]) -> (SyntaxNode<TestLang, ()>, impl Resolver) {
-        let mut builder = GreenNodeBuilder::new();
+        let mut builder: GreenNodeBuilder<TestLang> = GreenNodeBuilder::new();
         builder.start_node(SyntaxKind(62));
         for &chunk in chunks.iter() {
-            builder.token(SyntaxKind(92), chunk);
+            if chunk == "{" {
+                builder.token(SyntaxKind(1));
+            } else if chunk == "}" {
+                builder.token(SyntaxKind(2));
+            } else {
+                builder.token_with_text(SyntaxKind(92), chunk);
+            }
         }
         builder.finish_node();
         let (node, cache) = builder.finish();
