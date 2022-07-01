@@ -4,6 +4,8 @@ use std::{fmt, hash, mem};
 // This MUST be size=1 such that pointer math actually advances the pointer.
 type ErasedPtr = *const u8;
 
+use sptr::Strict;
+
 use crate::{
     green::{GreenNode, GreenToken, SyntaxKind},
     NodeOrToken, TextSize,
@@ -114,7 +116,7 @@ impl From<PackedGreenElement> for GreenElement {
 
 impl PackedGreenElement {
     pub(crate) fn is_node(&self) -> bool {
-        self.ptr as usize & 1 == 0
+        self.ptr.addr() & super::token::IS_TOKEN_TAG == 0
     }
 
     pub(crate) fn as_node(&self) -> Option<&GreenNode> {

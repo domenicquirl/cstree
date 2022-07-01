@@ -102,7 +102,7 @@ jobs:
           rust-version: nightly
           components: miri
         env: 
-          MIRIFLAGS: -Zmiri-disable-isolation
+          MIRIFLAGS: -Zmiri-disable-isolation -Zmiri-strict-provenance
       - run: cargo miri test --verbose --all-features
         
   sanitizers:
