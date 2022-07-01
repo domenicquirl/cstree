@@ -5,6 +5,7 @@ use crate::{
     interning::{Key, Resolver},
     TextSize,
 };
+use sptr::Strict;
 use triomphe::Arc;
 
 #[repr(align(2))] // to use 1 bit for pointer tagging. NB: this is an at-least annotation
@@ -23,17 +24,18 @@ pub struct GreenToken {
 unsafe impl Send for GreenToken {} // where GreenTokenData: Send + Sync
 unsafe impl Sync for GreenToken {} // where GreenTokenData: Send + Sync
 
+pub(super) const IS_TOKEN_TAG: usize = 0x1;
 impl GreenToken {
     fn add_tag(ptr: ptr::NonNull<GreenTokenData>) -> ptr::NonNull<GreenTokenData> {
         unsafe {
-            let ptr = ((ptr.as_ptr() as usize) | 1) as *mut GreenTokenData;
+            let ptr = ptr.as_ptr().map_addr(|addr| addr | IS_TOKEN_TAG);
             ptr::NonNull::new_unchecked(ptr)
         }
     }
 
     fn remove_tag(ptr: ptr::NonNull<GreenTokenData>) -> ptr::NonNull<GreenTokenData> {
         unsafe {
-            let ptr = ((ptr.as_ptr() as usize) & !1) as *mut GreenTokenData;
+            let ptr = ptr.as_ptr().map_addr(|addr| addr & !IS_TOKEN_TAG);
             ptr::NonNull::new_unchecked(ptr)
         }
     }

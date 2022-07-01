@@ -45,6 +45,7 @@
 
 #![forbid(missing_debug_implementations, unconditional_recursion)]
 #![deny(unsafe_code, missing_docs, future_incompatible)]
+#![allow(unstable_name_collisions)] // strict provenance - must come after `future_incompatible` to take precedence
 
 #[allow(unsafe_code)]
 mod green;
