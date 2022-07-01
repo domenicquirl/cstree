@@ -253,7 +253,12 @@ impl<L: Language, D> SyntaxToken<L, D> {
     /// let tree = parse(&mut builder, "x");
     /// # let tree = SyntaxNode::<Lang>::new_root(builder.finish().0);
     /// let type_table = &state.type_table;
-    /// let ident = tree.children_with_tokens().next().unwrap().into_token().unwrap();
+    /// let ident = tree
+    ///     .children_with_tokens()
+    ///     .next()
+    ///     .unwrap()
+    ///     .into_token()
+    ///     .unwrap();
     /// let typ = type_table.type_of(ident.text_key());
     /// ```
     #[inline]
