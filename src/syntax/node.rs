@@ -170,15 +170,6 @@ impl<L: Language, D> SyntaxNode<L, D> {
         unsafe { &*self.data }
     }
 
-    /// # Safety:
-    /// Caller must ensure that the access to the underlying data is unique (no active _mutable or immutable_
-    /// references).
-    #[inline]
-    #[allow(clippy::mut_from_ref)]
-    unsafe fn data_mut(&self) -> &mut NodeData<L, D> {
-        &mut *self.data
-    }
-
     #[inline]
     pub(super) fn clone_uncounted(&self) -> Self {
         Self { data: self.data }
@@ -346,8 +337,11 @@ impl<L: Language, D> SyntaxNode<L, D> {
             Kind::Root(green, _resolver) => green.into(),
             _ => unreachable!(),
         };
-        // safety: we have just created `ret` and have not shared it
-        unsafe { ret.data_mut() }.green = green;
+        // safety: we have just created `ret` and have not shared it.
+        // Also, we use `addr_of_mut` here in order to not have to go through a `&mut *ret.data`,
+        // which would invalidate the reading provenance of `green`, since `green` is contained in
+        // the date once we have written it here.
+        unsafe { ptr::addr_of_mut!((*ret.data).green).write(green) };
         ret
     }
 
