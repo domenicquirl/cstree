@@ -169,11 +169,12 @@ where
         self.interner.into_owned()
     }
 
-    fn node<L: Language>(&mut self, kind: L::Kind, children: &[GreenElement]) -> GreenNode {
+    fn node<L: Language>(&mut self, kind: L::Kind, all_children: &mut Vec<GreenElement>, offset: usize) -> GreenNode {
+        // NOTE: this fn must remove all children starting at `first_child` from `all_children` before returning
         let kind = L::kind_to_raw(kind);
         let mut hasher = FxHasher32::default();
         let mut text_len: TextSize = 0.into();
-        for child in children {
+        for child in &all_children[offset..] {
             text_len += child.text_len();
             child.hash(&mut hasher);
         }
@@ -186,10 +187,11 @@ where
         // For example, all `#[inline]` in this file share the same green node!
         // For `libsyntax/parse/parser.rs`, measurements show that deduping saves
         // 17% of the memory for green nodes!
+        let children = all_children.drain(offset..);
         if children.len() <= CHILDREN_CACHE_THRESHOLD {
             self.get_cached_node(kind, children, text_len, child_hash)
         } else {
-            GreenNode::new_with_len_and_hash(kind, children.iter().cloned(), text_len, child_hash)
+            GreenNode::new_with_len_and_hash(kind, children, text_len, child_hash)
         }
     }
 
@@ -204,7 +206,7 @@ where
     fn get_cached_node(
         &mut self,
         kind: SyntaxKind,
-        children: &[GreenElement],
+        children: std::vec::Drain<'_, GreenElement>,
         text_len: TextSize,
         child_hash: u32,
     ) -> GreenNode {
@@ -215,7 +217,7 @@ where
         };
         self.nodes
             .entry(head)
-            .or_insert_with_key(|head| GreenNode::from_head_and_children(head.clone(), children.iter().cloned()))
+            .or_insert_with_key(|head| GreenNode::from_head_and_children(head.clone(), children))
             .clone()
     }
 
@@ -412,8 +414,8 @@ where
     #[inline]
     pub fn finish_node(&mut self) {
         let (kind, first_child) = self.parents.pop().unwrap();
-        let node = self.cache.node::<L>(kind, &self.children[first_child..]);
-        self.children.truncate(first_child);
+        // NOTE: we rely on the node cache to remove all children starting at `first_child` from `self.children`
+        let node = self.cache.node::<L>(kind, &mut self.children, first_child);
         self.children.push(node.into());
     }
 
