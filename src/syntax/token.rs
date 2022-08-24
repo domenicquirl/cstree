@@ -182,57 +182,31 @@ impl<L: Language, D> SyntaxToken<L, D> {
         self.static_text().or_else(|| self.green().text(resolver)).unwrap()
     }
 
-    /// If the syntax kind of this token always represents the same text, retrieve that text.
+    /// If the [syntax kind](Language::Kind) of this token always represents the same text, returns
+    /// that text.
     ///
     /// # Examples
-    /// If there is a `SyntaxKind::Plus` that represents just the `+` operator and we implement
-    /// [`Language::static_text`] for it, we can retrieve this text in the resulting syntax tree. ```
-    /// # use cstree::*;
-    /// # #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-    /// # #[repr(u16)]
-    /// # enum SyntaxKind {
-    /// #     ROOT,
-    /// #     IDENT,
-    /// #     INT,
-    /// #     OP,
-    /// #     WS,
-    /// # }
-    /// # use SyntaxKind::*;
-    /// # #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-    /// # enum Lang {}
-    /// # impl cstree::Language for Lang {
-    /// #     type Kind = SyntaxKind;
-    /// #
-    /// #     fn kind_from_raw(raw: cstree::SyntaxKind) -> Self::Kind {
-    /// #         assert!(raw.0 <= SyntaxKind::WS as u16);
-    /// #         unsafe { std::mem::transmute::<u16, SyntaxKind>(raw.0) }
-    /// #     }
-    /// #
-    /// #     fn kind_to_raw(kind: Self::Kind) -> cstree::SyntaxKind {
-    /// #         cstree::SyntaxKind(kind as u16)
-    /// #     }
-    /// #
-    /// #     fn static_text(kind: Self::Kind) -> Option<&'static str> {
-    /// #         match kind {
-    /// #             OP => "+",
-    /// #             _ => None,
-    /// #         }
-    /// #     }
-    /// # }
-    /// # type SyntaxNode<L> = cstree::SyntaxNode<L, ()>;
-    /// # fn parse(b: &mut GreenNodeBuilder<Rodeo>, s: &str) {}
-    /// #
-    /// let mut builder = GreenNodeBuilder::new();
-    /// # builder.start_node(ROOT);
-    /// # builder.token_with_text(IDENT, "x");
-    /// # builder.token_with_text(WS, " ");
-    /// # builder.token(OP);
-    /// # builder.token_with_text(WS, " ");
-    /// # builder.token_with_text(INT, "3");
+    /// If there is a syntax kind `Plus` that represents just the `+` operator and we implement
+    /// [`Language::static_text`] for it, we can retrieve this text in the resulting syntax tree.
+    ///
+    /// ```
+    /// # use cstree::doctest::*;
+    /// let mut builder: GreenNodeBuilder<MyLanguage> = GreenNodeBuilder::new();
+    /// # builder.start_node(Root);
+    /// # builder.token(Identifier, "x");
+    /// # builder.token(Whitespace, " ");
+    /// # builder.token(Plus, "+");
+    /// # builder.token(Whitespace, " ");
+    /// # builder.token(Int, "3");
     /// # builder.finish_node();
-    /// # let tree = SyntaxNode::<Lang>::new_root(builder.finish().0);
     /// let tree = parse(&mut builder, "x + 3");
-    /// let plus = tree.children_with_tokens().nth(2).unwrap().into_token().unwrap();
+    /// # let tree: SyntaxNode<MyLanguage> = SyntaxNode::new_root(builder.finish().0);
+    /// let plus = tree
+    ///     .children_with_tokens()
+    ///     .nth(2) // `x`, then a space, then `+`
+    ///     .unwrap()
+    ///     .into_token()
+    ///     .unwrap();
     /// assert_eq!(plus.static_text(), Some("+"));
     /// ```
     #[inline(always)]
@@ -254,59 +228,29 @@ impl<L: Language, D> SyntaxToken<L, D> {
     ///  
     /// # Examples
     /// ```
-    /// # use cstree::*;
-    /// # #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-    /// # #[repr(u16)]
-    /// # enum SyntaxKind {
-    /// #     ROOT,
-    /// #     IDENT,
-    /// #     INT,
-    /// #     OP,
-    /// #     WS,
-    /// # }
-    /// # use SyntaxKind::*;
-    /// # #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-    /// # enum Lang {}
-    /// # impl cstree::Language for Lang {
-    /// #     type Kind = SyntaxKind;
-    /// #
-    /// #     fn kind_from_raw(raw: cstree::SyntaxKind) -> Self::Kind {
-    /// #         assert!(raw.0 <= SyntaxKind::WS as u16);
-    /// #         unsafe { std::mem::transmute::<u16, SyntaxKind>(raw.0) }
-    /// #     }
-    /// #
-    /// #     fn kind_to_raw(kind: Self::Kind) -> cstree::SyntaxKind {
-    /// #         cstree::SyntaxKind(kind as u16)
-    /// #     }
-    /// #
-    /// #     fn static_text(kind: Self::Kind) -> Option<&'static str> {
-    /// #         match kind {
-    /// #             OP => Some("+"),
-    /// #             _ => None,
-    /// #         }
-    /// #     }
-    /// # }
-    /// # type SyntaxNode<L> = cstree::SyntaxNode<L, ()>;
-    /// # fn parse(b: &mut GreenNodeBuilder<Rodeo>, s: &str) {}
-    /// #
-    /// let mut builder = GreenNodeBuilder::new();
-    /// # builder.start_node(ROOT);
-    /// # builder.token_with_text(IDENT, "x");
-    /// # builder.token_with_text(WS, " ");
-    /// # builder.token(OP);
-    /// # builder.token_with_text(WS, " ");
-    /// # builder.token_with_text(IDENT, "x");
-    /// # builder.token_with_text(WS, " ");
-    /// # builder.token(OP);
-    /// # builder.token_with_text(INT, "3");
+    /// # use cstree::doctest::*;
+    /// let mut builder: GreenNodeBuilder<MyLanguage> = GreenNodeBuilder::new();
+    /// # builder.start_node(Root);
+    /// # builder.token(Identifier, "x");
+    /// # builder.token(Whitespace, " ");
+    /// # builder.token(Plus, "+");
+    /// # builder.token(Whitespace, " ");
+    /// # builder.token(Identifier, "x");
+    /// # builder.token(Whitespace, " ");
+    /// # builder.token(Plus, "+");
+    /// # builder.token(Int, "3");
     /// # builder.finish_node();
-    /// # let tree = SyntaxNode::<Lang>::new_root(builder.finish().0);
     /// let tree = parse(&mut builder, "x + x + 3");
-    /// let first_x = tree.children_with_tokens().next().unwrap().into_token().unwrap();
-    /// let second_x = tree.children_with_tokens().nth(4).unwrap().into_token().unwrap();
+    /// # let tree: SyntaxNode<MyLanguage> = SyntaxNode::new_root(builder.finish().0);
+    /// let mut tokens = tree.children_with_tokens();
+    /// let tokens = tokens.by_ref();
+    /// let first_x = tokens.next().unwrap().into_token().unwrap();
+    ///
+    /// // For the other tokens, skip over the whitespace between them
+    /// let first_plus = tokens.skip(1).next().unwrap().into_token().unwrap();
+    /// let second_x = tokens.skip(1).next().unwrap().into_token().unwrap();
+    /// let second_plus = tokens.skip(1).next().unwrap().into_token().unwrap();
     /// assert!(first_x.text_eq(&second_x));
-    /// let first_plus = tree.children_with_tokens().nth(2).unwrap().into_token().unwrap();
-    /// let second_plus = tree.children_with_tokens().nth(6).unwrap().into_token().unwrap();
     /// assert!(first_plus.text_eq(&second_plus));
     /// ```
     #[inline]
@@ -329,37 +273,12 @@ impl<L: Language, D> SyntaxToken<L, D> {
     /// See also [`resolve_text`](SyntaxToken::resolve_text) and [`text_eq`](SyntaxToken::text_eq).
     ///
     /// # Examples
-    /// If you intern strings inside of your application, e.g. inside of a compiler, you can use
+    /// If you intern strings inside of your application, like inside a compiler, you can use
     /// token's text keys to cross-reference between the syntax tree and the rest of your
     /// implementation by re-using the interner in both.
     /// ```
-    /// # use cstree::*;
-    /// # use cstree::interning::{Hasher, Rodeo, Key, new_interner};
-    /// # #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-    /// # #[repr(u16)]
-    /// # enum SyntaxKind {
-    /// #     ROOT,
-    /// #     INT,
-    /// # }
-    /// # #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-    /// # enum Lang {}
-    /// # impl cstree::Language for Lang {
-    /// #     type Kind = SyntaxKind;
-    /// #
-    /// #     fn kind_from_raw(raw: cstree::SyntaxKind) -> Self::Kind {
-    /// #         assert!(raw.0 <= SyntaxKind::INT as u16);
-    /// #         unsafe { std::mem::transmute::<u16, SyntaxKind>(raw.0) }
-    /// #     }
-    /// #
-    /// #     fn kind_to_raw(kind: Self::Kind) -> cstree::SyntaxKind {
-    /// #         cstree::SyntaxKind(kind as u16)
-    /// #     }
-    /// # }
-    /// # type SyntaxNode<L> = cstree::SyntaxNode<L, ()>;
-    /// # const ROOT:  cstree::SyntaxKind = cstree::SyntaxKind(0);
-    /// # const IDENT: cstree::SyntaxKind = cstree::SyntaxKind(1);
-    /// # fn parse(b: &mut GreenNodeBuilder<Rodeo>, s: &str) {}
-    /// #
+    /// # use cstree::doctest::*;
+    /// use cstree::interning::{new_interner, Hasher, Key, Rodeo};
     /// struct TypeTable {
     ///     // ...
     /// }
@@ -373,17 +292,26 @@ impl<L: Language, D> SyntaxToken<L, D> {
     /// #   interner: Rodeo,
     /// #   type_table: TypeTable,
     /// # }
-    /// # let interner = new_interner();
-    /// # let state = &mut State { interner, type_table: TypeTable{} };
-    /// let mut builder = GreenNodeBuilder::with_interner(&mut state.interner);
+    /// let interner = new_interner();
+    /// let mut state = State {
+    ///     interner,
+    ///     type_table: TypeTable{ /* stuff */},
+    /// };
+    /// let mut builder: GreenNodeBuilder<MyLanguage, Rodeo> =
+    ///     GreenNodeBuilder::with_interner(&mut state.interner);
     /// # let input = "";
-    /// # builder.start_node(ROOT);
-    /// # builder.token_with_text(IDENT, "x");
+    /// # builder.start_node(Root);
+    /// # builder.token(Identifier, "x");
     /// # builder.finish_node();
     /// let tree = parse(&mut builder, "x");
-    /// # let tree = SyntaxNode::<Lang>::new_root(builder.finish().0);
+    /// # let tree: SyntaxNode<MyLanguage> = SyntaxNode::new_root(builder.finish().0);
     /// let type_table = &state.type_table;
-    /// let ident = tree.children_with_tokens().next().unwrap().into_token().unwrap();
+    /// let ident = tree
+    ///     .children_with_tokens()
+    ///     .next()
+    ///     .unwrap()
+    ///     .into_token()
+    ///     .unwrap();
     /// let typ = type_table.type_of(ident.text_key().unwrap());
     /// ```
     #[inline]

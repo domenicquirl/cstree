@@ -25,7 +25,7 @@ fn empty_tree_arc() {
             cstree::SyntaxKind(kind as u16)
         }
 
-        fn static_text(kind: Self::Kind) -> Option<&'static str> {
+        fn static_text(_kind: Self::Kind) -> Option<&'static str> {
             None
         }
     }

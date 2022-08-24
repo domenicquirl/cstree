@@ -88,6 +88,47 @@ impl<T> WalkEvent<T> {
     }
 }
 
+#[derive(Debug)]
+pub(crate) enum MaybeOwned<'a, T> {
+    Owned(T),
+    Borrowed(&'a mut T),
+}
+
+impl<T> MaybeOwned<'_, T> {
+    pub(crate) fn into_owned(self) -> Option<T> {
+        match self {
+            MaybeOwned::Owned(owned) => Some(owned),
+            MaybeOwned::Borrowed(_) => None,
+        }
+    }
+}
+
+impl<T> std::ops::Deref for MaybeOwned<'_, T> {
+    type Target = T;
+
+    fn deref(&self) -> &T {
+        match self {
+            MaybeOwned::Owned(it) => it,
+            MaybeOwned::Borrowed(it) => *it,
+        }
+    }
+}
+
+impl<T> std::ops::DerefMut for MaybeOwned<'_, T> {
+    fn deref_mut(&mut self) -> &mut T {
+        match self {
+            MaybeOwned::Owned(it) => it,
+            MaybeOwned::Borrowed(it) => *it,
+        }
+    }
+}
+
+impl<T: Default> Default for MaybeOwned<'_, T> {
+    fn default() -> Self {
+        MaybeOwned::Owned(T::default())
+    }
+}
+
 /// There might be zero, one or two leaves at a given offset.
 #[derive(Clone, Debug)]
 pub enum TokenAtOffset<T> {

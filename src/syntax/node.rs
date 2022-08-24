@@ -294,34 +294,13 @@ impl<L: Language, D> SyntaxNode<L, D> {
     ///
     /// # Example
     /// ```
-    /// # use cstree::*;
-    /// # #[allow(non_camel_case_types)]
-    /// #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-    /// #[repr(u16)]
-    /// enum SyntaxKind {
-    ///     ROOT,
-    /// }
-    /// #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-    /// enum Lang {}
-    /// impl cstree::Language for Lang {
-    ///     // ...
-    /// #     type Kind = SyntaxKind;
-    /// #
-    /// #     fn kind_from_raw(raw: cstree::SyntaxKind) -> Self::Kind {
-    /// #         assert!(raw.0 <= SyntaxKind::ROOT as u16);
-    /// #         unsafe { std::mem::transmute::<u16, SyntaxKind>(raw.0) }
-    /// #     }
-    /// #
-    /// #     fn kind_to_raw(kind: Self::Kind) -> cstree::SyntaxKind {
-    /// #         cstree::SyntaxKind(kind as u16)
-    /// #     }
-    /// }
-    /// # let mut builder = GreenNodeBuilder::new();
-    /// # builder.start_node(SyntaxKind(0));
+    /// # use cstree::doctest::*;
+    /// # let mut builder: GreenNodeBuilder<MyLanguage> = GreenNodeBuilder::new();
+    /// # builder.start_node(Root);
     /// # builder.finish_node();
-    /// # let (green, _) = builder.finish();
-    /// let root: SyntaxNode<Lang> = SyntaxNode::new_root(green);
-    /// assert_eq!(root.kind(), SyntaxKind::ROOT);
+    /// # let (green_root, _) = builder.finish();
+    /// let root: SyntaxNode<MyLanguage> = SyntaxNode::new_root(green_root);
+    /// assert_eq!(root.kind(), Root);
     /// ```
     #[inline]
     pub fn new_root(green: GreenNode) -> Self {
@@ -356,38 +335,18 @@ impl<L: Language, D> SyntaxNode<L, D> {
     ///
     /// # Example
     /// ```
-    /// # use cstree::*;
-    /// # #[allow(non_camel_case_types)]
-    /// #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-    /// #[repr(u16)]
-    /// enum SyntaxKind {
-    ///     TOKEN,
-    ///     ROOT,
-    /// }
-    /// #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-    /// enum Lang {}
-    /// impl cstree::Language for Lang {
-    ///     // ...
-    /// #     type Kind = SyntaxKind;
-    /// #
-    /// #     fn kind_from_raw(raw: cstree::SyntaxKind) -> Self::Kind {
-    /// #         assert!(raw.0 <= SyntaxKind::ROOT as u16);
-    /// #         unsafe { std::mem::transmute::<u16, SyntaxKind>(raw.0) }
-    /// #     }
-    /// #
-    /// #     fn kind_to_raw(kind: Self::Kind) -> cstree::SyntaxKind {
-    /// #         cstree::SyntaxKind(kind as u16)
-    /// #     }
-    /// }
-    /// # const ROOT: cstree::SyntaxKind = cstree::SyntaxKind(0);
-    /// # const TOKEN: cstree::SyntaxKind = cstree::SyntaxKind(1);
-    /// # type SyntaxNode<L> = cstree::SyntaxNode<L, ()>;
-    /// let mut builder = GreenNodeBuilder::new();
-    /// builder.start_node(ROOT);
-    /// builder.token(TOKEN, "content");
+    /// # use cstree::doctest::*;
+    /// let mut builder: GreenNodeBuilder<MyLanguage> = GreenNodeBuilder::new();
+    /// builder.start_node(Root);
+    /// builder.token(Identifier, "content");
     /// builder.finish_node();
     /// let (green, cache) = builder.finish();
-    /// let root: ResolvedNode<Lang> = SyntaxNode::new_root_with_resolver(green, cache.unwrap().into_interner().unwrap());
+    ///
+    /// // We are safe to use `unwrap` here because we created the builder with `new`.
+    /// // This created a new interner and cache for us owned by the builder,
+    /// // and `finish` always returns these.
+    /// let interner = cache.unwrap().into_interner().unwrap();
+    /// let root: ResolvedNode<MyLanguage> = SyntaxNode::new_root_with_resolver(green, interner);
     /// assert_eq!(root.text(), "content");
     /// ```
     #[inline]

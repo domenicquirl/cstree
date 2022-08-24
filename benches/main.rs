@@ -1,4 +1,4 @@
-use criterion::{criterion_group, criterion_main, Criterion, Throughput};
+use criterion::{black_box, criterion_group, criterion_main, Criterion, Throughput};
 use cstree::*;
 use lasso::{Interner, Rodeo};
 
@@ -6,19 +6,40 @@ use lasso::{Interner, Rodeo};
 pub enum Element<'s> {
     Node(Vec<Element<'s>>),
     Token(&'s str),
+    Plus,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum TestKind {
+    Element { n: u16 },
+    Plus,
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub enum TestLang {}
 impl Language for TestLang {
-    type Kind = SyntaxKind;
+    type Kind = TestKind;
 
     fn kind_from_raw(raw: SyntaxKind) -> Self::Kind {
-        raw
+        if raw.0 == u16::MAX - 1 {
+            TestKind::Plus
+        } else {
+            TestKind::Element { n: raw.0 }
+        }
     }
 
     fn kind_to_raw(kind: Self::Kind) -> SyntaxKind {
-        kind
+        match kind {
+            TestKind::Element { n } => SyntaxKind(n),
+            TestKind::Plus => SyntaxKind(u16::MAX - 1),
+        }
+    }
+
+    fn static_text(kind: Self::Kind) -> Option<&'static str> {
+        match kind {
+            TestKind::Plus => Some("+"),
+            TestKind::Element { .. } => None,
+        }
     }
 }
 
@@ -33,20 +54,27 @@ where
     node
 }
 
-pub fn build_recursive<'c, 'i, I>(root: &Element<'_>, builder: &mut GreenNodeBuilder<'c, 'i, I>, mut from: u16) -> u16
+pub fn build_recursive<'c, 'i, I>(
+    root: &Element<'_>,
+    builder: &mut GreenNodeBuilder<'c, 'i, TestLang, I>,
+    mut from: u16,
+) -> u16
 where
     I: Interner,
 {
     match root {
         Element::Node(children) => {
-            builder.start_node(SyntaxKind(from));
+            builder.start_node(TestKind::Element { n: from });
             for child in children {
                 from = build_recursive(child, builder, from + 1);
             }
             builder.finish_node();
         }
         Element::Token(text) => {
-            builder.token(SyntaxKind(from), *text);
+            builder.token(TestKind::Element { n: from }, *text);
+        }
+        Element::Plus => {
+            builder.token(TestKind::Plus, "+");
         }
     }
     from
@@ -62,7 +90,7 @@ fn two_level_tree() -> Element<'static> {
 }
 
 pub fn create(c: &mut Criterion) {
-    let mut group = c.benchmark_group("qualification");
+    let mut group = c.benchmark_group("re-use cache");
     group.throughput(Throughput::Elements(1));
 
     let mut interner = Rodeo::new();
@@ -71,9 +99,8 @@ pub fn create(c: &mut Criterion) {
 
     group.bench_function("two-level tree", |b| {
         b.iter(|| {
-            for _ in 0..100_000 {
-                let _tree = build_tree_with_cache(&tree, &mut cache);
-            }
+            let tree = build_tree_with_cache(&tree, &mut cache);
+            black_box(tree);
         })
     });
 

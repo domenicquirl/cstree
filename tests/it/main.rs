@@ -36,7 +36,7 @@ impl Language for TestLang {
         kind
     }
 
-    fn static_text(kind: Self::Kind) -> Option<&'static str> {
+    fn static_text(_kind: Self::Kind) -> Option<&'static str> {
         None
     }
 }
@@ -70,7 +70,7 @@ where
             builder.finish_node();
         }
         Element::Token(text) => {
-            builder.token_with_text(SyntaxKind(from), *text);
+            builder.token(SyntaxKind(from), *text);
         }
     }
     from
