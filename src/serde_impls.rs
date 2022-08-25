@@ -177,16 +177,16 @@ where
             where
                 A: SeqAccess<'de>,
             {
-                let mut builder = GreenNodeBuilder::new();
+                let mut builder: GreenNodeBuilder<L> = GreenNodeBuilder::new();
                 let mut data_indices = VecDeque::new();
 
                 while let Some(next) = seq.next_element::<Event<'_>>()? {
                     match next {
                         Event::EnterNode(kind, has_data) => {
-                            builder.start_node(kind);
+                            builder.start_node(L::kind_from_raw(kind));
                             data_indices.push_back(has_data);
                         }
-                        Event::Token(kind, text) => builder.token(kind, text),
+                        Event::Token(kind, text) => builder.token(L::kind_from_raw(kind), text),
                         Event::LeaveNode => builder.finish_node(),
                     }
                 }
