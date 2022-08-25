@@ -728,35 +728,3 @@ impl<'a, L: Language, D> ResolvedElementRef<'a, L, D> {
         }
     }
 }
-
-#[test]
-fn assert_send_sync() {
-    use crate::SyntaxKind;
-
-    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
-    enum L {}
-    #[derive(Debug, Clone, Copy)]
-    enum Kind {
-        Var,
-    }
-    impl Language for L {
-        type Kind = Kind;
-
-        fn kind_from_raw(_: SyntaxKind) -> Self::Kind {
-            Kind::Var
-        }
-
-        fn kind_to_raw(_: Self::Kind) -> SyntaxKind {
-            SyntaxKind(0)
-        }
-
-        fn static_text(_kind: Self::Kind) -> Option<&'static str> {
-            None
-        }
-    }
-    fn f<T: Send + Sync>() {}
-    f::<ResolvedNode<L>>();
-    f::<ResolvedToken<L>>();
-    f::<ResolvedElement<L>>();
-    f::<ResolvedElementRef<'static, L>>();
-}

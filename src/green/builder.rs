@@ -34,7 +34,7 @@ impl NodeCache<'static> {
     /// tokens. To re-use an existing interner, see [`with_interner`](NodeCache::with_interner).
     /// # Examples
     /// ```
-    /// # use cstree::doctest::{*, Language as _};
+    /// # use cstree::testing::{*, Language as _};
     /// // Build a tree
     /// let mut cache = NodeCache::new();
     /// let mut builder: GreenNodeBuilder<MyLanguage> = GreenNodeBuilder::with_cache(&mut cache);
@@ -72,7 +72,7 @@ where
     /// (strings) across tokens.
     /// # Examples
     /// ```
-    /// # use cstree::doctest::{*, Language as _};
+    /// # use cstree::testing::{*, Language as _};
     /// use lasso::Rodeo;
     ///
     /// // Create the builder from a custom `Rodeo`
@@ -106,7 +106,7 @@ where
     /// (strings) across tokens.
     /// # Examples
     /// ```
-    /// # use cstree::doctest::{*, Language as _};
+    /// # use cstree::testing::{*, Language as _};
     /// use lasso::Rodeo;
     ///
     /// // Create the builder from a custom `Rodeo`
@@ -245,7 +245,7 @@ pub struct Checkpoint(usize);
 ///
 /// # Examples
 /// ```
-/// # use cstree::doctest::{*, Language as _};
+/// # use cstree::testing::{*, Language as _};
 /// # use cstree::interning::IntoResolver;
 /// // Build a tree
 /// let mut builder: GreenNodeBuilder<MyLanguage> = GreenNodeBuilder::new();
@@ -305,7 +305,7 @@ where
     /// The `cache` given will be returned on [`finish`](GreenNodeBuilder::finish).
     /// # Examples
     /// ```
-    /// # use cstree::doctest::{*, Language as _};
+    /// # use cstree::testing::{*, Language as _};
     /// // Construct a builder from our own cache
     /// let cache = NodeCache::new();
     /// let mut builder: GreenNodeBuilder<MyLanguage> = GreenNodeBuilder::from_cache(cache);
@@ -366,7 +366,7 @@ where
     /// This is the same interner as used by the underlying [`NodeCache`].
     /// # Examples
     /// ```
-    /// # use cstree::doctest::*;
+    /// # use cstree::testing::*;
     /// # use cstree::interning::*;
     /// let mut builder: GreenNodeBuilder<MyLanguage> = GreenNodeBuilder::new();
     /// let interner = builder.interner_mut();
@@ -426,7 +426,7 @@ where
     ///
     /// # Examples
     /// ```
-    /// # use cstree::doctest::*;
+    /// # use cstree::testing::*;
     /// # use cstree::{GreenNodeBuilder, Language};
     /// # struct Parser;
     /// # impl Parser {

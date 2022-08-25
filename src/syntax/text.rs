@@ -13,7 +13,7 @@ use crate::{interning::Resolver, Language, SyntaxNode, SyntaxToken, TextRange, T
 ///
 /// # Example
 /// ```
-/// # use cstree::doctest::*;
+/// # use cstree::testing::*;
 /// # use cstree::interning::IntoResolver;
 /// #
 /// fn parse_float_literal(s: &str) -> ResolvedNode<MyLanguage> {

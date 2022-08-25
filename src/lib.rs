@@ -135,7 +135,7 @@ pub trait Language: Sized + Clone + Copy + fmt::Debug + Eq + Ord + std::hash::Ha
 
 #[doc(hidden)]
 #[allow(unsafe_code, unused)]
-pub mod doctest {
+pub mod testing {
     pub use crate::*;
     pub fn parse<L: Language, I>(_b: &mut super::GreenNodeBuilder<L, I>, _s: &str) {}
 

@@ -1,4 +1,4 @@
-use std::{fmt, hash, mem::ManuallyDrop, ptr};
+use std::{fmt, hash, mem::ManuallyDrop, ptr::NonNull};
 
 use crate::{
     green::SyntaxKind,
@@ -18,7 +18,7 @@ pub(super) struct GreenTokenData {
 
 /// Leaf node in the immutable "green" tree.
 pub struct GreenToken {
-    ptr: ptr::NonNull<GreenTokenData>,
+    ptr: NonNull<GreenTokenData>,
 }
 
 unsafe impl Send for GreenToken {} // where GreenTokenData: Send + Sync
@@ -26,17 +26,17 @@ unsafe impl Sync for GreenToken {} // where GreenTokenData: Send + Sync
 
 pub(super) const IS_TOKEN_TAG: usize = 0x1;
 impl GreenToken {
-    fn add_tag(ptr: ptr::NonNull<GreenTokenData>) -> ptr::NonNull<GreenTokenData> {
+    fn add_tag(ptr: NonNull<GreenTokenData>) -> NonNull<GreenTokenData> {
         unsafe {
             let ptr = ptr.as_ptr().map_addr(|addr| addr | IS_TOKEN_TAG);
-            ptr::NonNull::new_unchecked(ptr)
+            NonNull::new_unchecked(ptr)
         }
     }
 
-    fn remove_tag(ptr: ptr::NonNull<GreenTokenData>) -> ptr::NonNull<GreenTokenData> {
+    fn remove_tag(ptr: NonNull<GreenTokenData>) -> NonNull<GreenTokenData> {
         unsafe {
             let ptr = ptr.as_ptr().map_addr(|addr| addr & !IS_TOKEN_TAG);
-            ptr::NonNull::new_unchecked(ptr)
+            NonNull::new_unchecked(ptr)
         }
     }
 
@@ -48,7 +48,7 @@ impl GreenToken {
     #[inline]
     pub(super) fn new(data: GreenTokenData) -> GreenToken {
         let ptr = Arc::into_raw(Arc::new(data));
-        let ptr = ptr::NonNull::new(ptr as *mut _).unwrap();
+        let ptr = NonNull::new(ptr as *mut _).unwrap();
         GreenToken {
             ptr: Self::add_tag(ptr),
         }
@@ -102,7 +102,7 @@ impl Clone for GreenToken {
             let arc = ManuallyDrop::new(Arc::from_raw(ptr.as_ptr()));
             Arc::into_raw(Arc::clone(&arc))
         };
-        let ptr = unsafe { ptr::NonNull::new_unchecked(ptr as *mut _) };
+        let ptr = unsafe { NonNull::new_unchecked(ptr as *mut _) };
         GreenToken {
             ptr: Self::add_tag(ptr),
         }

@@ -190,7 +190,7 @@ impl<L: Language, D> SyntaxToken<L, D> {
     /// [`Language::static_text`] for it, we can retrieve this text in the resulting syntax tree.
     ///
     /// ```
-    /// # use cstree::doctest::*;
+    /// # use cstree::testing::*;
     /// let mut builder: GreenNodeBuilder<MyLanguage> = GreenNodeBuilder::new();
     /// # builder.start_node(Root);
     /// # builder.token(Identifier, "x");
@@ -228,7 +228,7 @@ impl<L: Language, D> SyntaxToken<L, D> {
     ///  
     /// # Examples
     /// ```
-    /// # use cstree::doctest::*;
+    /// # use cstree::testing::*;
     /// let mut builder: GreenNodeBuilder<MyLanguage> = GreenNodeBuilder::new();
     /// # builder.start_node(Root);
     /// # builder.token(Identifier, "x");
@@ -277,7 +277,7 @@ impl<L: Language, D> SyntaxToken<L, D> {
     /// token's text keys to cross-reference between the syntax tree and the rest of your
     /// implementation by re-using the interner in both.
     /// ```
-    /// # use cstree::doctest::*;
+    /// # use cstree::testing::*;
     /// use cstree::interning::{new_interner, Hasher, Key, Rodeo};
     /// struct TypeTable {
     ///     // ...
