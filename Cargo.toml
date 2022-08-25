@@ -1,7 +1,7 @@
 [package]
 edition = "2021"
 name = "cstree"
-version = "0.11.0"
+version = "0.11.1"
 authors = [
     "Domenic Quirl <DomenicQuirl@pm.me>",
     "Aleksey Kladov <aleksey.kladov@gmail.com>",
@@ -21,7 +21,8 @@ fxhash      = "0.2.1"
 parking_lot = "0.11.2"
 
 # Arc
-triomphe = "0.1.3"
+triomphe = "0.1.7"
+sptr     = "0.3.2"
 
 [dependencies.serde]
 version          = "1.0"
