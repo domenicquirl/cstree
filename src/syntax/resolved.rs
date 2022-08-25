@@ -198,7 +198,10 @@ impl<L: Language, D> ResolvedToken<L, D> {
     /// Uses the resolver associated with this tree to return the source text of this token.
     #[inline]
     pub fn text(&self) -> &str {
-        self.green().text(&**self.resolver())
+        // one of the two must be present upon construction
+        self.static_text()
+            .or_else(|| self.green().text(&**self.resolver()))
+            .unwrap()
     }
 }
 
@@ -724,32 +727,4 @@ impl<'a, L: Language, D> ResolvedElementRef<'a, L, D> {
             NodeOrToken::Token(it) => it.prev_sibling_or_token(),
         }
     }
-}
-
-#[test]
-fn assert_send_sync() {
-    use crate::SyntaxKind;
-
-    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
-    enum L {}
-    #[derive(Debug)]
-    enum Kind {
-        Var,
-    }
-    impl Language for L {
-        type Kind = Kind;
-
-        fn kind_from_raw(_: SyntaxKind) -> Self::Kind {
-            Kind::Var
-        }
-
-        fn kind_to_raw(_: Self::Kind) -> SyntaxKind {
-            SyntaxKind(0)
-        }
-    }
-    fn f<T: Send + Sync>() {}
-    f::<ResolvedNode<L>>();
-    f::<ResolvedToken<L>>();
-    f::<ResolvedElement<L>>();
-    f::<ResolvedElementRef<'static, L>>();
 }

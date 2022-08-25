@@ -52,6 +52,14 @@ impl cstree::Language for Lang {
     fn kind_to_raw(kind: Self::Kind) -> cstree::SyntaxKind {
         kind.into()
     }
+
+    fn static_text(kind: Self::Kind) -> Option<&'static str> {
+        match kind {
+            LParen => Some("("),
+            RParen => Some(")"),
+            _ => None,
+        }
+    }
 }
 
 /// GreenNode is an immutable tree, which caches identical nodes and tokens, but doesn't contain
@@ -60,7 +68,7 @@ impl cstree::Language for Lang {
 /// the Resolver to get the real text back from the interned representation.
 use cstree::{
     interning::{IntoResolver, Resolver},
-    GreenNode,
+    GreenNode, Language,
 };
 
 /// You can construct GreenNodes by hand, but a builder is helpful for top-down parsers: it maintains
@@ -84,7 +92,7 @@ fn parse(text: &str) -> Parse<impl Resolver> {
         /// input tokens, including whitespace.
         tokens:  VecDeque<(SyntaxKind, &'input str)>,
         /// the in-progress green tree.
-        builder: GreenNodeBuilder<'static, 'static>,
+        builder: GreenNodeBuilder<'static, 'static, Lang>,
         /// the list of syntax errors we've accumulated so far.
         errors:  Vec<String>,
     }
@@ -102,13 +110,13 @@ fn parse(text: &str) -> Parse<impl Resolver> {
     impl Parser<'_> {
         fn parse(mut self) -> Parse<impl Resolver> {
             // Make sure that the root node covers all source
-            self.builder.start_node(Root.into());
+            self.builder.start_node(Root);
             // Parse zero or more S-expressions
             loop {
                 match self.sexp() {
                     SexpRes::Eof => break,
                     SexpRes::RParen => {
-                        self.builder.start_node(Error.into());
+                        self.builder.start_node(Error);
                         self.errors.push("unmatched `)`".to_string());
                         self.bump(); // be sure to advance even in case of an error, so as to not get stuck
                         self.builder.finish_node();
@@ -135,7 +143,7 @@ fn parse(text: &str) -> Parse<impl Resolver> {
         fn list(&mut self) {
             assert_eq!(self.current(), Some(LParen));
             // Start the list node
-            self.builder.start_node(List.into());
+            self.builder.start_node(List);
             self.bump(); // '('
             loop {
                 match self.sexp() {
@@ -166,7 +174,7 @@ fn parse(text: &str) -> Parse<impl Resolver> {
             match t {
                 LParen => self.list(),
                 Word => {
-                    self.builder.start_node(Atom.into());
+                    self.builder.start_node(Atom);
                     self.bump();
                     self.builder.finish_node();
                 }
@@ -179,7 +187,7 @@ fn parse(text: &str) -> Parse<impl Resolver> {
         /// Advance one token, adding it to the current branch of the tree builder.
         fn bump(&mut self) {
             let (kind, text) = self.tokens.pop_front().unwrap();
-            self.builder.token(kind.into(), text);
+            self.builder.token(kind, text);
         }
 
         /// Peek at the first unprocessed token
@@ -348,7 +356,9 @@ impl ast::Atom {
 
     fn text<'r>(&self, resolver: &'r impl Resolver) -> &'r str {
         match &self.0.green().children().next() {
-            Some(cstree::NodeOrToken::Token(token)) => token.text(resolver),
+            Some(cstree::NodeOrToken::Token(token)) => Lang::static_text(Lang::kind_from_raw(token.kind()))
+                .or_else(|| token.text(resolver))
+                .unwrap(),
             _ => unreachable!(),
         }
     }

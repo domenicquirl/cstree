@@ -26,12 +26,12 @@ pub struct SyntaxKind(pub u16);
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use node::GreenNodeHead;
     use token::GreenTokenData;
 
-    use super::*;
-
     #[test]
+    #[cfg_attr(miri, ignore)]
     fn assert_send_sync() {
         fn f<T: Send + Sync>() {}
         f::<GreenNode>();
@@ -41,6 +41,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg_attr(miri, ignore)]
     #[rustfmt::skip]
     fn assert_green_sizes() {
         use std::mem::size_of;

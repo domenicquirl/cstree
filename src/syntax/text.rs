@@ -13,43 +13,21 @@ use crate::{interning::Resolver, Language, SyntaxNode, SyntaxToken, TextRange, T
 ///
 /// # Example
 /// ```
-/// # use cstree::{*, interning::IntoResolver};
-/// # #[allow(non_camel_case_types)]
-/// # #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-/// # #[repr(u16)]
-/// # enum SyntaxKind {
-/// #     TOKEN,
-/// #     ROOT,
-/// # }
-/// # #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-/// # enum Lang {}
-/// # impl cstree::Language for Lang {
-/// #     type Kind = SyntaxKind;
+/// # use cstree::testing::*;
+/// # use cstree::interning::IntoResolver;
 /// #
-/// #     fn kind_from_raw(raw: cstree::SyntaxKind) -> Self::Kind {
-/// #         assert!(raw.0 <= SyntaxKind::ROOT as u16);
-/// #         unsafe { std::mem::transmute::<u16, SyntaxKind>(raw.0) }
-/// #     }
-/// #
-/// #     fn kind_to_raw(kind: Self::Kind) -> cstree::SyntaxKind {
-/// #         cstree::SyntaxKind(kind as u16)
-/// #     }
-/// # }
-/// # type SyntaxNode = cstree::SyntaxNode<Lang, ()>;
-/// # type ResolvedNode = cstree::ResolvedNode<Lang, ()>;
-/// #
-/// # fn parse_float_literal(s: &str) -> ResolvedNode {
-/// #     const LITERAL: cstree::SyntaxKind = cstree::SyntaxKind(0);
-/// #     let mut builder = GreenNodeBuilder::new();
-/// #     builder.start_node(LITERAL);
-/// #     builder.token(LITERAL, s);
+/// fn parse_float_literal(s: &str) -> ResolvedNode<MyLanguage> {
+///     // parsing...
+/// #     let mut builder: GreenNodeBuilder<MyLanguage> = GreenNodeBuilder::new();
+/// #     builder.start_node(Float);
+/// #     builder.token(Float, s);
 /// #     builder.finish_node();
 /// #     let (root, cache) = builder.finish();
 /// #     let resolver = cache.unwrap().into_interner().unwrap().into_resolver();
 /// #     SyntaxNode::new_root_with_resolver(root, resolver)
-/// # }
-/// let node = parse_float_literal("2.748E2");
-/// let text = node.text();
+/// }
+/// let float_node = parse_float_literal("2.748E2");
+/// let text = float_node.text();
 /// assert_eq!(text.len(), 7.into());
 /// assert!(text.contains_char('E'));
 /// assert_eq!(text.find_char('E'), Some(5.into()));
@@ -412,13 +390,28 @@ mod tests {
         fn kind_to_raw(kind: Self::Kind) -> SyntaxKind {
             kind
         }
+
+        fn static_text(kind: Self::Kind) -> Option<&'static str> {
+            if kind == SyntaxKind(1) {
+                Some("{")
+            } else if kind == SyntaxKind(2) {
+                Some("}")
+            } else {
+                None
+            }
+        }
     }
 
     fn build_tree(chunks: &[&str]) -> (SyntaxNode<TestLang, ()>, impl Resolver) {
-        let mut builder = GreenNodeBuilder::new();
+        let mut builder: GreenNodeBuilder<TestLang> = GreenNodeBuilder::new();
         builder.start_node(SyntaxKind(62));
         for &chunk in chunks.iter() {
-            builder.token(SyntaxKind(92), chunk);
+            let kind = match chunk {
+                "{" => 1,
+                "}" => 2,
+                _ => 3,
+            };
+            builder.token(SyntaxKind(kind), chunk);
         }
         builder.finish_node();
         let (node, cache) = builder.finish();

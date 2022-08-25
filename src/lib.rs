@@ -71,18 +71,21 @@ pub use crate::{
 };
 pub use triomphe::Arc;
 
-/// The `Language` trait is the bridge between the internal `cstree` representation and your language
-/// types.
-/// This is essential to providing a [`SyntaxNode`] API that can be used with your types, as in the
+/// The `Language` trait is the bridge between the internal `cstree` representation and your
+/// language's types.
+/// This is essential for providing a [`SyntaxNode`] API that can be used with your types, as in the
 /// `s_expressions` example:
+///
 /// ```
 /// #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 /// # #[allow(non_camel_case_types)]
 /// #[repr(u16)]
 /// enum SyntaxKind {
-///     ROOT,       // top-level node
-///     ATOM,       // `+`, `15`
-///     WHITESPACE, // whitespaces is explicit
+///     Plus,       // `+`
+///     Minus,      // `-`
+///     Integer,    // like `15`
+///     Expression, // combined expression, like `5 + 4 - 3`
+///     Whitespace, // whitespaces is explicit
 ///     #[doc(hidden)]
 ///     __LAST,
 /// }
@@ -102,16 +105,75 @@ pub use triomphe::Arc;
 ///     fn kind_to_raw(kind: Self::Kind) -> cstree::SyntaxKind {
 ///         cstree::SyntaxKind(kind as u16)
 ///     }
+///
+///     fn static_text(kind: Self::Kind) -> Option<&'static str> {
+///         match kind {
+///             Plus => Some("+"),
+///             Minus => Some("-"),
+///             _ => None,
+///         }
+///     }
 /// }
 /// ```
 pub trait Language: Sized + Clone + Copy + fmt::Debug + Eq + Ord + std::hash::Hash {
     /// A type that represents what items in your Language can be.
     /// Typically, this is an `enum` with variants such as `Identifier`, `Literal`, ...
-    type Kind: fmt::Debug;
+    type Kind: Sized + Clone + Copy + fmt::Debug;
 
     /// Construct a semantic item kind from the compact representation.
     fn kind_from_raw(raw: SyntaxKind) -> Self::Kind;
 
     /// Convert a semantic item kind into a more compact representation.
     fn kind_to_raw(kind: Self::Kind) -> SyntaxKind;
+
+    /// Fixed text for a particular syntax kind.
+    ///
+    /// Implement for kinds that will only ever represent the same text, such as punctuation (like a
+    /// semicolon), keywords (like `fn`), or operators (like `<=`).
+    fn static_text(kind: Self::Kind) -> Option<&'static str>;
+}
+
+#[doc(hidden)]
+#[allow(unsafe_code, unused)]
+pub mod testing {
+    pub use crate::*;
+    pub fn parse<L: Language, I>(_b: &mut super::GreenNodeBuilder<L, I>, _s: &str) {}
+
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+    #[repr(u16)]
+    #[allow(non_camel_case_types)]
+    pub enum TestSyntaxKind {
+        Plus,
+        Identifier,
+        Int,
+        Float,
+        Operation,
+        Root,
+        Whitespace,
+        __LAST,
+    }
+    pub use TestSyntaxKind::*;
+
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+    pub enum TestLang {}
+    pub type MyLanguage = TestLang;
+    impl Language for TestLang {
+        type Kind = TestSyntaxKind;
+
+        fn kind_from_raw(raw: SyntaxKind) -> Self::Kind {
+            assert!(raw.0 <= TestSyntaxKind::__LAST as u16);
+            unsafe { std::mem::transmute::<u16, TestSyntaxKind>(raw.0) }
+        }
+
+        fn kind_to_raw(kind: Self::Kind) -> SyntaxKind {
+            SyntaxKind(kind as u16)
+        }
+
+        fn static_text(kind: Self::Kind) -> Option<&'static str> {
+            match kind {
+                TestSyntaxKind::Plus => Some("+"),
+                _ => None,
+            }
+        }
+    }
 }

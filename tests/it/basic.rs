@@ -3,7 +3,7 @@ use cstree::{GreenNodeBuilder, NodeCache, SyntaxKind, TextRange};
 use lasso::{Resolver, Rodeo};
 
 fn build_tree<D>(root: &Element<'_>) -> (SyntaxNode<D>, impl Resolver) {
-    let mut builder = GreenNodeBuilder::new();
+    let mut builder: GreenNodeBuilder<TestLang> = GreenNodeBuilder::new();
     build_recursive(root, &mut builder, 0);
     let (node, cache) = builder.finish();
     (SyntaxNode::new_root(node), cache.unwrap().into_interner().unwrap())
@@ -178,5 +178,5 @@ fn assert_debug_display() {
     f::<cstree::NodeOrToken<String, u128>>();
 
     fn dbg<T: fmt::Debug>() {}
-    dbg::<GreenNodeBuilder<'static, 'static>>();
+    dbg::<GreenNodeBuilder<'static, 'static, TestLang>>();
 }

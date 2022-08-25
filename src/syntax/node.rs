@@ -11,7 +11,8 @@ use std::{
     cell::UnsafeCell,
     fmt,
     hash::{Hash, Hasher},
-    iter, ptr,
+    iter,
+    ptr::{self, NonNull},
     sync::{
         atomic::{AtomicU32, Ordering},
         Arc as StdArc,
@@ -26,7 +27,7 @@ use triomphe::Arc;
 #[derive(Debug)]
 #[repr(transparent)]
 pub struct SyntaxNode<L: Language, D: 'static = ()> {
-    data: *mut NodeData<L, D>,
+    data: NonNull<NodeData<L, D>>,
 }
 
 unsafe impl<L: Language, D: 'static> Send for SyntaxNode<L, D> {}
@@ -158,7 +159,7 @@ impl<L: Language, D> Drop for SyntaxNode<L, D> {
             root.drop_recursive();
             let root_data = root.data;
             drop(root);
-            unsafe { drop(Box::from_raw(root_data)) };
+            unsafe { drop(Box::from_raw(root_data.as_ptr())) };
             unsafe { drop(Box::from_raw(ref_count)) };
         }
     }
@@ -167,7 +168,7 @@ impl<L: Language, D> Drop for SyntaxNode<L, D> {
 impl<L: Language, D> SyntaxNode<L, D> {
     #[inline]
     fn data(&self) -> &NodeData<L, D> {
-        unsafe { &*self.data }
+        unsafe { self.data.as_ref() }
     }
 
     #[inline]
@@ -209,7 +210,7 @@ impl<L: Language, D> SyntaxNode<L, D> {
                 // safety: since there are no more `parent` pointers from the children of the
                 // node this data belonged to, and we have just dropped the node, there are now
                 // no more references to `data`
-                let data = unsafe { Box::from_raw(data) };
+                let data = unsafe { Box::from_raw(data.as_ptr()) };
                 drop(data);
             }
         }
@@ -227,7 +228,7 @@ impl<L: Language, D> Eq for SyntaxNode<L, D> {}
 
 impl<L: Language, D> Hash for SyntaxNode<L, D> {
     fn hash<H: Hasher>(&self, state: &mut H) {
-        ptr::hash(self.data, state);
+        self.data.hash(state);
     }
 }
 
@@ -251,7 +252,7 @@ impl<L: Language, D> Kind<L, D> {
 
 pub(super) struct NodeData<L: Language, D: 'static> {
     kind:        Kind<L, D>,
-    green:       ptr::NonNull<GreenNode>,
+    green:       NonNull<GreenNode>,
     ref_count:   *mut AtomicU32,
     data:        RwLock<Option<Arc<D>>>,
     children:    Vec<UnsafeCell<Option<SyntaxElement<L, D>>>>,
@@ -259,24 +260,21 @@ pub(super) struct NodeData<L: Language, D: 'static> {
 }
 
 impl<L: Language, D> NodeData<L, D> {
-    fn new(
-        kind: Kind<L, D>,
-        green: ptr::NonNull<GreenNode>,
-        ref_count: *mut AtomicU32,
-        n_children: usize,
-    ) -> *mut Self {
+    fn new(kind: Kind<L, D>, green: NonNull<GreenNode>, ref_count: *mut AtomicU32, n_children: usize) -> NonNull<Self> {
         let mut children = Vec::with_capacity(n_children);
         let mut child_locks = Vec::with_capacity(n_children);
         children.extend((0..n_children).map(|_| Default::default()));
         child_locks.extend((0..n_children).map(|_| Default::default()));
-        Box::into_raw(Box::new(Self {
+        let ptr = Box::into_raw(Box::new(Self {
             kind,
             green,
             ref_count,
             data: RwLock::default(),
             children,
             child_locks,
-        }))
+        }));
+        // safety: guaranteed by `Box::into_raw`
+        unsafe { NonNull::new_unchecked(ptr) }
     }
 }
 
@@ -285,41 +283,20 @@ impl<L: Language, D> SyntaxNode<L, D> {
     ///
     /// # Example
     /// ```
-    /// # use cstree::*;
-    /// # #[allow(non_camel_case_types)]
-    /// #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-    /// #[repr(u16)]
-    /// enum SyntaxKind {
-    ///     ROOT,
-    /// }
-    /// #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-    /// enum Lang {}
-    /// impl cstree::Language for Lang {
-    ///     // ...
-    /// #     type Kind = SyntaxKind;
-    /// #
-    /// #     fn kind_from_raw(raw: cstree::SyntaxKind) -> Self::Kind {
-    /// #         assert!(raw.0 <= SyntaxKind::ROOT as u16);
-    /// #         unsafe { std::mem::transmute::<u16, SyntaxKind>(raw.0) }
-    /// #     }
-    /// #
-    /// #     fn kind_to_raw(kind: Self::Kind) -> cstree::SyntaxKind {
-    /// #         cstree::SyntaxKind(kind as u16)
-    /// #     }
-    /// }
-    /// # let mut builder = GreenNodeBuilder::new();
-    /// # builder.start_node(SyntaxKind(0));
+    /// # use cstree::testing::*;
+    /// # let mut builder: GreenNodeBuilder<MyLanguage> = GreenNodeBuilder::new();
+    /// # builder.start_node(Root);
     /// # builder.finish_node();
-    /// # let (green, _) = builder.finish();
-    /// let root: SyntaxNode<Lang> = SyntaxNode::new_root(green);
-    /// assert_eq!(root.kind(), SyntaxKind::ROOT);
+    /// # let (green_root, _) = builder.finish();
+    /// let root: SyntaxNode<MyLanguage> = SyntaxNode::new_root(green_root);
+    /// assert_eq!(root.kind(), Root);
     /// ```
     #[inline]
     pub fn new_root(green: GreenNode) -> Self {
         Self::make_new_root(green, None)
     }
 
-    pub(super) fn new(data: *mut NodeData<L, D>) -> Self {
+    fn new(data: NonNull<NodeData<L, D>>) -> Self {
         Self { data }
     }
 
@@ -328,12 +305,12 @@ impl<L: Language, D> SyntaxNode<L, D> {
         let n_children = green.children().count();
         let data = NodeData::new(
             Kind::Root(green, resolver),
-            ptr::NonNull::dangling(),
+            NonNull::dangling(),
             Box::into_raw(ref_count),
             n_children,
         );
         let ret = Self::new(data);
-        let green: ptr::NonNull<GreenNode> = match &ret.data().kind {
+        let green: NonNull<GreenNode> = match &ret.data().kind {
             Kind::Root(green, _resolver) => green.into(),
             _ => unreachable!(),
         };
@@ -341,7 +318,7 @@ impl<L: Language, D> SyntaxNode<L, D> {
         // Also, we use `addr_of_mut` here in order to not have to go through a `&mut *ret.data`,
         // which would invalidate the reading provenance of `green`, since `green` is contained in
         // the date once we have written it here.
-        unsafe { ptr::addr_of_mut!((*ret.data).green).write(green) };
+        unsafe { ptr::addr_of_mut!((*ret.data.as_ptr()).green).write(green) };
         ret
     }
 
@@ -350,39 +327,18 @@ impl<L: Language, D> SyntaxNode<L, D> {
     ///
     /// # Example
     /// ```
-    /// # use cstree::*;
-    /// # #[allow(non_camel_case_types)]
-    /// #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-    /// #[repr(u16)]
-    /// enum SyntaxKind {
-    ///     TOKEN,
-    ///     ROOT,
-    /// }
-    /// #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-    /// enum Lang {}
-    /// impl cstree::Language for Lang {
-    ///     // ...
-    /// #     type Kind = SyntaxKind;
-    /// #
-    /// #     fn kind_from_raw(raw: cstree::SyntaxKind) -> Self::Kind {
-    /// #         assert!(raw.0 <= SyntaxKind::ROOT as u16);
-    /// #         unsafe { std::mem::transmute::<u16, SyntaxKind>(raw.0) }
-    /// #     }
-    /// #
-    /// #     fn kind_to_raw(kind: Self::Kind) -> cstree::SyntaxKind {
-    /// #         cstree::SyntaxKind(kind as u16)
-    /// #     }
-    /// }
-    /// # const ROOT: cstree::SyntaxKind = cstree::SyntaxKind(0);
-    /// # const TOKEN: cstree::SyntaxKind = cstree::SyntaxKind(1);
-    /// # type SyntaxNode<L> = cstree::SyntaxNode<L, ()>;
-    /// let mut builder = GreenNodeBuilder::new();
-    /// builder.start_node(ROOT);
-    /// builder.token(TOKEN, "content");
+    /// # use cstree::testing::*;
+    /// let mut builder: GreenNodeBuilder<MyLanguage> = GreenNodeBuilder::new();
+    /// builder.start_node(Root);
+    /// builder.token(Identifier, "content");
     /// builder.finish_node();
     /// let (green, cache) = builder.finish();
-    /// let root: ResolvedNode<Lang> =
-    ///     SyntaxNode::new_root_with_resolver(green, cache.unwrap().into_interner().unwrap());
+    ///
+    /// // We are safe to use `unwrap` here because we created the builder with `new`.
+    /// // This created a new interner and cache for us owned by the builder,
+    /// // and `finish` always returns these.
+    /// let interner = cache.unwrap().into_interner().unwrap();
+    /// let root: ResolvedNode<MyLanguage> = SyntaxNode::new_root_with_resolver(green, interner);
     /// assert_eq!(root.text(), "content");
     /// ```
     #[inline]
@@ -485,7 +441,7 @@ impl<L: Language, D> SyntaxNode<L, D> {
                     ref_count.fetch_add(2, Ordering::AcqRel);
                     let node_data = node.data;
                     drop(node);
-                    unsafe { drop(Box::from_raw(node_data)) };
+                    unsafe { drop(Box::from_raw(node_data.as_ptr())) };
                 }
                 SyntaxElement::Token(token) => {
                     // We don't have to worry about `NodeData` or `SyntaxToken<L>`'s own `Drop` here,

@@ -33,3 +33,34 @@ pub use text::SyntaxText;
 // this.
 //
 //   - DQ 01/2021
+
+#[cfg(test)]
+mod tests {
+    use crate::testing::*;
+
+    #[test]
+    #[cfg_attr(miri, ignore)]
+    fn assert_send_sync() {
+        fn f<T: Send + Sync>() {}
+        f::<SyntaxNode<TestLang>>();
+        f::<SyntaxToken<TestLang>>();
+        f::<SyntaxElement<TestLang>>();
+        f::<SyntaxElementRef<'static, TestLang>>();
+
+        f::<ResolvedNode<TestLang>>();
+        f::<ResolvedToken<TestLang>>();
+        f::<ResolvedElement<TestLang>>();
+        f::<ResolvedElementRef<'static, TestLang>>();
+    }
+
+    #[test]
+    #[cfg_attr(miri, ignore)]
+    #[rustfmt::skip]
+    fn assert_syntax_sizes() {
+        use std::mem::size_of;
+
+        assert_eq!(size_of::<SyntaxNode<TestLang>>(),          size_of::<*const u8>());
+        assert_eq!(size_of::<Option<SyntaxNode<TestLang>>>(),  size_of::<*const u8>()); // verify niche opt of `NonNull`
+        assert_eq!(size_of::<SyntaxToken<TestLang>>(),         size_of::<*const u8>() + size_of::<u32>() * 2);
+    }
+}

@@ -24,9 +24,13 @@ fn empty_tree_arc() {
         fn kind_to_raw(kind: Self::Kind) -> cstree::SyntaxKind {
             cstree::SyntaxKind(kind as u16)
         }
+
+        fn static_text(_kind: Self::Kind) -> Option<&'static str> {
+            None
+        }
     }
-    let mut builder = GreenNodeBuilder::new();
-    builder.start_node(SyntaxKind(0));
+    let mut builder: GreenNodeBuilder<Lang> = GreenNodeBuilder::new();
+    builder.start_node(SyntaxKind::Root);
     builder.finish_node();
     let (green, _) = builder.finish();
     let root: SyntaxNode<Lang> = SyntaxNode::new_root(green);
