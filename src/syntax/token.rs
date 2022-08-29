@@ -5,11 +5,13 @@ use std::{
     sync::Arc as StdArc,
 };
 
-use lasso::Resolver;
 use text_size::{TextRange, TextSize};
 
 use super::*;
-use crate::{interning::Key, Direction, GreenNode, GreenToken, Language, SyntaxKind};
+use crate::{
+    interning::{Resolver, TokenKey},
+    Direction, GreenNode, GreenToken, Language, SyntaxKind,
+};
 
 /// Syntax tree token.
 #[derive(Debug)]
@@ -49,7 +51,7 @@ impl<L: Language, D> SyntaxToken<L, D> {
     /// Writes this token's [`Debug`](fmt::Debug) representation into the given `target`.
     pub fn write_debug<R>(&self, resolver: &R, target: &mut impl fmt::Write) -> fmt::Result
     where
-        R: Resolver + ?Sized,
+        R: Resolver<TokenKey> + ?Sized,
     {
         write!(target, "{:?}@{:?}", self.kind(), self.text_range())?;
         let text = self.resolve_text(resolver);
@@ -72,7 +74,7 @@ impl<L: Language, D> SyntaxToken<L, D> {
     #[inline]
     pub fn debug<R>(&self, resolver: &R) -> String
     where
-        R: Resolver + ?Sized,
+        R: Resolver<TokenKey> + ?Sized,
     {
         // NOTE: `fmt::Write` methods on `String` never fail
         let mut res = String::new();
@@ -84,7 +86,7 @@ impl<L: Language, D> SyntaxToken<L, D> {
     #[inline]
     pub fn write_display<R>(&self, resolver: &R, target: &mut impl fmt::Write) -> fmt::Result
     where
-        R: Resolver + ?Sized,
+        R: Resolver<TokenKey> + ?Sized,
     {
         write!(target, "{}", self.resolve_text(resolver))
     }
@@ -95,14 +97,14 @@ impl<L: Language, D> SyntaxToken<L, D> {
     #[inline]
     pub fn display<R>(&self, resolver: &R) -> String
     where
-        R: Resolver + ?Sized,
+        R: Resolver<TokenKey> + ?Sized,
     {
         self.resolve_text(resolver).to_string()
     }
 
     /// If there is a resolver associated with this tree, returns it.
     #[inline]
-    pub fn resolver(&self) -> Option<&StdArc<dyn Resolver>> {
+    pub fn resolver(&self) -> Option<&StdArc<dyn Resolver<TokenKey>>> {
         self.parent.resolver()
     }
 
@@ -176,7 +178,7 @@ impl<L: Language, D> SyntaxToken<L, D> {
     #[inline]
     pub fn resolve_text<'i, I>(&self, resolver: &'i I) -> &'i str
     where
-        I: Resolver + ?Sized,
+        I: Resolver<TokenKey> + ?Sized,
     {
         // one of the two must be present upon construction
         self.static_text().or_else(|| self.green().text(resolver)).unwrap()
@@ -315,7 +317,7 @@ impl<L: Language, D> SyntaxToken<L, D> {
     /// let typ = type_table.type_of(ident.text_key().unwrap());
     /// ```
     #[inline]
-    pub fn text_key(&self) -> Option<Key> {
+    pub fn text_key(&self) -> Option<TokenKey> {
         self.green().text_key()
     }
 

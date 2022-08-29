@@ -2,7 +2,7 @@ use std::{fmt, hash, mem::ManuallyDrop, ptr::NonNull};
 
 use crate::{
     green::SyntaxKind,
-    interning::{Key, Resolver},
+    interning::{Resolver, TokenKey},
     TextSize,
 };
 use sptr::Strict;
@@ -12,7 +12,7 @@ use triomphe::Arc;
 #[derive(Debug, PartialEq, Eq, Hash, Copy, Clone)]
 pub(super) struct GreenTokenData {
     pub(super) kind:     SyntaxKind,
-    pub(super) text:     Option<Key>,
+    pub(super) text:     Option<TokenKey>,
     pub(super) text_len: TextSize,
 }
 
@@ -64,9 +64,9 @@ impl GreenToken {
     #[inline]
     pub fn text<'i, I>(&self, resolver: &'i I) -> Option<&'i str>
     where
-        I: Resolver + ?Sized,
+        I: Resolver<TokenKey> + ?Sized,
     {
-        self.data().text.map(|key| resolver.resolve(&key))
+        self.data().text.map(|key| resolver.resolve(key))
     }
 
     /// Returns the length of text covered by this token.
@@ -80,7 +80,7 @@ impl GreenToken {
     ///
     /// See also [`text`](GreenToken::text).
     #[inline]
-    pub fn text_key(&self) -> Option<Key> {
+    pub fn text_key(&self) -> Option<TokenKey> {
         self.data().text
     }
 }

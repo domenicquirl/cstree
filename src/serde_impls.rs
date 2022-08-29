@@ -1,7 +1,7 @@
 //! Serialization and Deserialization for syntax trees.
 
 use crate::{
-    interning::{IntoResolver, Resolver},
+    interning::{Resolver, TokenKey},
     GreenNodeBuilder, Language, NodeOrToken, ResolvedNode, SyntaxKind, SyntaxNode, WalkEvent,
 };
 use serde::{
@@ -97,7 +97,7 @@ pub(crate) struct SerializeWithData<'node, 'resolver, L: Language, D: 'static, R
 impl<L, D, R> Serialize for SerializeWithData<'_, '_, L, D, R>
 where
     L: Language,
-    R: Resolver + ?Sized,
+    R: Resolver<TokenKey> + ?Sized,
     D: Serialize,
 {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
@@ -112,7 +112,7 @@ where
 impl<L, D, R> Serialize for SerializeWithResolver<'_, '_, L, D, R>
 where
     L: Language,
-    R: Resolver + ?Sized,
+    R: Resolver<TokenKey> + ?Sized,
 {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -192,8 +192,7 @@ where
                 }
 
                 let (tree, cache) = builder.finish();
-                let tree =
-                    ResolvedNode::new_root_with_resolver(tree, cache.unwrap().into_interner().unwrap().into_resolver());
+                let tree = ResolvedNode::new_root_with_resolver(tree, cache.unwrap().into_interner().unwrap());
                 Ok((tree, data_indices))
             }
         }

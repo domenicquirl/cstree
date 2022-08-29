@@ -9,10 +9,10 @@ use std::{
     sync::Arc as StdArc,
 };
 
-use lasso::Resolver;
 use text_size::{TextRange, TextSize};
 
 use crate::{
+    interning::{Resolver, TokenKey},
     Direction, GreenNode, Language, NodeOrToken, SyntaxElementRef, SyntaxKind, SyntaxNode, SyntaxText, SyntaxToken,
     TokenAtOffset, WalkEvent,
 };
@@ -126,7 +126,7 @@ impl<L: Language, D> From<ResolvedToken<L, D>> for ResolvedElement<L, D> {
 
 impl<L: Language, D> ResolvedElement<L, D> {
     #[allow(missing_docs)]
-    pub fn display(&self, resolver: &impl Resolver) -> String {
+    pub fn display(&self, resolver: &impl Resolver<TokenKey>) -> String {
         match self {
             NodeOrToken::Node(it) => it.display(resolver),
             NodeOrToken::Token(it) => it.display(resolver),
@@ -177,7 +177,7 @@ impl<L: Language, D> ResolvedNode<L, D> {
     /// source text covered by this node, i.e. the combined text of all token leafs of the subtree
     /// originating in this node.
     #[inline]
-    pub fn text(&self) -> SyntaxText<'_, '_, dyn Resolver, L, D> {
+    pub fn text(&self) -> SyntaxText<'_, '_, dyn Resolver<TokenKey>, L, D> {
         SyntaxText::new(self, &**self.resolver())
     }
 }
@@ -266,13 +266,13 @@ macro_rules! forward_node {
 
 impl<L: Language, D> ResolvedNode<L, D> {
     /// Returns the [`Resolver`] associated with this tree.
-    pub fn resolver(&self) -> &StdArc<dyn Resolver> {
+    pub fn resolver(&self) -> &StdArc<dyn Resolver<TokenKey>> {
         self.syntax.resolver().unwrap()
     }
 
     /// See [`SyntaxNode::new_root_with_resolver`].
     #[inline]
-    pub fn new_root_with_resolver(green: GreenNode, resolver: impl Resolver + 'static) -> Self {
+    pub fn new_root_with_resolver(green: GreenNode, resolver: impl Resolver<TokenKey> + 'static) -> Self {
         SyntaxNode::new_root_with_resolver(green, resolver)
     }
 
@@ -498,7 +498,7 @@ impl<L: Language, D> ResolvedNode<L, D> {
 
 impl<L: Language, D> ResolvedToken<L, D> {
     /// Returns the [`Resolver`] associated with this tree.
-    pub fn resolver(&self) -> &StdArc<dyn Resolver> {
+    pub fn resolver(&self) -> &StdArc<dyn Resolver<TokenKey>> {
         self.syntax.resolver().unwrap()
     }
 

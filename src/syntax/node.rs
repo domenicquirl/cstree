@@ -3,7 +3,7 @@ use super::*;
 use crate::serde_impls::{SerializeWithData, SerializeWithResolver};
 use crate::{
     green::{GreenElementRef, SyntaxKind},
-    interning::Resolver,
+    interning::{Resolver, TokenKey},
     *,
 };
 use parking_lot::RwLock;
@@ -39,7 +39,7 @@ impl<L: Language, D> SyntaxNode<L, D> {
     /// Otherwise, only this node's kind and range are written.
     pub fn write_debug<R>(&self, resolver: &R, target: &mut impl fmt::Write, recursive: bool) -> fmt::Result
     where
-        R: Resolver + ?Sized,
+        R: Resolver<TokenKey> + ?Sized,
     {
         if recursive {
             let mut level = 0;
@@ -71,7 +71,7 @@ impl<L: Language, D> SyntaxNode<L, D> {
     #[inline]
     pub fn debug<R>(&self, resolver: &R, recursive: bool) -> String
     where
-        R: Resolver + ?Sized,
+        R: Resolver<TokenKey> + ?Sized,
     {
         // NOTE: `fmt::Write` methods on `String` never fail
         let mut res = String::new();
@@ -82,7 +82,7 @@ impl<L: Language, D> SyntaxNode<L, D> {
     /// Writes this node's [`Display`](fmt::Display) representation into the given `target`.
     pub fn write_display<R>(&self, resolver: &R, target: &mut impl fmt::Write) -> fmt::Result
     where
-        R: Resolver + ?Sized,
+        R: Resolver<TokenKey> + ?Sized,
     {
         self.preorder_with_tokens()
             .filter_map(|event| match event {
@@ -98,7 +98,7 @@ impl<L: Language, D> SyntaxNode<L, D> {
     #[inline]
     pub fn display<R>(&self, resolver: &R) -> String
     where
-        R: Resolver + ?Sized,
+        R: Resolver<TokenKey> + ?Sized,
     {
         // NOTE: `fmt::Write` methods on `String` never fail
         let mut res = String::new();
@@ -107,7 +107,7 @@ impl<L: Language, D> SyntaxNode<L, D> {
     }
 
     /// If there is a resolver associated with this tree, returns it.
-    pub fn resolver(&self) -> Option<&StdArc<dyn Resolver>> {
+    pub fn resolver(&self) -> Option<&StdArc<dyn Resolver<TokenKey>>> {
         match &self.root().data().kind {
             Kind::Root(_, resolver) => resolver.as_ref(),
             _ => unreachable!(),
@@ -233,7 +233,7 @@ impl<L: Language, D> Hash for SyntaxNode<L, D> {
 }
 
 enum Kind<L: Language, D: 'static> {
-    Root(GreenNode, Option<StdArc<dyn Resolver>>),
+    Root(GreenNode, Option<StdArc<dyn Resolver<TokenKey>>>),
     Child {
         parent: SyntaxNode<L, D>,
         index:  u32,
@@ -300,7 +300,7 @@ impl<L: Language, D> SyntaxNode<L, D> {
         Self { data }
     }
 
-    fn make_new_root(green: GreenNode, resolver: Option<StdArc<dyn Resolver>>) -> Self {
+    fn make_new_root(green: GreenNode, resolver: Option<StdArc<dyn Resolver<TokenKey>>>) -> Self {
         let ref_count = Box::new(AtomicU32::new(1));
         let n_children = green.children().count();
         let data = NodeData::new(
@@ -342,8 +342,8 @@ impl<L: Language, D> SyntaxNode<L, D> {
     /// assert_eq!(root.text(), "content");
     /// ```
     #[inline]
-    pub fn new_root_with_resolver(green: GreenNode, resolver: impl Resolver + 'static) -> ResolvedNode<L, D> {
-        let ptr: StdArc<dyn Resolver> = StdArc::new(resolver);
+    pub fn new_root_with_resolver(green: GreenNode, resolver: impl Resolver<TokenKey> + 'static) -> ResolvedNode<L, D> {
+        let ptr: StdArc<dyn Resolver<TokenKey>> = StdArc::new(resolver);
         ResolvedNode {
             syntax: SyntaxNode::make_new_root(green, Some(ptr)),
         }
@@ -543,7 +543,7 @@ impl<L: Language, D> SyntaxNode<L, D> {
     #[inline]
     pub fn resolve_text<'n, 'i, I>(&'n self, resolver: &'i I) -> SyntaxText<'n, 'i, I, L, D>
     where
-        I: Resolver + ?Sized,
+        I: Resolver<TokenKey> + ?Sized,
     {
         SyntaxText::new(self, resolver)
     }
@@ -911,7 +911,7 @@ where
     /// including the data and by using an external resolver.
     pub fn as_serialize_with_data_with_resolver<'node>(
         &'node self,
-        resolver: &'node impl Resolver,
+        resolver: &'node impl Resolver<TokenKey>,
     ) -> impl serde::Serialize + 'node
     where
         D: serde::Serialize,
@@ -923,7 +923,7 @@ where
     /// which uses the given resolver instead of the resolver inside the tree.
     pub fn as_serialize_with_resolver<'node>(
         &'node self,
-        resolver: &'node impl Resolver,
+        resolver: &'node impl Resolver<TokenKey>,
     ) -> impl serde::Serialize + 'node {
         SerializeWithResolver { node: self, resolver }
     }

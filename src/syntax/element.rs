@@ -1,10 +1,13 @@
 use std::{fmt, sync::atomic::AtomicU32};
 
-use lasso::Resolver;
 use text_size::{TextRange, TextSize};
 
 use super::*;
-use crate::{green::GreenElementRef, Language, NodeOrToken, SyntaxKind, TokenAtOffset};
+use crate::{
+    green::GreenElementRef,
+    interning::{Resolver, TokenKey},
+    Language, NodeOrToken, SyntaxKind, TokenAtOffset,
+};
 
 /// An element of the tree, can be either a node or a token.
 pub type SyntaxElement<L, D = ()> = NodeOrToken<SyntaxNode<L, D>, SyntaxToken<L, D>>;
@@ -27,7 +30,7 @@ impl<L: Language, D> SyntaxElement<L, D> {
     /// To avoid allocating for every element, see [`write_display`](type.SyntaxElement.html#method.write_display).
     pub fn display<R>(&self, resolver: &R) -> String
     where
-        R: Resolver + ?Sized,
+        R: Resolver<TokenKey> + ?Sized,
     {
         match self {
             NodeOrToken::Node(it) => it.display(resolver),
@@ -38,7 +41,7 @@ impl<L: Language, D> SyntaxElement<L, D> {
     /// Writes this element's [`Display`](fmt::Display) representation into the given `target`.
     pub fn write_display<R>(&self, resolver: &R, target: &mut impl fmt::Write) -> fmt::Result
     where
-        R: Resolver + ?Sized,
+        R: Resolver<TokenKey> + ?Sized,
     {
         match self {
             NodeOrToken::Node(it) => it.write_display(resolver, target),
@@ -53,7 +56,7 @@ impl<L: Language, D> SyntaxElement<L, D> {
     /// To avoid allocating for every element, see [`write_debug`](type.SyntaxElement.html#method.write_debug).
     pub fn debug<R>(&self, resolver: &R, recursive: bool) -> String
     where
-        R: Resolver + ?Sized,
+        R: Resolver<TokenKey> + ?Sized,
     {
         match self {
             NodeOrToken::Node(it) => it.debug(resolver, recursive),
@@ -66,7 +69,7 @@ impl<L: Language, D> SyntaxElement<L, D> {
     /// Otherwise, only this element's kind and range are written.
     pub fn write_debug<R>(&self, resolver: &R, target: &mut impl fmt::Write, recursive: bool) -> fmt::Result
     where
-        R: Resolver + ?Sized,
+        R: Resolver<TokenKey> + ?Sized,
     {
         match self {
             NodeOrToken::Node(it) => it.write_debug(resolver, target, recursive),
@@ -105,7 +108,7 @@ impl<'a, L: Language, D> SyntaxElementRef<'a, L, D> {
     /// To avoid allocating for every element, see [`write_display`](type.SyntaxElementRef.html#method.write_display).
     pub fn display<R>(&self, resolver: &R) -> String
     where
-        R: Resolver + ?Sized,
+        R: Resolver<TokenKey> + ?Sized,
     {
         match self {
             NodeOrToken::Node(it) => it.display(resolver),
@@ -116,7 +119,7 @@ impl<'a, L: Language, D> SyntaxElementRef<'a, L, D> {
     /// Writes this element's [`Display`](fmt::Display) representation into the given `target`.
     pub fn write_display<R>(&self, resolver: &R, target: &mut impl fmt::Write) -> fmt::Result
     where
-        R: Resolver + ?Sized,
+        R: Resolver<TokenKey> + ?Sized,
     {
         match self {
             NodeOrToken::Node(it) => it.write_display(resolver, target),
@@ -131,7 +134,7 @@ impl<'a, L: Language, D> SyntaxElementRef<'a, L, D> {
     /// To avoid allocating for every element, see [`write_debug`](type.SyntaxElementRef.html#method.write_debug).
     pub fn debug<R>(&self, resolver: &R, recursive: bool) -> String
     where
-        R: Resolver + ?Sized,
+        R: Resolver<TokenKey> + ?Sized,
     {
         match self {
             NodeOrToken::Node(it) => it.debug(resolver, recursive),
@@ -144,7 +147,7 @@ impl<'a, L: Language, D> SyntaxElementRef<'a, L, D> {
     /// Otherwise, only this element's kind and range are written.
     pub fn write_debug<R>(&self, resolver: &R, target: &mut impl fmt::Write, recursive: bool) -> fmt::Result
     where
-        R: Resolver + ?Sized,
+        R: Resolver<TokenKey> + ?Sized,
     {
         match self {
             NodeOrToken::Node(it) => it.write_debug(resolver, target, recursive),

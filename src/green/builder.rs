@@ -4,8 +4,8 @@ use fxhash::{FxHashMap, FxHasher32};
 use text_size::TextSize;
 
 use crate::{
-    green::{interner::TokenInterner, GreenElement, GreenNode, GreenToken, SyntaxKind},
-    interning::{Interner, Key},
+    green::{GreenElement, GreenNode, GreenToken, SyntaxKind},
+    interning::{new_interner, Interner, TokenInterner, TokenKey},
     utility_types::MaybeOwned,
     Language, NodeOrToken,
 };
@@ -53,7 +53,7 @@ impl NodeCache<'static> {
         Self {
             nodes:    FxHashMap::default(),
             tokens:   FxHashMap::default(),
-            interner: MaybeOwned::Owned(TokenInterner::new()),
+            interner: MaybeOwned::Owned(new_interner()),
         }
     }
 }
@@ -66,7 +66,7 @@ impl Default for NodeCache<'static> {
 
 impl<'i, I> NodeCache<'i, I>
 where
-    I: Interner,
+    I: Interner<TokenKey>,
 {
     /// Constructs a new, empty cache that will use the given interner to deduplicate source text
     /// (strings) across tokens.
@@ -196,7 +196,7 @@ where
     }
 
     #[inline(always)]
-    fn intern(&mut self, text: &str) -> Key {
+    fn intern(&mut self, text: &str) -> TokenKey {
         self.interner.get_or_intern(text)
     }
 
@@ -221,7 +221,7 @@ where
             .clone()
     }
 
-    fn token<L: Language>(&mut self, kind: L::Kind, text: Option<Key>, len: u32) -> GreenToken {
+    fn token<L: Language>(&mut self, kind: L::Kind, text: Option<TokenKey>, len: u32) -> GreenToken {
         let text_len = TextSize::from(len);
         let kind = L::kind_to_raw(kind);
         let data = GreenTokenData { kind, text, text_len };
@@ -288,7 +288,7 @@ impl<L: Language> Default for GreenNodeBuilder<'static, 'static, L> {
 impl<'cache, 'interner, L, I> GreenNodeBuilder<'cache, 'interner, L, I>
 where
     L: Language,
-    I: Interner,
+    I: Interner<TokenKey>,
 {
     /// Reusing a [`NodeCache`] between multiple builders saves memory, as it allows to structurally
     /// share underlying trees.

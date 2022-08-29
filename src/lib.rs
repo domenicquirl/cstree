@@ -52,12 +52,14 @@ mod green;
 #[allow(unsafe_code)]
 mod syntax;
 
+#[allow(unsafe_code)]
+pub mod interning;
+
 #[cfg(feature = "serialize")]
 mod serde_impls;
 #[allow(missing_docs)]
 mod utility_types;
 
-pub mod interning;
 use std::fmt;
 
 // Reexport types for working with strings.
@@ -69,7 +71,10 @@ pub use crate::{
     green::{Checkpoint, GreenNode, GreenNodeBuilder, GreenNodeChildren, GreenToken, NodeCache, SyntaxKind},
     utility_types::{Direction, NodeOrToken, TokenAtOffset, WalkEvent},
 };
-pub use triomphe::Arc;
+
+pub mod arc {
+    pub use triomphe::Arc;
+}
 
 /// The `Language` trait is the bridge between the internal `cstree` representation and your
 /// language's types.

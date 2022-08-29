@@ -2,7 +2,10 @@
 
 use std::fmt;
 
-use crate::{interning::Resolver, Language, SyntaxNode, SyntaxToken, TextRange, TextSize};
+use crate::{
+    interning::{Resolver, TokenKey},
+    Language, SyntaxNode, SyntaxToken, TextRange, TextSize,
+};
 
 /// An efficient representation of the text that is covered by a [`SyntaxNode`], i.e. the combined
 /// source text of all tokens that are descendants of the node.
@@ -42,7 +45,7 @@ pub struct SyntaxText<'n, 'i, I: ?Sized, L: Language, D: 'static = ()> {
     resolver: &'i I,
 }
 
-impl<'n, 'i, I: Resolver + ?Sized, L: Language, D> SyntaxText<'n, 'i, I, L, D> {
+impl<'n, 'i, I: Resolver<TokenKey> + ?Sized, L: Language, D> SyntaxText<'n, 'i, I, L, D> {
     pub(crate) fn new(node: &'n SyntaxNode<L, D>, resolver: &'i I) -> Self {
         let range = node.text_range();
         SyntaxText { node, range, resolver }
@@ -203,25 +206,25 @@ fn found<T>(res: Result<(), T>) -> Option<T> {
     }
 }
 
-impl<I: Resolver + ?Sized, L: Language, D> fmt::Debug for SyntaxText<'_, '_, I, L, D> {
+impl<I: Resolver<TokenKey> + ?Sized, L: Language, D> fmt::Debug for SyntaxText<'_, '_, I, L, D> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         fmt::Debug::fmt(&self.to_string(), f)
     }
 }
 
-impl<I: Resolver + ?Sized, L: Language, D> fmt::Display for SyntaxText<'_, '_, I, L, D> {
+impl<I: Resolver<TokenKey> + ?Sized, L: Language, D> fmt::Display for SyntaxText<'_, '_, I, L, D> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         self.try_for_each_chunk(|chunk| fmt::Display::fmt(chunk, f))
     }
 }
 
-impl<I: Resolver + ?Sized, L: Language, D> From<SyntaxText<'_, '_, I, L, D>> for String {
+impl<I: Resolver<TokenKey> + ?Sized, L: Language, D> From<SyntaxText<'_, '_, I, L, D>> for String {
     fn from(text: SyntaxText<'_, '_, I, L, D>) -> String {
         text.to_string()
     }
 }
 
-impl<I: Resolver + ?Sized, L: Language, D> PartialEq<str> for SyntaxText<'_, '_, I, L, D> {
+impl<I: Resolver<TokenKey> + ?Sized, L: Language, D> PartialEq<str> for SyntaxText<'_, '_, I, L, D> {
     fn eq(&self, mut rhs: &str) -> bool {
         self.try_for_each_chunk(|chunk| {
             if !rhs.starts_with(chunk) {
@@ -235,19 +238,19 @@ impl<I: Resolver + ?Sized, L: Language, D> PartialEq<str> for SyntaxText<'_, '_,
     }
 }
 
-impl<I: Resolver + ?Sized, L: Language, D> PartialEq<SyntaxText<'_, '_, I, L, D>> for str {
+impl<I: Resolver<TokenKey> + ?Sized, L: Language, D> PartialEq<SyntaxText<'_, '_, I, L, D>> for str {
     fn eq(&self, rhs: &SyntaxText<'_, '_, I, L, D>) -> bool {
         rhs == self
     }
 }
 
-impl<I: Resolver + ?Sized, L: Language, D> PartialEq<&'_ str> for SyntaxText<'_, '_, I, L, D> {
+impl<I: Resolver<TokenKey> + ?Sized, L: Language, D> PartialEq<&'_ str> for SyntaxText<'_, '_, I, L, D> {
     fn eq(&self, rhs: &&str) -> bool {
         self == *rhs
     }
 }
 
-impl<I: Resolver + ?Sized, L: Language, D> PartialEq<SyntaxText<'_, '_, I, L, D>> for &'_ str {
+impl<I: Resolver<TokenKey> + ?Sized, L: Language, D> PartialEq<SyntaxText<'_, '_, I, L, D>> for &'_ str {
     fn eq(&self, rhs: &SyntaxText<'_, '_, I, L, D>) -> bool {
         rhs == self
     }
@@ -258,8 +261,8 @@ impl<'n1, 'i1, 'n2, 'i2, I1, I2, L1, L2, D1, D2> PartialEq<SyntaxText<'n2, 'i2, 
 where
     L1: Language,
     L2: Language,
-    I1: Resolver + ?Sized,
-    I2: Resolver + ?Sized,
+    I1: Resolver<TokenKey> + ?Sized,
+    I2: Resolver<TokenKey> + ?Sized,
 {
     fn eq(&self, other: &SyntaxText<'_, '_, I2, L2, D2>) -> bool {
         if self.range.len() != other.range.len() {
@@ -282,8 +285,8 @@ fn zip_texts<'it1, 'it2, It1, It2, I1, I2, L1, L2, D1, D2>(
 where
     It1: Iterator<Item = (&'it1 SyntaxToken<L1, D1>, TextRange)>,
     It2: Iterator<Item = (&'it2 SyntaxToken<L2, D2>, TextRange)>,
-    I1: Resolver + ?Sized,
-    I2: Resolver + ?Sized,
+    I1: Resolver<TokenKey> + ?Sized,
+    I2: Resolver<TokenKey> + ?Sized,
     D1: 'static,
     D2: 'static,
     L1: Language + 'it1,
@@ -309,7 +312,7 @@ where
     }
 }
 
-impl<I: Resolver + ?Sized, L: Language, D> Eq for SyntaxText<'_, '_, I, L, D> {}
+impl<I: Resolver<TokenKey> + ?Sized, L: Language, D> Eq for SyntaxText<'_, '_, I, L, D> {}
 
 mod private {
     use std::ops;
@@ -402,7 +405,7 @@ mod tests {
         }
     }
 
-    fn build_tree(chunks: &[&str]) -> (SyntaxNode<TestLang, ()>, impl Resolver) {
+    fn build_tree(chunks: &[&str]) -> (SyntaxNode<TestLang, ()>, impl Resolver<TokenKey>) {
         let mut builder: GreenNodeBuilder<TestLang> = GreenNodeBuilder::new();
         builder.start_node(SyntaxKind(62));
         for &chunk in chunks.iter() {
