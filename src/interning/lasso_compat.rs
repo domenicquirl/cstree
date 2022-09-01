@@ -6,6 +6,18 @@ use super::{
     TokenKey,
 };
 
+// Safety: `InternKey` has the same invariant as `lasso::Key`
+unsafe impl lasso::Key for TokenKey {
+    fn into_usize(self) -> usize {
+        self.into_u32() as usize
+    }
+
+    fn try_from_usize(int: usize) -> Option<Self> {
+        let raw_key = u32::try_from(int).ok()?;
+        Self::try_from_u32(raw_key)
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum LassoCompatError {
     LassoError(lasso::LassoError),

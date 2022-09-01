@@ -1,10 +1,7 @@
 use crate::{build_recursive, build_tree_with_cache, ResolvedNode};
 
 use super::{Element, SyntaxNode, TestLang};
-use cstree::{
-    interning::{new_interner, IntoResolver},
-    GreenNodeBuilder, NodeCache, NodeOrToken,
-};
+use cstree::{interning::new_interner, GreenNodeBuilder, NodeCache, NodeOrToken};
 use serde_test::Token;
 use std::fmt;
 
@@ -227,7 +224,7 @@ fn build_tree(root: Element<'_>) -> ResolvedNode<String> {
     let mut builder: GreenNodeBuilder<TestLang> = GreenNodeBuilder::new();
     build_recursive(&root, &mut builder, 0);
     let (node, cache) = builder.finish();
-    SyntaxNode::new_root_with_resolver(node, cache.unwrap().into_interner().unwrap().into_resolver())
+    SyntaxNode::new_root_with_resolver(node, cache.unwrap().into_interner().unwrap())
 }
 
 fn attach_data(node: &SyntaxNode<String>) {

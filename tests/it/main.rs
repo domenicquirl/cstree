@@ -4,8 +4,7 @@ mod sendsync;
 #[cfg(feature = "serialize")]
 mod serde;
 
-use cstree::{GreenNode, GreenNodeBuilder, Language, NodeCache, SyntaxKind};
-use lasso::Interner;
+use cstree::{interning::Interner, GreenNode, GreenNodeBuilder, Language, NodeCache, SyntaxKind};
 
 pub type SyntaxNode<D = ()> = cstree::SyntaxNode<TestLang, D>;
 pub type SyntaxToken<D = ()> = cstree::SyntaxToken<TestLang, D>;

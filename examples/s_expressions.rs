@@ -66,10 +66,7 @@ impl cstree::Language for Lang {
 /// offsets and parent pointers.
 /// cstree also deduplicates the actual source string in addition to the tree nodes, so we will need
 /// the Resolver to get the real text back from the interned representation.
-use cstree::{
-    interning::{IntoResolver, Resolver},
-    GreenNode, Language,
-};
+use cstree::{interning::Resolver, GreenNode, Language};
 
 /// You can construct GreenNodes by hand, but a builder is helpful for top-down parsers: it maintains
 /// a stack of currently in-progress nodes.
@@ -135,7 +132,7 @@ fn parse(text: &str) -> Parse<impl Resolver> {
             let (tree, cache) = self.builder.finish();
             Parse {
                 green_node: tree,
-                resolver:   cache.unwrap().into_interner().unwrap().into_resolver(),
+                resolver:   cache.unwrap().into_interner().unwrap(),
                 errors:     self.errors,
             }
         }
@@ -355,7 +352,7 @@ impl ast::Atom {
     }
 
     fn text<'r>(&self, resolver: &'r impl Resolver) -> &'r str {
-        match &self.0.green().children().next() {
+        match self.0.green().children().next() {
             Some(cstree::NodeOrToken::Token(token)) => Lang::static_text(Lang::kind_from_raw(token.kind()))
                 .or_else(|| token.text(resolver))
                 .unwrap(),

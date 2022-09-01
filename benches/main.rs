@@ -1,6 +1,8 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion, Throughput};
-use cstree::*;
-use lasso::{Interner, Rodeo};
+use cstree::{
+    interning::{new_interner, Interner},
+    *,
+};
 use std::{fmt, hash::Hash};
 
 #[derive(Debug)]
@@ -117,7 +119,7 @@ pub fn create(c: &mut Criterion) {
     let mut group = c.benchmark_group("two-level tree");
     group.throughput(Throughput::Elements(1));
 
-    let mut interner = Rodeo::new();
+    let mut interner = new_interner();
     let mut cache = NodeCache::with_interner(&mut interner);
     let tree = two_level_tree();
 

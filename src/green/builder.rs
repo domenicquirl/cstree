@@ -153,7 +153,7 @@ where
     /// let mut cache = NodeCache::new();
     /// let interner = cache.interner_mut();
     /// let key = interner.get_or_intern("foo");
-    /// assert_eq!(interner.resolve(&key), "foo");
+    /// assert_eq!(interner.resolve(key), "foo");
     /// ```
     #[inline]
     pub fn interner_mut(&mut self) -> &mut I {
@@ -246,7 +246,6 @@ pub struct Checkpoint(usize);
 /// # Examples
 /// ```
 /// # use cstree::testing::{*, Language as _};
-/// # use cstree::interning::IntoResolver;
 /// // Build a tree
 /// let mut builder: GreenNodeBuilder<MyLanguage> = GreenNodeBuilder::new();
 /// builder.start_node(Root);
@@ -258,7 +257,7 @@ pub struct Checkpoint(usize);
 /// assert_eq!(tree.kind(), MyLanguage::kind_to_raw(Root));
 /// let int = tree.children().next().unwrap();
 /// assert_eq!(int.kind(), MyLanguage::kind_to_raw(Int));
-/// let resolver = cache.unwrap().into_interner().unwrap().into_resolver();
+/// let resolver = cache.unwrap().into_interner().unwrap();
 /// assert_eq!(int.as_token().unwrap().text(&resolver), Some("42"));
 /// ```
 #[derive(Debug)]
@@ -371,7 +370,7 @@ where
     /// let mut builder: GreenNodeBuilder<MyLanguage> = GreenNodeBuilder::new();
     /// let interner = builder.interner_mut();
     /// let key = interner.get_or_intern("foo");
-    /// assert_eq!(interner.resolve(&key), "foo");
+    /// assert_eq!(interner.resolve(key), "foo");
     /// ```
     #[inline]
     pub fn interner_mut(&mut self) -> &mut I {

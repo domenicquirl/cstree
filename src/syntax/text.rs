@@ -17,7 +17,6 @@ use crate::{
 /// # Example
 /// ```
 /// # use cstree::testing::*;
-/// # use cstree::interning::IntoResolver;
 /// #
 /// fn parse_float_literal(s: &str) -> ResolvedNode<MyLanguage> {
 ///     // parsing...
@@ -26,7 +25,7 @@ use crate::{
 /// #     builder.token(Float, s);
 /// #     builder.finish_node();
 /// #     let (root, cache) = builder.finish();
-/// #     let resolver = cache.unwrap().into_interner().unwrap().into_resolver();
+/// #     let resolver = cache.unwrap().into_interner().unwrap();
 /// #     SyntaxNode::new_root_with_resolver(root, resolver)
 /// }
 /// let float_node = parse_float_literal("2.748E2");

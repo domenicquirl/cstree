@@ -4,13 +4,13 @@ use crossbeam_utils::thread::scope;
 use std::{thread, time::Duration};
 
 use super::{build_recursive, Element, ResolvedNode, SyntaxNode, TestLang};
-use cstree::{interning::IntoResolver, GreenNodeBuilder};
+use cstree::GreenNodeBuilder;
 
 fn build_tree<D>(root: &Element<'_>) -> ResolvedNode<D> {
     let mut builder: GreenNodeBuilder<TestLang> = GreenNodeBuilder::new();
     build_recursive(root, &mut builder, 0);
     let (node, cache) = builder.finish();
-    SyntaxNode::new_root_with_resolver(node, cache.unwrap().into_interner().unwrap().into_resolver())
+    SyntaxNode::new_root_with_resolver(node, cache.unwrap().into_interner().unwrap())
 }
 
 fn two_level_tree() -> Element<'static> {

@@ -13,10 +13,7 @@
 //!     - "+" Token(Add)
 //!     - "4" Token(Number)
 
-use cstree::{
-    interning::{IntoResolver, Resolver},
-    GreenNodeBuilder, NodeOrToken,
-};
+use cstree::{interning::Resolver, GreenNodeBuilder, NodeOrToken};
 use std::iter::Peekable;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -128,10 +125,7 @@ impl<'input, I: Iterator<Item = (SyntaxKind, &'input str)>> Parser<'input, I> {
         self.builder.finish_node();
 
         let (tree, cache) = self.builder.finish();
-        (
-            SyntaxNode::new_root(tree),
-            cache.unwrap().into_interner().unwrap().into_resolver(),
-        )
+        (SyntaxNode::new_root(tree), cache.unwrap().into_interner().unwrap())
     }
 }
 

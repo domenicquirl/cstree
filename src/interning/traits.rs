@@ -1,19 +1,24 @@
 use core::fmt;
 
-/// Common interface for all interner keys via conversion to and from `u32`.
+use super::TokenKey;
+
+/// Common interface for all intern keys via conversion to and from `u32`.
 ///
 /// # Safety
 /// Implementations must guarantee that keys can round-trip in both directions: going from `Self` to `u32` to `Self` and
 /// going from `u32` to `Self` to `u32` must each yield the original value.
 pub unsafe trait InternKey: Copy + Eq + fmt::Debug {
+    /// Convert `self` into its raw representation.
     fn into_u32(self) -> u32;
 
+    /// Try to reconstruct an intern key from its raw representation.
+    /// Returns `None` if `key` is not a valid key.
     fn try_from_u32(key: u32) -> Option<Self>;
 }
 
 /// The read-only part of an interner.
 /// Allows to perform lookups of intern keys to resolve them to their interned text.
-pub trait Resolver<Key: InternKey> {
+pub trait Resolver<Key: InternKey = TokenKey> {
     /// Tries to resolve the given `key` and return its interned text.
     ///
     /// If `self` does not contain any text for `key`, `None` is returned.
@@ -33,7 +38,14 @@ pub trait Resolver<Key: InternKey> {
     }
 }
 
-pub trait Interner<Key: InternKey>: Resolver<Key> {
+/// A full interner, which can intern new strings returning intern keys and also resolve intern keys to the interned
+/// value.
+///
+/// **Note:** Because single-threaded interners may require mutable access, the methods on this trait take `&mut self`.
+/// In order to use a multi- (or single)-threaded interner that allows access through a shared reference, it is
+/// implemented for `&`[`MultiThreadTokenInterner`](crate::interning::MultiThreadTokenInterner), allowing it to be used
+/// with a `&mut &MultiThreadTokenInterner`.
+pub trait Interner<Key: InternKey = TokenKey>: Resolver<Key> {
     /// Represents possible ways in which interning may fail.
     /// For example, this might be running out of fresh intern keys, or failure to allocate sufficient space for a new
     /// value.

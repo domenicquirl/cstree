@@ -280,18 +280,18 @@ impl<L: Language, D> SyntaxToken<L, D> {
     /// implementation by re-using the interner in both.
     /// ```
     /// # use cstree::testing::*;
-    /// use cstree::interning::{new_interner, Hasher, Key, Rodeo};
+    /// use cstree::interning::{new_interner, Hasher, TokenInterner, TokenKey};
     /// struct TypeTable {
     ///     // ...
     /// }
     /// impl TypeTable {
-    ///     fn type_of(&self, ident: Key) -> &str {
+    ///     fn type_of(&self, ident: TokenKey) -> &str {
     ///         // ...
     /// #     ""
     ///     }
     /// }
     /// # struct State {
-    /// #   interner: Rodeo,
+    /// #   interner: TokenInterner,
     /// #   type_table: TypeTable,
     /// # }
     /// let interner = new_interner();
@@ -299,7 +299,7 @@ impl<L: Language, D> SyntaxToken<L, D> {
     ///     interner,
     ///     type_table: TypeTable{ /* stuff */},
     /// };
-    /// let mut builder: GreenNodeBuilder<MyLanguage, Rodeo> =
+    /// let mut builder: GreenNodeBuilder<MyLanguage, TokenInterner> =
     ///     GreenNodeBuilder::with_interner(&mut state.interner);
     /// # let input = "";
     /// # builder.start_node(Root);
