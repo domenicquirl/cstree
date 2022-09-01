@@ -1,9 +1,11 @@
-use super::{traits::*, TokenKey};
+//! Default interner implementations based on `lasso`.
 
 use std::num::NonZeroUsize;
 
 use fxhash::FxBuildHasher as Hasher;
 use lasso::{Capacity, Rodeo, ThreadedRodeo};
+
+use super::{Interner, Resolver, TokenKey};
 
 /// Default number of strings that the interner will initially allocate space for.
 /// Value recommended by the author of `lasso`.
@@ -50,7 +52,7 @@ pub struct TokenInterner {
 }
 
 impl TokenInterner {
-    pub(super) fn new() -> Self {
+    pub(in crate::interning) fn new() -> Self {
         Self {
             rodeo: Rodeo::with_capacity_and_hasher(
                 Capacity::new(DEFAULT_STRING_CAPACITY, DEFAULT_BYTE_CAPACITY),
@@ -72,7 +74,7 @@ pub struct MultiThreadTokenInterner {
 }
 
 impl MultiThreadTokenInterner {
-    pub(super) fn new() -> Self {
+    pub(in crate::interning) fn new() -> Self {
         Self {
             rodeo: ThreadedRodeo::with_capacity_and_hasher(
                 Capacity::new(DEFAULT_STRING_CAPACITY, DEFAULT_BYTE_CAPACITY),

@@ -1,3 +1,5 @@
+//! Bridge between `cstree`'s and `lasso`'s types and traits.
+
 use core::fmt;
 use std::hash::{BuildHasher, Hash};
 
