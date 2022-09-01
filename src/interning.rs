@@ -17,6 +17,7 @@ pub use fxhash::FxBuildHasher as Hasher;
 pub use lasso;
 
 /// The intern key type for the source text of [`GreenToken`s](crate::green::token::GreenToken).
+/// Each unique key uniquely identifies a deduplicated, interned source string.
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 #[repr(transparent)]
 pub struct TokenKey {

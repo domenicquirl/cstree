@@ -3,7 +3,7 @@ use super::{traits::*, TokenKey};
 use std::num::NonZeroUsize;
 
 use fxhash::FxBuildHasher as Hasher;
-use lasso::{Capacity, Rodeo, Spur, ThreadedRodeo};
+use lasso::{Capacity, Rodeo, ThreadedRodeo};
 
 /// Default number of strings that the interner will initially allocate space for.
 /// Value recommended by the author of `lasso`.
@@ -13,10 +13,40 @@ const DEFAULT_STRING_CAPACITY: usize = 512;
 /// Value recommended by the author of `lasso`.
 const DEFAULT_BYTE_CAPACITY: NonZeroUsize = unsafe { NonZeroUsize::new_unchecked(4096) };
 
+macro_rules! impl_traits {
+    (for $interner:ty) => {
+        impl Resolver<TokenKey> for $interner {
+            #[inline]
+            fn try_resolve(&self, key: TokenKey) -> Option<&str> {
+                self.rodeo.try_resolve(&key)
+            }
+
+            #[inline]
+            fn resolve(&self, key: TokenKey) -> &str {
+                self.rodeo.resolve(&key)
+            }
+        }
+
+        impl Interner<TokenKey> for $interner {
+            type Error = lasso::LassoError;
+
+            #[inline]
+            fn try_get_or_intern(&mut self, text: &str) -> Result<TokenKey, Self::Error> {
+                self.rodeo.try_get_or_intern(text)
+            }
+
+            #[inline]
+            fn get_or_intern(&mut self, text: &str) -> TokenKey {
+                self.rodeo.get_or_intern(text)
+            }
+        }
+    };
+}
+
 /// The default [`Interner`] used to deduplicate green token strings.
 #[derive(Debug)]
 pub struct TokenInterner {
-    rodeo: Rodeo<Spur, Hasher>,
+    rodeo: Rodeo<TokenKey, Hasher>,
 }
 
 impl TokenInterner {
@@ -30,31 +60,7 @@ impl TokenInterner {
     }
 }
 
-impl Resolver<TokenKey> for TokenInterner {
-    #[inline]
-    fn try_resolve(&self, key: TokenKey) -> Option<&str> {
-        <Rodeo<Spur, Hasher> as Resolver<TokenKey>>::try_resolve(&self.rodeo, key)
-    }
-
-    #[inline]
-    fn resolve(&self, key: TokenKey) -> &str {
-        <Rodeo<Spur, Hasher> as Resolver<TokenKey>>::resolve(&self.rodeo, key)
-    }
-}
-
-impl Interner<TokenKey> for TokenInterner {
-    type Error = <Rodeo<Spur, Hasher> as Interner<TokenKey>>::Error;
-
-    #[inline]
-    fn try_get_or_intern(&mut self, text: &str) -> Result<TokenKey, Self::Error> {
-        <Rodeo<Spur, Hasher> as Interner<TokenKey>>::try_get_or_intern(&mut self.rodeo, text)
-    }
-
-    #[inline]
-    fn get_or_intern(&mut self, text: &str) -> TokenKey {
-        <Rodeo<Spur, Hasher> as Interner<TokenKey>>::get_or_intern(&mut self.rodeo, text)
-    }
-}
+impl_traits!(for TokenInterner);
 
 /// A threadsafe [`Interner`] for deduplicating [`GreenToken`](crate::green::token::GreenToken) strings.
 ///
@@ -62,7 +68,7 @@ impl Interner<TokenKey> for TokenInterner {
 /// &interner` in shared contexts.
 #[derive(Debug)]
 pub struct MultiThreadTokenInterner {
-    rodeo: ThreadedRodeo<Spur, Hasher>,
+    rodeo: ThreadedRodeo<TokenKey, Hasher>,
 }
 
 impl MultiThreadTokenInterner {
@@ -76,54 +82,5 @@ impl MultiThreadTokenInterner {
     }
 }
 
-impl Resolver<TokenKey> for MultiThreadTokenInterner {
-    #[inline]
-    fn try_resolve(&self, key: TokenKey) -> Option<&str> {
-        <ThreadedRodeo<Spur, Hasher> as Resolver<TokenKey>>::try_resolve(&self.rodeo, key)
-    }
-
-    #[inline]
-    fn resolve(&self, key: TokenKey) -> &str {
-        <ThreadedRodeo<Spur, Hasher> as Resolver<TokenKey>>::resolve(&self.rodeo, key)
-    }
-}
-
-impl Interner<TokenKey> for MultiThreadTokenInterner {
-    type Error = <ThreadedRodeo<Spur, Hasher> as Interner<TokenKey>>::Error;
-
-    #[inline]
-    fn try_get_or_intern(&mut self, text: &str) -> Result<TokenKey, Self::Error> {
-        <ThreadedRodeo<Spur, Hasher> as Interner<TokenKey>>::try_get_or_intern(&mut self.rodeo, text)
-    }
-
-    #[inline]
-    fn get_or_intern(&mut self, text: &str) -> TokenKey {
-        <ThreadedRodeo<Spur, Hasher> as Interner<TokenKey>>::get_or_intern(&mut self.rodeo, text)
-    }
-}
-
-impl Resolver<TokenKey> for &MultiThreadTokenInterner {
-    #[inline]
-    fn try_resolve(&self, key: TokenKey) -> Option<&str> {
-        <ThreadedRodeo<Spur, Hasher> as Resolver<TokenKey>>::try_resolve(&self.rodeo, key)
-    }
-
-    #[inline]
-    fn resolve(&self, key: TokenKey) -> &str {
-        <ThreadedRodeo<Spur, Hasher> as Resolver<TokenKey>>::resolve(&self.rodeo, key)
-    }
-}
-
-impl Interner<TokenKey> for &MultiThreadTokenInterner {
-    type Error = <ThreadedRodeo<Spur, Hasher> as Interner<TokenKey>>::Error;
-
-    #[inline]
-    fn try_get_or_intern(&mut self, text: &str) -> Result<TokenKey, Self::Error> {
-        <&ThreadedRodeo<Spur, Hasher> as Interner<TokenKey>>::try_get_or_intern(&mut &self.rodeo, text)
-    }
-
-    #[inline]
-    fn get_or_intern(&mut self, text: &str) -> TokenKey {
-        <&ThreadedRodeo<Spur, Hasher> as Interner<TokenKey>>::get_or_intern(&mut &self.rodeo, text)
-    }
-}
+impl_traits!(for MultiThreadTokenInterner);
+impl_traits!(for &MultiThreadTokenInterner);
