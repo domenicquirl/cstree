@@ -1,7 +1,7 @@
 [package]
 edition = "2021"
 name = "cstree"
-version = "0.11.1"
+version = "0.11.1" # when updating, also update `doc(html_root_url)`
 authors = [
     "Domenic Quirl <DomenicQuirl@pm.me>",
     "Aleksey Kladov <aleksey.kladov@gmail.com>",
@@ -15,7 +15,6 @@ readme = "README.md"
 debug = true
 
 [dependencies]
-lasso       = { version = "0.6", features = ["inline-more", "multi-threaded"] }
 text-size   = "1.1.0"
 fxhash      = "0.2.1"
 parking_lot = "0.11.2"
@@ -23,6 +22,14 @@ parking_lot = "0.11.2"
 # Arc
 triomphe = "0.1.7"
 sptr     = "0.3.2"
+
+# Default Interner
+indexmap = "1.9"
+
+[dependencies.lasso]
+version  = "0.6"
+features = ["inline-more"]
+optional = true
 
 [dependencies.serde]
 version          = "1.0"
@@ -42,8 +49,17 @@ name    = "main"
 harness = false
 
 [features]
-default   = []
+default = []
+# Implementations of `serde::{De,}Serialize` for CSTrees.
 serialize = ["serde", "lasso/serialize"]
+# Interoperability with the `lasso` interning crate.
+# When enabled, `cstree`'s default interners will use `lasso` internally, too.
+lasso_compat = ["lasso"]
+# Additionally provide threadsafe interner types. 
+# Where applicable (and if the corresponding features are selected), provide compatibility 
+# implementations for multi-thread interners from other crates.
+multi_threaded_interning = ["lasso_compat", "lasso/multi-threaded"]
 
 [package.metadata.docs.rs]
-features = ["serialize"]
+all-features = true
+rustdoc-args = ["--cfg", "doc_cfg"]

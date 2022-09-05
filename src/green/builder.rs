@@ -72,13 +72,13 @@ where
     /// (strings) across tokens.
     /// # Examples
     /// ```
-    /// # use cstree::testing::{*, Language as _};
-    /// use lasso::Rodeo;
+    /// # use cstree::testing::{*, interning::*, Language as _};
     ///
-    /// // Create the builder from a custom `Rodeo`
-    /// let mut interner = Rodeo::new();
+    /// // Create the builder from a custom interner
+    /// let mut interner = new_interner();
     /// let mut cache = NodeCache::with_interner(&mut interner);
-    /// let mut builder: GreenNodeBuilder<MyLanguage, Rodeo> = GreenNodeBuilder::with_cache(&mut cache);
+    /// let mut builder: GreenNodeBuilder<MyLanguage, TokenInterner> =
+    ///     GreenNodeBuilder::with_cache(&mut cache);
     ///
     /// // Construct the tree
     /// # builder.start_node(Root);
@@ -106,13 +106,13 @@ where
     /// (strings) across tokens.
     /// # Examples
     /// ```
-    /// # use cstree::testing::{*, Language as _};
-    /// use lasso::Rodeo;
+    /// # use cstree::testing::{*, interning::*, Language as _};
     ///
-    /// // Create the builder from a custom `Rodeo`
-    /// let mut interner = Rodeo::new();
+    /// // Create the builder from a custom interner
+    /// let mut interner = new_interner();
     /// let cache = NodeCache::from_interner(interner);
-    /// let mut builder: GreenNodeBuilder<MyLanguage, Rodeo> = GreenNodeBuilder::from_cache(cache);
+    /// let mut builder: GreenNodeBuilder<MyLanguage, TokenInterner> =
+    ///     GreenNodeBuilder::from_cache(cache);
     ///
     /// // Construct the tree
     /// # builder.start_node(Root);

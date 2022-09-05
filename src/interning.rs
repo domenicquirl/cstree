@@ -5,16 +5,30 @@
 mod traits;
 pub use self::traits::*;
 
-mod token_interner;
-pub use token_interner::{MultiThreadTokenInterner, TokenInterner};
+mod default_interner;
+
+#[cfg(not(feature = "lasso_compat"))]
+#[doc(inline)]
+pub use default_interner::TokenInterner;
 
 mod lasso_compat;
+
+#[cfg(feature = "lasso_compat")]
+#[doc(inline)]
+pub use lasso_compat::TokenInterner;
+
+#[cfg(feature = "multi_threaded_interning")]
+#[doc(inline)]
+pub use lasso_compat::MultiThreadedTokenInterner;
+
+#[cfg(feature = "lasso_compat")]
+#[cfg_attr(doc_cfg, doc(cfg(feature = "lasso_compat")))]
+pub use lasso;
 
 use core::fmt;
 use std::num::NonZeroU32;
 
 pub use fxhash::FxBuildHasher as Hasher;
-pub use lasso;
 
 /// The intern key type for the source text of [`GreenToken`s](crate::green::token::GreenToken).
 /// Each unique key uniquely identifies a deduplicated, interned source string.
@@ -57,7 +71,9 @@ pub fn new_interner() -> TokenInterner {
 /// Constructs a new [`Interner`](traits::Interner) that can be used across multiple threads.
 ///
 /// Note that you can use `&mut &MultiThreadTokenInterner` to access interning methods through a shared reference.
+#[cfg(feature = "multi_threaded_interning")]
+#[cfg_attr(doc_cfg, doc(cfg(feature = "multi_threaded_interning")))]
 #[inline]
-pub fn new_threaded_interner() -> MultiThreadTokenInterner {
-    MultiThreadTokenInterner::new()
+pub fn new_threaded_interner() -> MultiThreadedTokenInterner {
+    MultiThreadedTokenInterner::new()
 }

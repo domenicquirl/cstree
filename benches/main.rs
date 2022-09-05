@@ -116,7 +116,12 @@ fn two_level_tree() -> Element<'static> {
 }
 
 pub fn create(c: &mut Criterion) {
-    let mut group = c.benchmark_group("two-level tree");
+    #[cfg(not(feature = "lasso_compat"))]
+    const GROUP_NAME: &str = "two-level tree (default interner)";
+    #[cfg(feature = "lasso_compat")]
+    const GROUP_NAME: &str = "two-level tree (lasso)";
+
+    let mut group = c.benchmark_group(GROUP_NAME);
     group.throughput(Throughput::Elements(1));
 
     let mut interner = new_interner();

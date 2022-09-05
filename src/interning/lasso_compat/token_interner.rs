@@ -1,11 +1,13 @@
 //! Default interner implementations based on `lasso`.
 
-use std::num::NonZeroUsize;
+#![cfg(feature = "lasso_compat")]
+
+use std::{hash::BuildHasher, num::NonZeroUsize};
 
 use fxhash::FxBuildHasher as Hasher;
 use lasso::{Capacity, Rodeo, ThreadedRodeo};
 
-use super::{Interner, Resolver, TokenKey};
+use crate::interning::{Interner, Resolver, TokenKey};
 
 /// Default number of strings that the interner will initially allocate space for.
 /// Value recommended by the author of `lasso`.
@@ -16,7 +18,8 @@ const DEFAULT_STRING_CAPACITY: usize = 512;
 const DEFAULT_BYTE_CAPACITY: NonZeroUsize = unsafe { NonZeroUsize::new_unchecked(4096) };
 
 macro_rules! impl_traits {
-    (for $interner:ty) => {
+    (for $interner:ty $(, if #[cfg(feature = $feature:literal)])?) => {
+        $(#[cfg_attr(doc_cfg, doc(cfg(feature = $feature)))])?
         impl Resolver<TokenKey> for $interner {
             #[inline]
             fn try_resolve(&self, key: TokenKey) -> Option<&str> {
@@ -29,6 +32,7 @@ macro_rules! impl_traits {
             }
         }
 
+        $(#[cfg_attr(doc_cfg, doc(cfg(feature = $feature)))])?
         impl Interner<TokenKey> for $interner {
             type Error = lasso::LassoError;
 
@@ -60,29 +64,46 @@ impl TokenInterner {
             ),
         }
     }
+
+    /// Returns the [`Rodeo`] backing this interner.
+    #[cfg_attr(doc_cfg, doc(cfg(feature = "lasso_compat")))]
+    #[inline]
+    pub fn into_inner(self) -> Rodeo<TokenKey, impl BuildHasher> {
+        self.rodeo
+    }
 }
 
 impl_traits!(for TokenInterner);
 
-/// A threadsafe [`Interner`] for deduplicating [`GreenToken`](crate::green::token::GreenToken) strings.
-///
-/// Note that [`Interner`] and [`Resolver`] are also implemented for  `&MultiThreadTokenInterner` so you can pass `&mut
-/// &interner` in shared contexts.
-#[derive(Debug)]
-pub struct MultiThreadTokenInterner {
-    rodeo: ThreadedRodeo<TokenKey, Hasher>,
-}
+#[cfg(feature = "multi_threaded_interning")]
+pub use multi_threaded::MultiThreadedTokenInterner;
 
-impl MultiThreadTokenInterner {
-    pub(in crate::interning) fn new() -> Self {
-        Self {
-            rodeo: ThreadedRodeo::with_capacity_and_hasher(
-                Capacity::new(DEFAULT_STRING_CAPACITY, DEFAULT_BYTE_CAPACITY),
-                Hasher::default(),
-            ),
+#[cfg(feature = "multi_threaded_interning")]
+mod multi_threaded {
+    use super::*;
+
+    /// A threadsafe [`Interner`] for deduplicating [`GreenToken`](crate::green::token::GreenToken) strings.
+    ///
+    /// Note that [`Interner`] and [`Resolver`] are also implemented for  `&MultiThreadTokenInterner` so you can pass
+    /// `&mut &interner` in shared contexts.
+    #[cfg_attr(doc_cfg, doc(cfg(feature = "multi_threaded_interning")))]
+    #[derive(Debug)]
+    pub struct MultiThreadedTokenInterner {
+        rodeo: ThreadedRodeo<TokenKey, Hasher>,
+    }
+
+    impl MultiThreadedTokenInterner {
+        pub(in crate::interning) fn new() -> Self {
+            Self {
+                rodeo: ThreadedRodeo::with_capacity_and_hasher(
+                    Capacity::new(DEFAULT_STRING_CAPACITY, DEFAULT_BYTE_CAPACITY),
+                    Hasher::default(),
+                ),
+            }
         }
     }
-}
 
-impl_traits!(for MultiThreadTokenInterner);
-impl_traits!(for &MultiThreadTokenInterner);
+    impl_traits!(for MultiThreadedTokenInterner, if #[cfg(feature = "multi_threaded_interning")]);
+
+    impl_traits!(for &MultiThreadedTokenInterner, if #[cfg(feature = "multi_threaded_interning")]);
+}

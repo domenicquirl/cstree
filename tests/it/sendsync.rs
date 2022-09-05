@@ -6,8 +6,24 @@ use std::{thread, time::Duration};
 use super::{build_recursive, Element, ResolvedNode, SyntaxNode, TestLang};
 use cstree::GreenNodeBuilder;
 
+// Excercise the multi-threaded interner when the corresponding feature is enabled.
+
+#[cfg(feature = "multi_threaded_interning")]
+use cstree::interning::{new_threaded_interner, MultiThreadedTokenInterner};
+
+#[cfg(not(feature = "multi_threaded_interning"))]
+fn get_builder() -> GreenNodeBuilder<'static, 'static, TestLang> {
+    GreenNodeBuilder::new()
+}
+
+#[cfg(feature = "multi_threaded_interning")]
+fn get_builder() -> GreenNodeBuilder<'static, 'static, TestLang, MultiThreadedTokenInterner> {
+    let interner = new_threaded_interner();
+    GreenNodeBuilder::from_interner(interner)
+}
+
 fn build_tree<D>(root: &Element<'_>) -> ResolvedNode<D> {
-    let mut builder: GreenNodeBuilder<TestLang> = GreenNodeBuilder::new();
+    let mut builder = get_builder();
     build_recursive(root, &mut builder, 0);
     let (node, cache) = builder.finish();
     SyntaxNode::new_root_with_resolver(node, cache.unwrap().into_interner().unwrap())

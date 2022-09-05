@@ -47,6 +47,9 @@
 #![deny(unsafe_code, future_incompatible)]
 #![allow(unstable_name_collisions)] // strict provenance - must come after `future_incompatible` to take precedence
 #![warn(missing_docs)]
+// Docs.rs
+#![doc(html_root_url = "https://docs.rs/cstree/0.11.1")]
+#![cfg_attr(doc_cfg, feature(doc_cfg))]
 
 #[allow(unsafe_code)]
 mod green;

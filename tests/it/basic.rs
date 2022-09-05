@@ -1,6 +1,8 @@
 use super::*;
-use cstree::{interning::Resolver, GreenNodeBuilder, NodeCache, SyntaxKind, TextRange};
-use lasso::{Rodeo, Spur};
+use cstree::{
+    interning::{new_interner, Resolver},
+    GreenNodeBuilder, NodeCache, SyntaxKind, TextRange,
+};
 
 fn build_tree<D>(root: &Element<'_>) -> (SyntaxNode<D>, impl Resolver) {
     let mut builder: GreenNodeBuilder<TestLang> = GreenNodeBuilder::new();
@@ -115,7 +117,7 @@ fn data() {
 
 #[test]
 fn with_interner() {
-    let mut interner: Rodeo<Spur> = Rodeo::new();
+    let mut interner = new_interner();
     let mut cache = NodeCache::with_interner(&mut interner);
     let tree = two_level_tree();
     let tree = build_tree_with_cache(&tree, &mut cache);
@@ -135,7 +137,7 @@ fn with_interner() {
 
 #[test]
 fn inline_resolver() {
-    let mut interner: Rodeo<Spur> = Rodeo::new();
+    let mut interner = new_interner();
     let mut cache = NodeCache::with_interner(&mut interner);
     let tree = two_level_tree();
     let tree = build_tree_with_cache(&tree, &mut cache);
