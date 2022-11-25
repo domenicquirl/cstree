@@ -65,7 +65,7 @@ impl<L: Language, D> DerefMut for ResolvedNode<L, D> {
 /// Syntax tree token that is guaranteed to belong to a tree that contains an associated
 /// [`Resolver`](lasso::Resolver).
 /// # See also
-/// [`SyntaxToken`]]
+/// [`SyntaxToken`]
 #[repr(transparent)]
 pub struct ResolvedToken<L: Language, D: 'static = ()> {
     syntax: SyntaxToken<L, D>,
