@@ -26,13 +26,15 @@ pub use lasso_compat::MultiThreadedTokenInterner;
 #[cfg_attr(doc_cfg, doc(cfg(feature = "lasso_compat")))]
 pub use lasso;
 
-#[cfg(feature = "salsa_v0_compat")]
-mod salsa_v0_compat;
-
 #[cfg(feature = "salsa_2022_compat")]
 mod salsa_2022_compat;
 #[cfg(feature = "salsa_2022_compat")]
+#[cfg_attr(doc_cfg, doc(cfg(feature = "salsa_2022_compat")))]
 pub use salsa_2022_compat::InternWithDb;
+
+#[cfg(feature = "salsa_2022_compat")]
+#[cfg_attr(doc_cfg, doc(cfg(feature = "salsa_2022_compat")))]
+pub use salsa;
 
 use core::fmt;
 use std::num::NonZeroU32;
