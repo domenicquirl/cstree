@@ -1,6 +1,6 @@
 #![cfg(feature = "salsa_2022_compat")]
 
-use cstree::{interning::InternWithDb, GreenNodeBuilder};
+use cstree::GreenNodeBuilder;
 
 #[salsa::jar(db = Db)]
 pub struct Jar(crate::SourceId);
@@ -22,23 +22,15 @@ struct Database {
 
 impl salsa::Database for Database {}
 
-trait AsInterner {
-    fn as_interner(&self) -> InternWithDb<'_, Database, SourceId>;
-}
-
-impl AsInterner for Database {
-    fn as_interner(&self) -> InternWithDb<'_, Database, SourceId> {
-        InternWithDb::new(self, |db, text| SourceId::new(db, text), |db, id| id.text(db))
-    }
-}
+impl_cstree_interning_for_salsa!(impl Interning for Database => text as SourceId);
 
 use cstree::testing::*;
 
 fn main() {
     let db = Database::default();
-    let foo = SourceId::new(&db, "foo".to_string());
-    let foo = foo.text(&db);
-    assert_eq!(foo, "foo");
+    let interned = SourceId::new(&db, "foo".to_string());
+    let original = interned.text(&db);
+    assert_eq!(original, "foo");
 
     let interner = db.as_interner();
     let mut shared_interner = &interner;
@@ -54,5 +46,5 @@ fn main() {
         builder.finish()
     };
     let tree: SyntaxNode<TestLang> = SyntaxNode::new_root(tree);
-    assert_eq!(tree.resolve_text(&interner), "2.05 + 7.32");
+    assert_eq!(tree.resolve_text(shared_interner), "2.05 + 7.32");
 }

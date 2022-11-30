@@ -43,8 +43,8 @@ pub trait Resolver<Key: InternKey = TokenKey> {
 ///
 /// **Note:** Because single-threaded interners may require mutable access, the methods on this trait take `&mut self`.
 /// In order to use a multi- (or single)-threaded interner that allows access through a shared reference, it is
-/// implemented for `&`[`MultiThreadTokenInterner`](crate::interning::MultiThreadTokenInterner), allowing it to be used
-/// with a `&mut &MultiThreadTokenInterner`.
+/// implemented for `&`[`MultiThreadedTokenInterner`](crate::interning::MultiThreadedTokenInterner), allowing it to be
+/// used with a `&mut &MultiThreadTokenInterner`.
 pub trait Interner<Key: InternKey = TokenKey>: Resolver<Key> {
     /// Represents possible ways in which interning may fail.
     /// For example, this might be running out of fresh intern keys, or failure to allocate sufficient space for a new
