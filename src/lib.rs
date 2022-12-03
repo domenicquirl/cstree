@@ -67,8 +67,10 @@ mod utility_types;
 use std::fmt;
 
 // Reexport types for working with strings.
+// TODO: wrap in submodule
 pub use text_size::{TextLen, TextRange, TextSize};
 
+// TODO: clean up module structure
 #[doc(inline)]
 pub use crate::syntax::*;
 pub use crate::{
@@ -136,9 +138,12 @@ pub trait Language: Sized + Clone + Copy + fmt::Debug + Eq + Ord + std::hash::Ha
     fn kind_to_raw(kind: Self::Kind) -> SyntaxKind;
 
     /// Fixed text for a particular syntax kind.
-    ///
     /// Implement for kinds that will only ever represent the same text, such as punctuation (like a
     /// semicolon), keywords (like `fn`), or operators (like `<=`).
+    ///
+    /// Indicating tokens that have a `static_text` this way allows `cstree` to store them more efficiently, which makes
+    /// it faster to add them to a syntax tree and to look up their text. Since there can often be many occurrences
+    /// of these tokens inside a file, doing so will improve the performance of using `cstree`.
     fn static_text(kind: Self::Kind) -> Option<&'static str>;
 }
 

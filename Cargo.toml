@@ -57,7 +57,7 @@ harness = false
 [features]
 default = []
 # Implementations of `serde::{De,}Serialize` for CSTrees.
-serialize = ["serde", "lasso/serialize"]
+serialize = ["serde", "lasso?/serialize"]
 # Interoperability with the `lasso` interning crate.
 # When enabled, `cstree`'s default interners will use `lasso` internally, too.
 lasso_compat = ["lasso"]
@@ -71,7 +71,7 @@ multi_threaded_interning = ["lasso_compat", "lasso/multi-threaded"]
 salsa_2022_compat = ["salsa"]
 
 [[example]]
-name              = "salsa_2022"
+name              = "salsa"
 required-features = ["salsa_2022_compat"]
 
 [package.metadata.docs.rs]

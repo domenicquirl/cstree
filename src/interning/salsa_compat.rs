@@ -23,7 +23,7 @@
 //! ```
 //! # use cstree::testing::*;
 //! # use cstree::GreenNodeBuilder;
-//! # use cstree::interning::salsa_2022_compat::salsa;
+//! # use cstree::interning::salsa_compat::salsa;
 //! # use cstree::impl_cstree_interning_for_salsa;
 //! // Define the `salsa` jar, database and intern Id
 //! #[salsa::jar(db = Db)]
@@ -70,6 +70,8 @@
 //! let tree: SyntaxNode<TestLang> = SyntaxNode::new_root(tree);
 //! assert_eq!(tree.resolve_text(shared_interner), "2.05 + 7.32");
 //! ```
+//!
+//! The full code is also available in the `salsa` example.
 //!
 //! ## Working with `InternWithDb` directly
 //! If you don't want the trait, or macros, or if you just need more control about what happens during interning and
@@ -138,12 +140,12 @@ impl salsa::AsId for TokenKey {
 macro_rules! impl_cstree_interning_for_salsa {
     (impl Interning for $db:ty => $name:ident as $id:ty) => {
         trait SalsaAsInterner {
-            fn as_interner(&self) -> ::cstree::interning::salsa_2022_compat::InternWithDb<'_, $db, $id>;
+            fn as_interner(&self) -> ::cstree::interning::salsa_compat::InternWithDb<'_, $db, $id>;
         }
 
         impl SalsaAsInterner for Database {
-            fn as_interner(&self) -> ::cstree::interning::salsa_2022_compat::InternWithDb<'_, $db, $id> {
-                ::cstree::interning::salsa_2022_compat::InternWithDb::new(
+            fn as_interner(&self) -> ::cstree::interning::salsa_compat::InternWithDb<'_, $db, $id> {
+                ::cstree::interning::salsa_compat::InternWithDb::new(
                     self,
                     |db, text| <$id>::new(db, text),
                     |db, id| id.$name(db),
