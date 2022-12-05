@@ -95,7 +95,7 @@
 //! of the `GreenNodeBuilder` appropriately.
 //!
 //! [crate documentation]: crate
-//! [`Language::static_text`]: crate::Language:static_text
+//! [`Language::static_text`]: crate::Language::static_text
 //! [`GreenNodeBuilder::token`]: crate::GreenNodeBuilder::token
 //! [`GreenNodeBuilder::new`]: crate::GreenNodeBuilder::new
 //! [`finish`]: crate::GreenNodeBuilder::finish
