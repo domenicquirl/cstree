@@ -7,8 +7,10 @@ type ErasedPtr = *const u8;
 use sptr::Strict;
 
 use crate::{
-    green::{GreenNode, GreenToken, SyntaxKind},
-    NodeOrToken, TextSize,
+    green::{GreenNode, GreenToken},
+    text::TextSize,
+    util::NodeOrToken,
+    RawSyntaxKind,
 };
 
 pub(super) type GreenElement = NodeOrToken<GreenNode, GreenToken>;
@@ -64,7 +66,7 @@ impl From<GreenToken> for PackedGreenElement {
 impl GreenElement {
     /// Returns kind of this element.
     #[inline]
-    pub fn kind(&self) -> SyntaxKind {
+    pub fn kind(&self) -> RawSyntaxKind {
         self.as_ref().kind()
     }
 
@@ -78,7 +80,7 @@ impl GreenElement {
 impl GreenElementRef<'_> {
     /// Returns kind of this element.
     #[inline]
-    pub fn kind(&self) -> SyntaxKind {
+    pub fn kind(&self) -> RawSyntaxKind {
         match self {
             NodeOrToken::Node(it) => it.kind(),
             NodeOrToken::Token(it) => it.kind(),

@@ -4,7 +4,11 @@ use std::iter::FusedIterator;
 
 use text_size::TextSize;
 
-use crate::{green::GreenElementRef, GreenNodeChildren, Language, SyntaxElementRef, SyntaxNode};
+use crate::{
+    green::{GreenElementRef, GreenNodeChildren},
+    syntax::{SyntaxElementRef, SyntaxNode},
+    Language,
+};
 
 #[derive(Clone, Debug)]
 struct Iter<'n> {

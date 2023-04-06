@@ -1,8 +1,8 @@
 //! Implementation of the inner, "green" tree.
-//! The [`GreenNodeBuilder`] is the main entry point to constructing [`GreenNode`]s and
-//! [`GreenToken`]s.
+//! The [`GreenNodeBuilder`](crate::build::GreenNodeBuilder) from the [`build` module](crate::build) is the main entry
+//! point to constructing [`GreenNode`]s and [`GreenToken`]s.
 
-mod builder;
+pub(super) mod builder;
 mod element;
 mod iter;
 mod node;
@@ -11,16 +11,7 @@ mod token;
 pub(crate) use self::element::GreenElementRef;
 use self::element::{GreenElement, PackedGreenElement};
 
-pub use self::{
-    builder::{Checkpoint, GreenNodeBuilder, NodeCache},
-    iter::GreenNodeChildren,
-    node::GreenNode,
-    token::GreenToken,
-};
-
-/// SyntaxKind is a type tag for each token or node.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct SyntaxKind(pub u16);
+pub use self::{iter::GreenNodeChildren, node::GreenNode, token::GreenToken};
 
 #[cfg(test)]
 mod tests {

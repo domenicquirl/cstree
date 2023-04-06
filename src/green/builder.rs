@@ -4,10 +4,11 @@ use fxhash::{FxHashMap, FxHasher32};
 use text_size::TextSize;
 
 use crate::{
-    green::{GreenElement, GreenNode, GreenToken, SyntaxKind},
+    green::{GreenElement, GreenNode, GreenToken},
     interning::{new_interner, Interner, TokenInterner, TokenKey},
+    util::NodeOrToken,
     utility_types::MaybeOwned,
-    Language, NodeOrToken,
+    Language, RawSyntaxKind,
 };
 
 use super::{node::GreenNodeHead, token::GreenTokenData};
@@ -35,6 +36,8 @@ impl NodeCache<'static> {
     /// # Examples
     /// ```
     /// # use cstree::testing::{*, Language as _};
+    /// use cstree::build::NodeCache;
+    ///
     /// // Build a tree
     /// let mut cache = NodeCache::new();
     /// let mut builder: GreenNodeBuilder<MyLanguage> = GreenNodeBuilder::with_cache(&mut cache);
@@ -72,7 +75,9 @@ where
     /// (strings) across tokens.
     /// # Examples
     /// ```
-    /// # use cstree::testing::{*, interning::*, Language as _};
+    /// # use cstree::testing::{*, Language as _};
+    /// # use cstree::interning::*;
+    /// use cstree::build::NodeCache;
     ///
     /// // Create the builder from a custom interner
     /// let mut interner = new_interner();
@@ -106,7 +111,9 @@ where
     /// (strings) across tokens.
     /// # Examples
     /// ```
-    /// # use cstree::testing::{*, interning::*, Language as _};
+    /// # use cstree::testing::{*, Language as _};
+    /// # use cstree::interning::*;
+    /// use cstree::build::NodeCache;
     ///
     /// // Create the builder from a custom interner
     /// let mut interner = new_interner();
@@ -149,6 +156,7 @@ where
     /// # Examples
     /// ```
     /// # use cstree::*;
+    /// # use cstree::build::*;
     /// # use cstree::interning::*;
     /// let mut cache = NodeCache::new();
     /// let interner = cache.interner_mut();
@@ -205,7 +213,7 @@ where
     #[inline]
     fn get_cached_node(
         &mut self,
-        kind: SyntaxKind,
+        kind: RawSyntaxKind,
         children: std::vec::Drain<'_, GreenElement>,
         text_len: TextSize,
         child_hash: u32,
@@ -305,6 +313,7 @@ where
     /// # Examples
     /// ```
     /// # use cstree::testing::{*, Language as _};
+    /// # use cstree::build::*;
     /// // Construct a builder from our own cache
     /// let cache = NodeCache::new();
     /// let mut builder: GreenNodeBuilder<MyLanguage> = GreenNodeBuilder::from_cache(cache);
@@ -366,6 +375,7 @@ where
     /// # Examples
     /// ```
     /// # use cstree::testing::*;
+    /// # use cstree::build::*;
     /// # use cstree::interning::*;
     /// let mut builder: GreenNodeBuilder<MyLanguage> = GreenNodeBuilder::new();
     /// let interner = builder.interner_mut();
@@ -426,7 +436,7 @@ where
     /// # Examples
     /// ```
     /// # use cstree::testing::*;
-    /// # use cstree::{GreenNodeBuilder, Language};
+    /// # use cstree::{build::GreenNodeBuilder, Language};
     /// # struct Parser;
     /// # impl Parser {
     /// #     fn peek(&self) -> Option<TestSyntaxKind> { None }

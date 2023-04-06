@@ -4,7 +4,7 @@ use crossbeam_utils::thread::scope;
 use std::{thread, time::Duration};
 
 use super::{build_recursive, Element, ResolvedNode, SyntaxNode, TestLang};
-use cstree::GreenNodeBuilder;
+use cstree::build::GreenNodeBuilder;
 
 // Excercise the multi-threaded interner when the corresponding feature is enabled.
 

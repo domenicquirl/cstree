@@ -6,7 +6,8 @@ use super::*;
 use crate::{
     green::GreenElementRef,
     interning::{Resolver, TokenKey},
-    Language, NodeOrToken, SyntaxKind, TokenAtOffset,
+    util::{NodeOrToken, TokenAtOffset},
+    Language, RawSyntaxKind,
 };
 
 /// An element of the tree, can be either a node or a token.
@@ -181,7 +182,7 @@ impl<L: Language, D> SyntaxElement<L, D> {
 
     /// The internal representation of the kind of this element.
     #[inline]
-    pub fn syntax_kind(&self) -> SyntaxKind {
+    pub fn syntax_kind(&self) -> RawSyntaxKind {
         match self {
             NodeOrToken::Node(it) => it.syntax_kind(),
             NodeOrToken::Token(it) => it.syntax_kind(),
@@ -264,7 +265,7 @@ impl<'a, L: Language, D> SyntaxElementRef<'a, L, D> {
 
     /// The internal representation of the kind of this element.
     #[inline]
-    pub fn syntax_kind(&self) -> SyntaxKind {
+    pub fn syntax_kind(&self) -> RawSyntaxKind {
         match self {
             NodeOrToken::Node(it) => it.syntax_kind(),
             NodeOrToken::Token(it) => it.syntax_kind(),

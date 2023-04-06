@@ -4,7 +4,7 @@ use std::{iter::FusedIterator, slice};
 
 use super::{element::PackedGreenElement, GreenElementRef};
 
-/// An iterator over a [`GreenNode`](crate::GreenNode)'s children.
+/// An iterator over a [`GreenNode`](crate::green::GreenNode)'s children.
 #[derive(Debug, Clone)]
 pub struct GreenNodeChildren<'a> {
     pub(super) inner: slice::Iter<'a, PackedGreenElement>,

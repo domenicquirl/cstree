@@ -4,7 +4,9 @@ use std::fmt;
 
 use crate::{
     interning::{Resolver, TokenKey},
-    Language, SyntaxNode, SyntaxToken, TextRange, TextSize,
+    syntax::{SyntaxNode, SyntaxToken},
+    text::{TextRange, TextSize},
+    Language,
 };
 
 /// An efficient representation of the text that is covered by a [`SyntaxNode`], i.e. the combined
@@ -17,6 +19,7 @@ use crate::{
 /// # Example
 /// ```
 /// # use cstree::testing::*;
+/// # use cstree::syntax::ResolvedNode;
 /// #
 /// fn parse_float_literal(s: &str) -> ResolvedNode<MyLanguage> {
 ///     // parsing...
@@ -316,7 +319,7 @@ impl<I: Resolver<TokenKey> + ?Sized, L: Language, D> Eq for SyntaxText<'_, '_, I
 mod private {
     use std::ops;
 
-    use crate::{TextRange, TextSize};
+    use crate::text::{TextRange, TextSize};
 
     pub trait SyntaxTextRange {
         fn start(&self) -> Option<TextSize>;
@@ -376,27 +379,27 @@ mod private {
 
 #[cfg(test)]
 mod tests {
-    use crate::{green::SyntaxKind, GreenNodeBuilder};
+    use crate::{build::GreenNodeBuilder, RawSyntaxKind};
 
     use super::*;
 
     #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
     pub enum TestLang {}
     impl Language for TestLang {
-        type Kind = SyntaxKind;
+        type Kind = RawSyntaxKind;
 
-        fn kind_from_raw(raw: SyntaxKind) -> Self::Kind {
+        fn kind_from_raw(raw: RawSyntaxKind) -> Self::Kind {
             raw
         }
 
-        fn kind_to_raw(kind: Self::Kind) -> SyntaxKind {
+        fn kind_to_raw(kind: Self::Kind) -> RawSyntaxKind {
             kind
         }
 
         fn static_text(kind: Self::Kind) -> Option<&'static str> {
-            if kind == SyntaxKind(1) {
+            if kind == RawSyntaxKind(1) {
                 Some("{")
-            } else if kind == SyntaxKind(2) {
+            } else if kind == RawSyntaxKind(2) {
                 Some("}")
             } else {
                 None
@@ -406,14 +409,14 @@ mod tests {
 
     fn build_tree(chunks: &[&str]) -> (SyntaxNode<TestLang, ()>, impl Resolver<TokenKey>) {
         let mut builder: GreenNodeBuilder<TestLang> = GreenNodeBuilder::new();
-        builder.start_node(SyntaxKind(62));
+        builder.start_node(RawSyntaxKind(62));
         for &chunk in chunks.iter() {
             let kind = match chunk {
                 "{" => 1,
                 "}" => 2,
                 _ => 3,
             };
-            builder.token(SyntaxKind(kind), chunk);
+            builder.token(RawSyntaxKind(kind), chunk);
         }
         builder.finish_node();
         let (node, cache) = builder.finish();

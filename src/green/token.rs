@@ -1,9 +1,9 @@
 use std::{fmt, hash, mem::ManuallyDrop, ptr::NonNull};
 
 use crate::{
-    green::SyntaxKind,
     interning::{Resolver, TokenKey},
-    TextSize,
+    text::TextSize,
+    RawSyntaxKind,
 };
 use sptr::Strict;
 use triomphe::Arc;
@@ -11,7 +11,7 @@ use triomphe::Arc;
 #[repr(align(2))] // to use 1 bit for pointer tagging. NB: this is an at-least annotation
 #[derive(Debug, PartialEq, Eq, Hash, Copy, Clone)]
 pub(super) struct GreenTokenData {
-    pub(super) kind:     SyntaxKind,
+    pub(super) kind:     RawSyntaxKind,
     pub(super) text:     Option<TokenKey>,
     pub(super) text_len: TextSize,
 }
@@ -54,9 +54,9 @@ impl GreenToken {
         }
     }
 
-    /// [`SyntaxKind`] of this Token.
+    /// [`RawSyntaxKind`] of this Token.
     #[inline]
-    pub fn kind(&self) -> SyntaxKind {
+    pub fn kind(&self) -> RawSyntaxKind {
         self.data().kind
     }
 

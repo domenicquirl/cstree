@@ -1,7 +1,9 @@
 use super::*;
 use cstree::{
+    build::{GreenNodeBuilder, NodeCache},
     interning::{new_interner, Resolver},
-    GreenNodeBuilder, NodeCache, SyntaxKind, TextRange,
+    text::TextRange,
+    RawSyntaxKind,
 };
 
 fn build_tree<D>(root: &Element<'_>) -> (SyntaxNode<D>, impl Resolver) {
@@ -33,20 +35,20 @@ fn tree_with_eq_tokens() -> Element<'static> {
 fn create() {
     let tree = two_level_tree();
     let (tree, resolver) = build_tree::<()>(&tree);
-    assert_eq!(tree.syntax_kind(), SyntaxKind(0));
-    assert_eq!(tree.kind(), SyntaxKind(0));
+    assert_eq!(tree.syntax_kind(), RawSyntaxKind(0));
+    assert_eq!(tree.kind(), RawSyntaxKind(0));
     {
         let leaf1_0 = tree.children().nth(1).unwrap().children_with_tokens().next().unwrap();
         let leaf1_0 = leaf1_0.into_token().unwrap();
-        assert_eq!(leaf1_0.syntax_kind(), SyntaxKind(5));
-        assert_eq!(leaf1_0.kind(), SyntaxKind(5));
+        assert_eq!(leaf1_0.syntax_kind(), RawSyntaxKind(5));
+        assert_eq!(leaf1_0.kind(), RawSyntaxKind(5));
         assert_eq!(leaf1_0.resolve_text(&resolver), "1.0");
         assert_eq!(leaf1_0.text_range(), TextRange::at(6.into(), 3.into()));
     }
     {
         let node2 = tree.children().nth(2).unwrap();
-        assert_eq!(node2.syntax_kind(), SyntaxKind(6));
-        assert_eq!(node2.kind(), SyntaxKind(6));
+        assert_eq!(node2.syntax_kind(), RawSyntaxKind(6));
+        assert_eq!(node2.kind(), RawSyntaxKind(6));
         assert_eq!(node2.children_with_tokens().count(), 3);
         assert_eq!(node2.resolve_text(&resolver), "2.02.12.2");
     }
@@ -56,7 +58,7 @@ fn create() {
 fn token_text_eq() {
     let tree = tree_with_eq_tokens();
     let (tree, _) = build_tree::<()>(&tree);
-    assert_eq!(tree.kind(), SyntaxKind(0));
+    assert_eq!(tree.kind(), RawSyntaxKind(0));
 
     let leaf0_0 = tree.children().next().unwrap().children_with_tokens().next().unwrap();
     let leaf0_0 = leaf0_0.into_token().unwrap();
@@ -148,7 +150,7 @@ fn inline_resolver() {
         assert_eq!(leaf1_0.text(), "1.0");
         assert_eq!(leaf1_0.text_range(), TextRange::at(6.into(), 3.into()));
         assert_eq!(format!("{}", leaf1_0), leaf1_0.text());
-        assert_eq!(format!("{:?}", leaf1_0), "SyntaxKind(5)@6..9 \"1.0\"");
+        assert_eq!(format!("{:?}", leaf1_0), "RawSyntaxKind(5)@6..9 \"1.0\"");
     }
     {
         let node2 = tree.children().nth(2).unwrap();
@@ -156,13 +158,13 @@ fn inline_resolver() {
         let resolver = node2.resolver();
         assert_eq!(node2.resolve_text(resolver.as_ref()), node2.text());
         assert_eq!(format!("{}", node2).as_str(), node2.text());
-        assert_eq!(format!("{:?}", node2), "SyntaxKind(6)@9..18");
+        assert_eq!(format!("{:?}", node2), "RawSyntaxKind(6)@9..18");
         assert_eq!(
             format!("{:#?}", node2),
-            r#"SyntaxKind(6)@9..18
-  SyntaxKind(7)@9..12 "2.0"
-  SyntaxKind(8)@12..15 "2.1"
-  SyntaxKind(9)@15..18 "2.2"
+            r#"RawSyntaxKind(6)@9..18
+  RawSyntaxKind(7)@9..12 "2.0"
+  RawSyntaxKind(8)@12..15 "2.1"
+  RawSyntaxKind(9)@15..18 "2.2"
 "#
         );
     }
@@ -177,7 +179,7 @@ fn assert_debug_display() {
     f::<ResolvedToken>();
     f::<ResolvedElement>();
     f::<ResolvedElementRef<'static>>();
-    f::<cstree::NodeOrToken<String, u128>>();
+    f::<cstree::util::NodeOrToken<String, u128>>();
 
     fn dbg<T: fmt::Debug>() {}
     dbg::<GreenNodeBuilder<'static, 'static, TestLang>>();

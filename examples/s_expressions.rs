@@ -30,7 +30,7 @@ use SyntaxKind::*;
 /// in order to not need the user's `enum SyntaxKind` as a type parameter.
 ///
 /// First, to easily pass the enum variants into cstree via `.into()`:
-impl From<SyntaxKind> for cstree::SyntaxKind {
+impl From<SyntaxKind> for cstree::RawSyntaxKind {
     fn from(kind: SyntaxKind) -> Self {
         Self(kind as u16)
     }
@@ -44,12 +44,12 @@ pub enum Lang {}
 impl cstree::Language for Lang {
     type Kind = SyntaxKind;
 
-    fn kind_from_raw(raw: cstree::SyntaxKind) -> Self::Kind {
+    fn kind_from_raw(raw: cstree::RawSyntaxKind) -> Self::Kind {
         assert!(raw.0 <= Root as u16);
         unsafe { std::mem::transmute::<u16, SyntaxKind>(raw.0) }
     }
 
-    fn kind_to_raw(kind: Self::Kind) -> cstree::SyntaxKind {
+    fn kind_to_raw(kind: Self::Kind) -> cstree::RawSyntaxKind {
         kind.into()
     }
 
@@ -66,11 +66,11 @@ impl cstree::Language for Lang {
 /// offsets and parent pointers.
 /// cstree also deduplicates the actual source string in addition to the tree nodes, so we will need
 /// the Resolver to get the real text back from the interned representation.
-use cstree::{interning::Resolver, GreenNode, Language};
+use cstree::{green::GreenNode, interning::Resolver, Language};
 
 /// You can construct GreenNodes by hand, but a builder is helpful for top-down parsers: it maintains
 /// a stack of currently in-progress nodes.
-use cstree::GreenNodeBuilder;
+use cstree::build::GreenNodeBuilder;
 
 /// The parse results are stored as a "green tree".
 /// We'll discuss how to work with the results later.
@@ -210,11 +210,11 @@ fn parse(text: &str) -> Parse<impl Resolver> {
 /// To work with the parse results we need a view into the green tree - the syntax tree.
 /// It is also immutable, like a GreenNode, but it contains parent pointers, offsets, and has
 /// identity semantics.
-type SyntaxNode = cstree::SyntaxNode<Lang>;
+type SyntaxNode = cstree::syntax::SyntaxNode<Lang>;
 #[allow(unused)]
-type SyntaxToken = cstree::SyntaxToken<Lang>;
+type SyntaxToken = cstree::syntax::SyntaxToken<Lang>;
 #[allow(unused)]
-type SyntaxElement = cstree::SyntaxElement<Lang>;
+type SyntaxElement = cstree::syntax::SyntaxElement<Lang>;
 
 impl<I> Parse<I> {
     fn syntax(&self) -> SyntaxNode {
@@ -352,8 +352,10 @@ impl ast::Atom {
     }
 
     fn text<'r>(&self, resolver: &'r impl Resolver) -> &'r str {
+        use cstree::util::NodeOrToken;
+
         match self.0.green().children().next() {
-            Some(cstree::NodeOrToken::Token(token)) => Lang::static_text(Lang::kind_from_raw(token.kind()))
+            Some(NodeOrToken::Token(token)) => Lang::static_text(Lang::kind_from_raw(token.kind()))
                 .or_else(|| token.text(resolver))
                 .unwrap(),
             _ => unreachable!(),
@@ -419,7 +421,7 @@ nan
 /// Split the input string into a flat list of tokens (such as L_PAREN, WORD, and WHITESPACE)
 fn lex(text: &str) -> VecDeque<(SyntaxKind, &str)> {
     fn tok(t: SyntaxKind) -> m_lexer::TokenKind {
-        m_lexer::TokenKind(cstree::SyntaxKind::from(t).0)
+        m_lexer::TokenKind(cstree::RawSyntaxKind::from(t).0)
     }
     fn kind(t: m_lexer::TokenKind) -> SyntaxKind {
         match t.0 {

@@ -42,7 +42,7 @@ impl Bool for UseStaticText {
 impl<T: Bool> Language for TestLang<T> {
     type Kind = TestKind;
 
-    fn kind_from_raw(raw: SyntaxKind) -> Self::Kind {
+    fn kind_from_raw(raw: RawSyntaxKind) -> Self::Kind {
         if raw.0 == u16::MAX - 1 {
             TestKind::Plus
         } else {
@@ -50,10 +50,10 @@ impl<T: Bool> Language for TestLang<T> {
         }
     }
 
-    fn kind_to_raw(kind: Self::Kind) -> SyntaxKind {
+    fn kind_to_raw(kind: Self::Kind) -> RawSyntaxKind {
         match kind {
-            TestKind::Element { n } => SyntaxKind(n),
-            TestKind::Plus => SyntaxKind(u16::MAX - 1),
+            TestKind::Element { n } => RawSyntaxKind(n),
+            TestKind::Plus => RawSyntaxKind(u16::MAX - 1),
         }
     }
 

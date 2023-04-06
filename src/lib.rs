@@ -2,7 +2,7 @@
 //! "Traditional" abstract syntax trees (ASTs) usually contain different types of nodes which represent information
 //! about the source text of a document and reduce this information to the minimal amount necessary to correctly
 //! interpret it. In contrast, CSTs are lossless representations of the entire input where all tree nodes are
-//! represented uniformly (i.e. the nodes are _untyped_), but include a [`SyntaxKind`] field to determine the kind of
+//! represented uniformly (i.e. the nodes are _untyped_), but include a [`RawSyntaxKind`] field to determine the kind of
 //! node.
 //! One of the big advantages of this representation is not only that it can recreate the original source exactly, but
 //! also that it lends itself very well to the representation of _incomplete or erroneous_ trees and is thus very suited
@@ -39,15 +39,19 @@
 //! concrete syntax trees as its output. We'll talk more about parsing below -- first, let's have a look at what needs
 //! to happen to go from input text to a `cstree` syntax tree:
 //!
-//!  1. Define a [`SyntaxKind`] enum and implement [`Language`]
-//!  2. Create a [`GreenNodeBuilder`] and call [`start_node`](GreenNodeBuilder::start_node),
-//! [`token`](GreenNodeBuilder::token) and [`finish_node`](GreenNodeBuilder::finish_node) from your parser
-//!  3. Call [`SyntaxNode::new_root`] or [`SyntaxNode::new_root_with_resolver`] with the resulting [`GreenNode`] to
-//! obtain a syntax tree that you can traverse
+//!  1. Define a [`RawSyntaxKind`] enum and implement [`Language`]
+//!
+//!  2. Create a [`GreenNodeBuilder`](build::GreenNodeBuilder) and call
+//! [`start_node`](build::GreenNodeBuilder::start_node), [`token`](build::GreenNodeBuilder::token) and
+//! [`finish_node`](build::GreenNodeBuilder::finish_node) from your parser  
+//!
+//!  3. Call [`SyntaxNode::new_root`](syntax::SyntaxNode::new_root) or
+//! [`SyntaxNode::new_root_with_resolver`](syntax::SyntaxNode::new_root_with_resolver) with the resulting
+//! [`GreenNode`](green::GreenNode) to obtain a syntax tree that you can traverse
 //!
 //! ### Parsing into a green tree
 //! In contrast to parsers that return abstract syntax trees,
-//!   * the node for any element in the language grammar will have the same type: [`GreenNode`]
+//!   * the node for any element in the language grammar will have the same type: [`GreenNode`](green::GreenNode)
 //!   * instead of parsing a lot of inner elements and then wrapping them in an outer AST struct, building trees with
 //!     `cstree` follows the source code more closely in that you tell `cstree` about each new element you enter and all
 //!     tokens that the parser consumes
@@ -73,9 +77,9 @@
 #![cfg_attr(doc_cfg, feature(doc_cfg))]
 
 #[allow(unsafe_code)]
-mod green;
+pub mod green;
 #[allow(unsafe_code)]
-mod syntax;
+pub mod syntax;
 
 #[allow(unsafe_code)]
 pub mod interning;
@@ -87,17 +91,45 @@ mod utility_types;
 
 use std::fmt;
 
-// Reexport types for working with strings.
-// TODO: wrap in submodule
-pub use text_size::{TextLen, TextRange, TextSize};
+/// `RawSyntaxKind` is a type tag for each token or node.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct RawSyntaxKind(pub u16);
 
-// TODO: clean up module structure
-#[doc(inline)]
-pub use crate::syntax::*;
-pub use crate::{
-    green::{Checkpoint, GreenNode, GreenNodeBuilder, GreenNodeChildren, GreenToken, NodeCache, SyntaxKind},
-    utility_types::{Direction, NodeOrToken, TokenAtOffset, WalkEvent},
-};
+/// Typesafe representations of text ranges and sizes.
+pub mod text {
+    pub use crate::syntax::SyntaxText;
+    pub use text_size::{TextLen, TextRange, TextSize};
+}
+
+/// A tree builder for the construction of syntax trees.
+///
+/// Please refer to the documentation on [`GreenNodeBuilder`](build::GreenNodeBuilder) itself and the ["getting started"
+/// section](../index.html#getting-started) from the top-level documentation for an introduction to how to build a
+/// syntax tree.
+pub mod build {
+    pub use crate::green::builder::{Checkpoint, GreenNodeBuilder, NodeCache};
+}
+
+/// A convenient collection of the most used parts of `cstree`.
+pub mod prelude {
+    pub use crate::{
+        build::GreenNodeBuilder,
+        green::{GreenNode, GreenToken},
+        syntax::{SyntaxElement, SyntaxNode, SyntaxToken},
+        Language, RawSyntaxKind,
+    };
+}
+
+/// Types for syntax tree traversal / moving through trees.
+pub mod traversal {
+    pub use crate::utility_types::{Direction, WalkEvent};
+}
+
+/// Utility types. It shouldn't be needed to reference these directly, but they are returned in several places in
+/// `cstree` and may come in handy.
+pub mod util {
+    pub use crate::utility_types::{NodeOrToken, TokenAtOffset};
+}
 
 /// Synchronization primitives.
 pub mod sync {
@@ -134,13 +166,13 @@ pub mod sync {
 /// impl cstree::Language for Lang {
 ///     type Kind = SyntaxKind;
 ///
-///     fn kind_from_raw(raw: cstree::SyntaxKind) -> Self::Kind {
+///     fn kind_from_raw(raw: cstree::RawSyntaxKind) -> Self::Kind {
 ///         assert!(raw.0 <= __LAST as u16);
 ///         unsafe { std::mem::transmute::<u16, SyntaxKind>(raw.0) }
 ///     }
 ///
-///     fn kind_to_raw(kind: Self::Kind) -> cstree::SyntaxKind {
-///         cstree::SyntaxKind(kind as u16)
+///     fn kind_to_raw(kind: Self::Kind) -> cstree::RawSyntaxKind {
+///         cstree::RawSyntaxKind(kind as u16)
 ///     }
 ///
 ///     fn static_text(kind: Self::Kind) -> Option<&'static str> {
@@ -152,16 +184,18 @@ pub mod sync {
 ///     }
 /// }
 /// ```
+///
+/// [`SyntaxNode`]: crate::syntax::SyntaxNode
 pub trait Language: Sized + Clone + Copy + fmt::Debug + Eq + Ord + std::hash::Hash {
     /// A type that represents what items in your Language can be.
     /// Typically, this is an `enum` with variants such as `Identifier`, `Literal`, ...
     type Kind: Sized + Clone + Copy + fmt::Debug;
 
     /// Construct a semantic item kind from the compact representation.
-    fn kind_from_raw(raw: SyntaxKind) -> Self::Kind;
+    fn kind_from_raw(raw: RawSyntaxKind) -> Self::Kind;
 
     /// Convert a semantic item kind into a more compact representation.
-    fn kind_to_raw(kind: Self::Kind) -> SyntaxKind;
+    fn kind_to_raw(kind: Self::Kind) -> RawSyntaxKind;
 
     /// Fixed text for a particular syntax kind.
     /// Implement for kinds that will only ever represent the same text, such as punctuation (like a
@@ -176,8 +210,8 @@ pub trait Language: Sized + Clone + Copy + fmt::Debug + Eq + Ord + std::hash::Ha
 #[doc(hidden)]
 #[allow(unsafe_code, unused)]
 pub mod testing {
-    pub use crate::*;
-    pub fn parse<L: Language, I>(_b: &mut super::GreenNodeBuilder<L, I>, _s: &str) {}
+    pub use crate::prelude::*;
+    pub fn parse<L: Language, I>(_b: &mut GreenNodeBuilder<L, I>, _s: &str) {}
 
     #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
     #[repr(u16)]
@@ -200,13 +234,13 @@ pub mod testing {
     impl Language for TestLang {
         type Kind = TestSyntaxKind;
 
-        fn kind_from_raw(raw: SyntaxKind) -> Self::Kind {
+        fn kind_from_raw(raw: RawSyntaxKind) -> Self::Kind {
             assert!(raw.0 <= TestSyntaxKind::__LAST as u16);
             unsafe { std::mem::transmute::<u16, TestSyntaxKind>(raw.0) }
         }
 
-        fn kind_to_raw(kind: Self::Kind) -> SyntaxKind {
-            SyntaxKind(kind as u16)
+        fn kind_to_raw(kind: Self::Kind) -> RawSyntaxKind {
+            RawSyntaxKind(kind as u16)
         }
 
         fn static_text(kind: Self::Kind) -> Option<&'static str> {

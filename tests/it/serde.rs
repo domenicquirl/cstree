@@ -1,7 +1,11 @@
 use crate::{build_recursive, build_tree_with_cache, ResolvedNode};
 
 use super::{Element, SyntaxNode, TestLang};
-use cstree::{interning::new_interner, GreenNodeBuilder, NodeCache, NodeOrToken};
+use cstree::{
+    build::{GreenNodeBuilder, NodeCache},
+    interning::new_interner,
+    util::NodeOrToken,
+};
 use serde_test::Token;
 use std::fmt;
 

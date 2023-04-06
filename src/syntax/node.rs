@@ -2,9 +2,12 @@ use super::*;
 #[cfg(feature = "serialize")]
 use crate::serde_impls::{SerializeWithData, SerializeWithResolver};
 use crate::{
-    green::{GreenElementRef, SyntaxKind},
+    green::{GreenElementRef, GreenNode},
     interning::{Resolver, TokenKey},
-    *,
+    text::*,
+    traversal::*,
+    util::*,
+    Language, RawSyntaxKind,
 };
 use parking_lot::RwLock;
 use std::{
@@ -114,14 +117,15 @@ impl<L: Language, D> SyntaxNode<L, D> {
         }
     }
 
-    /// Turns this node into a [`ResolvedNode`], but only if there is a resolver associated with this tree.
+    /// Turns this node into a [`ResolvedNode`](crate::syntax::ResolvedNode), but only if there is a resolver associated
+    /// with this tree.
     #[inline]
     pub fn try_resolved(&self) -> Option<&ResolvedNode<L, D>> {
         // safety: we only coerce if `resolver` exists
         self.resolver().map(|_| unsafe { ResolvedNode::coerce_ref(self) })
     }
 
-    /// Turns this node into a [`ResolvedNode`].
+    /// Turns this node into a [`ResolvedNode`](crate::syntax::ResolvedNode).
     /// # Panics
     /// If there is no resolver associated with this tree.
     #[inline]
@@ -328,6 +332,8 @@ impl<L: Language, D> SyntaxNode<L, D> {
     /// # Example
     /// ```
     /// # use cstree::testing::*;
+    /// use cstree::syntax::ResolvedNode;
+    ///
     /// let mut builder: GreenNodeBuilder<MyLanguage> = GreenNodeBuilder::new();
     /// builder.start_node(Root);
     /// builder.token(Identifier, "content");
@@ -517,7 +523,7 @@ impl<L: Language, D> SyntaxNode<L, D> {
 
     /// The internal representation of the kind of this node.
     #[inline]
-    pub fn syntax_kind(&self) -> SyntaxKind {
+    pub fn syntax_kind(&self) -> RawSyntaxKind {
         self.green().kind()
     }
 

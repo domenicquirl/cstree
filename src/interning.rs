@@ -71,7 +71,8 @@
 //! [`Resolver`] and [`Interner`] will be implemented for `&interner` if `interner` is multi-threaded:
 //!
 //! ```
-//! # use cstree::testing::{*, interning::*, Language as _};
+//! # use cstree::testing::{*, Language as _};
+//! # use cstree::interning::*;
 //!
 //! let interner = new_threaded_interner();
 //! let mut builder: GreenNodeBuilder<MyLanguage, &MultiThreadedTokenInterner> =
@@ -96,11 +97,11 @@
 //!
 //! [crate documentation]: crate
 //! [`Language::static_text`]: crate::Language::static_text
-//! [`GreenNodeBuilder::token`]: crate::GreenNodeBuilder::token
-//! [`GreenNodeBuilder::new`]: crate::GreenNodeBuilder::new
-//! [`finish`]: crate::GreenNodeBuilder::finish
-//! [`NodeCache::into_interner`]: crate::NodeCache::into_interner
-//! [`SyntaxNode::new_root_with_resolver`]: crate::SyntaxNode::new_root_with_resolver
+//! [`GreenNodeBuilder::token`]: crate::build::GreenNodeBuilder::token
+//! [`GreenNodeBuilder::new`]: crate::build::GreenNodeBuilder::new
+//! [`finish`]: crate::build::GreenNodeBuilder::finish
+//! [`NodeCache::into_interner`]: crate::build::NodeCache::into_interner
+//! [`SyntaxNode::new_root_with_resolver`]: crate::syntax::SyntaxNode::new_root_with_resolver
 //! [`lasso`]: lasso
 //! [the `salsa_compat` module documentation]: salsa_compat
 
@@ -134,8 +135,6 @@ pub mod salsa_compat;
 
 use core::fmt;
 use std::num::NonZeroU32;
-
-pub use fxhash::FxBuildHasher as Hasher;
 
 /// The intern key type for the source text of [`GreenToken`s](crate::green::GreenToken).
 /// Each unique key uniquely identifies a deduplicated, interned source string.

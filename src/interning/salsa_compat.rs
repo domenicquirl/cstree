@@ -22,7 +22,6 @@
 //!
 //! ```
 //! # use cstree::testing::*;
-//! # use cstree::GreenNodeBuilder;
 //! # use cstree::interning::salsa_compat::salsa;
 //! # use cstree::impl_cstree_interning_for_salsa;
 //! // Define the `salsa` jar, database and intern Id

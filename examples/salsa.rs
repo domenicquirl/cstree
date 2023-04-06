@@ -1,6 +1,6 @@
 #![cfg(feature = "salsa_2022_compat")]
 
-use cstree::GreenNodeBuilder;
+use cstree::{build::GreenNodeBuilder, impl_cstree_interning_for_salsa};
 
 #[salsa::jar(db = Db)]
 pub struct Jar(crate::SourceId);
@@ -24,7 +24,7 @@ impl salsa::Database for Database {}
 
 impl_cstree_interning_for_salsa!(impl Interning for Database => text as SourceId);
 
-use cstree::testing::*;
+use cstree::{syntax::SyntaxNode, testing::*};
 
 fn main() {
     let db = Database::default();

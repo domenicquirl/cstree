@@ -12,9 +12,12 @@ use std::{
 use text_size::{TextRange, TextSize};
 
 use crate::{
+    green::GreenNode,
     interning::{Resolver, TokenKey},
-    Direction, GreenNode, Language, NodeOrToken, SyntaxElementRef, SyntaxKind, SyntaxNode, SyntaxText, SyntaxToken,
-    TokenAtOffset, WalkEvent,
+    syntax::*,
+    traversal::*,
+    util::*,
+    Language, RawSyntaxKind,
 };
 
 /// Syntax tree node that is guaranteed to belong to a tree that contains an associated
@@ -109,7 +112,7 @@ impl<L: Language, D> DerefMut for ResolvedToken<L, D> {
 /// An element of the tree that is guaranteed to belong to a tree that contains an associated
 /// [`Resolver`](lasso::Resolver), can be either a node or a token.
 /// # See also
-/// [`SyntaxElement`](crate::SyntaxElement)
+/// [`SyntaxElement`](crate::syntax::SyntaxElement)
 pub type ResolvedElement<L, D = ()> = NodeOrToken<ResolvedNode<L, D>, ResolvedToken<L, D>>;
 
 impl<L: Language, D> From<ResolvedNode<L, D>> for ResolvedElement<L, D> {
@@ -575,7 +578,7 @@ impl<L: Language, D> ResolvedElement<L, D> {
 
     /// The internal representation of the kind of this element.
     #[inline]
-    pub fn syntax_kind(&self) -> SyntaxKind {
+    pub fn syntax_kind(&self) -> RawSyntaxKind {
         match self {
             NodeOrToken::Node(it) => it.syntax_kind(),
             NodeOrToken::Token(it) => it.syntax_kind(),
@@ -658,7 +661,7 @@ impl<'a, L: Language, D> ResolvedElementRef<'a, L, D> {
 
     /// The internal representation of the kind of this element.
     #[inline]
-    pub fn syntax_kind(&self) -> SyntaxKind {
+    pub fn syntax_kind(&self) -> RawSyntaxKind {
         match self {
             NodeOrToken::Node(it) => it.syntax_kind(),
             NodeOrToken::Token(it) => it.syntax_kind(),

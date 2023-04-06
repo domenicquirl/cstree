@@ -1,8 +1,12 @@
 //! Serialization and Deserialization for syntax trees.
 
 use crate::{
+    build::GreenNodeBuilder,
     interning::{Resolver, TokenKey},
-    GreenNodeBuilder, Language, NodeOrToken, ResolvedNode, SyntaxKind, SyntaxNode, WalkEvent,
+    syntax::{ResolvedNode, SyntaxNode},
+    traversal::WalkEvent,
+    util::NodeOrToken,
+    Language, RawSyntaxKind,
 };
 use serde::{
     de::{Error, SeqAccess, Visitor},
@@ -77,8 +81,8 @@ enum Event<'text> {
     /// The second parameter indicates if this node needs data.
     /// If the boolean is true, the next element inside the data list
     /// must be attached to this node.
-    EnterNode(SyntaxKind, bool),
-    Token(SyntaxKind, &'text str),
+    EnterNode(RawSyntaxKind, bool),
+    Token(RawSyntaxKind, &'text str),
     LeaveNode,
 }
 
@@ -235,7 +239,7 @@ where
     }
 }
 
-impl Serialize for SyntaxKind {
+impl Serialize for RawSyntaxKind {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
@@ -244,7 +248,7 @@ impl Serialize for SyntaxKind {
     }
 }
 
-impl<'de> Deserialize<'de> for SyntaxKind {
+impl<'de> Deserialize<'de> for RawSyntaxKind {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,

@@ -9,8 +9,10 @@ use text_size::{TextRange, TextSize};
 
 use super::*;
 use crate::{
+    green::{GreenNode, GreenToken},
     interning::{Resolver, TokenKey},
-    Direction, GreenNode, GreenToken, Language, SyntaxKind,
+    traversal::Direction,
+    Language, RawSyntaxKind,
 };
 
 /// Syntax tree token.
@@ -108,14 +110,15 @@ impl<L: Language, D> SyntaxToken<L, D> {
         self.parent.resolver()
     }
 
-    /// Turns this token into a [`ResolvedToken`], but only if there is a resolver associated with this tree.
+    /// Turns this token into a [`ResolvedToken`](crate::syntax::ResolvedToken), but only if there is a resolver
+    /// associated with this tree.
     #[inline]
     pub fn try_resolved(&self) -> Option<&ResolvedToken<L, D>> {
         // safety: we only coerce if `resolver` exists
         self.resolver().map(|_| unsafe { ResolvedToken::coerce_ref(self) })
     }
 
-    /// Turns this token into a [`ResolvedToken`].
+    /// Turns this token into a [`ResolvedToken`](crate::syntax::ResolvedToken).
     /// # Panics
     /// If there is no resolver associated with this tree.
     #[inline]
@@ -155,7 +158,7 @@ impl<L: Language, D> SyntaxToken<L, D> {
 
     /// The internal representation of the kind of this token.
     #[inline]
-    pub fn syntax_kind(&self) -> SyntaxKind {
+    pub fn syntax_kind(&self) -> RawSyntaxKind {
         self.green().kind()
     }
 
@@ -193,6 +196,7 @@ impl<L: Language, D> SyntaxToken<L, D> {
     ///
     /// ```
     /// # use cstree::testing::*;
+    /// # use cstree::build::*;
     /// let mut builder: GreenNodeBuilder<MyLanguage> = GreenNodeBuilder::new();
     /// # builder.start_node(Root);
     /// # builder.token(Identifier, "x");

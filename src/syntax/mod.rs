@@ -36,6 +36,7 @@ pub use text::SyntaxText;
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use crate::testing::*;
 
     #[test]
