@@ -284,7 +284,7 @@ impl<L: Language, D> SyntaxToken<L, D> {
     /// implementation by re-using the interner in both.
     /// ```
     /// # use cstree::testing::*;
-    /// use cstree::interning::{new_interner, Hasher, TokenInterner, TokenKey};
+    /// use cstree::interning::{new_interner, TokenInterner, TokenKey};
     /// struct TypeTable {
     ///     // ...
     /// }
