@@ -102,7 +102,7 @@
 //! [`NodeCache::into_interner`]: crate::NodeCache::into_interner
 //! [`SyntaxNode::new_root_with_resolver`]: crate::SyntaxNode::new_root_with_resolver
 //! [`lasso`]: lasso
-//! [the `salsa_compat` module documentation]: salsa_2022_compat
+//! [the `salsa_compat` module documentation]: salsa_compat
 
 mod traits;
 pub use self::traits::*;
@@ -137,7 +137,7 @@ use std::num::NonZeroU32;
 
 pub use fxhash::FxBuildHasher as Hasher;
 
-/// The intern key type for the source text of [`GreenToken`s](crate::green::token::GreenToken).
+/// The intern key type for the source text of [`GreenToken`s](crate::green::GreenToken).
 /// Each unique key uniquely identifies a deduplicated, interned source string.
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 #[repr(transparent)]

@@ -82,7 +82,7 @@ pub use multi_threaded::MultiThreadedTokenInterner;
 mod multi_threaded {
     use super::*;
 
-    /// A threadsafe [`Interner`] for deduplicating [`GreenToken`](crate::green::token::GreenToken) strings.
+    /// A threadsafe [`Interner`] for deduplicating [`GreenToken`](crate::green::GreenToken) strings.
     ///
     /// Note that [`Interner`] and [`Resolver`] are also implemented for  `&MultiThreadTokenInterner` so you can pass
     /// `&mut &interner` in shared contexts.
