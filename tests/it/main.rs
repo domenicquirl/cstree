@@ -45,7 +45,7 @@ impl Language for TestLang {
     }
 }
 
-pub fn build_tree_with_cache<'c, 'i, I>(root: &Element<'_>, cache: &'c mut NodeCache<'i, I>) -> GreenNode
+pub fn build_tree_with_cache<I>(root: &Element<'_>, cache: &mut NodeCache<'_, I>) -> GreenNode
 where
     I: Interner,
 {
@@ -56,11 +56,7 @@ where
     node
 }
 
-pub fn build_recursive<'c, 'i, L, I>(
-    root: &Element<'_>,
-    builder: &mut GreenNodeBuilder<'c, 'i, L, I>,
-    mut from: u16,
-) -> u16
+pub fn build_recursive<L, I>(root: &Element<'_>, builder: &mut GreenNodeBuilder<'_, '_, L, I>, mut from: u16) -> u16
 where
     L: Language<Kind = RawSyntaxKind>,
     I: Interner,
@@ -74,7 +70,7 @@ where
             builder.finish_node();
         }
         Element::Token(text) => {
-            builder.token(RawSyntaxKind(from), *text);
+            builder.token(RawSyntaxKind(from), text);
         }
     }
     from

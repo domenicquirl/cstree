@@ -166,8 +166,8 @@ impl<L: Language, D> SyntaxElement<L, D> {
         ref_count: *mut AtomicU32,
     ) -> SyntaxElement<L, D> {
         match element {
-            NodeOrToken::Node(node) => SyntaxNode::new_child(node, parent, index as u32, offset, ref_count).into(),
-            NodeOrToken::Token(_) => SyntaxToken::new(parent, index as u32, offset).into(),
+            NodeOrToken::Node(node) => SyntaxNode::new_child(node, parent, index, offset, ref_count).into(),
+            NodeOrToken::Token(_) => SyntaxToken::new(parent, index, offset).into(),
         }
     }
 

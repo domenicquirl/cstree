@@ -71,7 +71,7 @@ impl<T: Bool> Language for TestLang<T> {
     }
 }
 
-pub fn build_tree_with_cache<'c, 'i, T: Bool, I>(root: &Element<'_>, cache: &'c mut NodeCache<'i, I>) -> GreenNode
+pub fn build_tree_with_cache<T: Bool, I>(root: &Element<'_>, cache: &mut NodeCache<'_, I>) -> GreenNode
 where
     I: Interner,
 {
@@ -82,9 +82,9 @@ where
     node
 }
 
-pub fn build_recursive<'c, 'i, T: Bool, I>(
+pub fn build_recursive<T: Bool, I>(
     root: &Element<'_>,
-    builder: &mut GreenNodeBuilder<'c, 'i, TestLang<T>, I>,
+    builder: &mut GreenNodeBuilder<'_, '_, TestLang<T>, I>,
     mut from: u16,
 ) -> u16
 where
@@ -99,7 +99,7 @@ where
             builder.finish_node();
         }
         Element::Token(text) => {
-            builder.token(TestKind::Element { n: from }, *text);
+            builder.token(TestKind::Element { n: from }, text);
         }
         Element::Plus => {
             builder.token(TestKind::Plus, "+");

@@ -149,7 +149,7 @@ where
     /// See also [`interner_mut`](NodeCache::interner_mut).
     #[inline]
     pub fn interner(&self) -> &I {
-        &*self.interner
+        &self.interner
     }
 
     /// Get a mutable reference to the interner used to deduplicate source text (strings).
@@ -165,7 +165,7 @@ where
     /// ```
     #[inline]
     pub fn interner_mut(&mut self) -> &mut I {
-        &mut *self.interner
+        &mut self.interner
     }
 
     /// If this node cache was constructed with [`new`](NodeCache::new) or
@@ -366,7 +366,7 @@ where
     /// See also [`interner_mut`](GreenNodeBuilder::interner_mut).
     #[inline]
     pub fn interner(&self) -> &I {
-        &*self.cache.interner
+        &self.cache.interner
     }
 
     /// Get a mutable reference to the interner used to deduplicate source text (strings).
@@ -384,7 +384,7 @@ where
     /// ```
     #[inline]
     pub fn interner_mut(&mut self) -> &mut I {
-        &mut *self.cache.interner
+        &mut self.cache.interner
     }
 
     /// Add a new token to the current branch without storing an explicit section of text.
