@@ -11,6 +11,7 @@
  * Internal performance improvements for up to 10% faster tree building by avoiding unnecessary duplication of elements.
  * Use `NonNull` for the internal representation of `SyntaxNode`, meaning it now benefits from niche optimizations (`Option<SyntaxNode>` is now the same size as `SyntaxNode` itself: the size of a pointer).
  * `SyntaxKind` has been renamed to `RawSyntaxKind` to no longer conflict with user-defined `SyntaxKind` enumerations.
+   * `RawSyntaxKind` has been changed to use a 32-bit index internally, which means existing `Language` implementations and syntax kind `enum`s need to be adjusted to `#[repr(u32)]` and the corresponding conversions.
  * The crate's export module structure has been reorganized to give different groups of definitions their own submodules. A `cstree::prelude` module is available, containing the most commonly needed types that were previously accessible via `use cstree::*`. Otherwise, the module structure is now as follows:
    * `cstree`
      * `Language`

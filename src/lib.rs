@@ -58,12 +58,12 @@
 //!
 //! First, we need to list the different part of our language's grammar.
 //! We can do that using an `enum` with a unit variant for any terminal and non-terminal.
-//! The `enum` needs to be convertible to a `u16`, so we use the `repr` attribute to ensure it uses the correct
+//! The `enum` needs to be convertible to a `u32`, so we use the `repr` attribute to ensure it uses the correct
 //! representation.
 //!
 //! ```rust,ignore
 //! #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-//! #[repr(u16)]
+//! #[repr(u32)]
 //! enum SyntaxKind {
 //!     /* Tokens */
 //!     Int,    // 42
@@ -112,7 +112,7 @@
 //!     }
 //!
 //!     fn kind_to_raw(kind: Self::Kind) -> RawSyntaxKind {
-//!         RawSyntaxKind(kind as u16)
+//!         RawSyntaxKind(kind as u32)
 //!     }
 //!
 //!     fn static_text(kind: Self::Kind) -> Option<&'static str> {
@@ -368,7 +368,7 @@ use std::fmt;
 
 /// `RawSyntaxKind` is a type tag for each token or node.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct RawSyntaxKind(pub u16);
+pub struct RawSyntaxKind(pub u32);
 
 /// Typesafe representations of text ranges and sizes.
 pub mod text {
@@ -423,7 +423,7 @@ pub mod sync {
 /// ```
 /// #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 /// # #[allow(non_camel_case_types)]
-/// #[repr(u16)]
+/// #[repr(u32)]
 /// enum SyntaxKind {
 ///     Plus,       // `+`
 ///     Minus,      // `-`
@@ -442,12 +442,12 @@ pub mod sync {
 ///     type Kind = SyntaxKind;
 ///
 ///     fn kind_from_raw(raw: cstree::RawSyntaxKind) -> Self::Kind {
-///         assert!(raw.0 <= __LAST as u16);
-///         unsafe { std::mem::transmute::<u16, SyntaxKind>(raw.0) }
+///         assert!(raw.0 <= __LAST as u32);
+///         unsafe { std::mem::transmute::<u32, SyntaxKind>(raw.0) }
 ///     }
 ///
 ///     fn kind_to_raw(kind: Self::Kind) -> cstree::RawSyntaxKind {
-///         cstree::RawSyntaxKind(kind as u16)
+///         cstree::RawSyntaxKind(kind as u32)
 ///     }
 ///
 ///     fn static_text(kind: Self::Kind) -> Option<&'static str> {
@@ -489,7 +489,7 @@ pub mod testing {
     pub fn parse<L: Language, I>(_b: &mut GreenNodeBuilder<L, I>, _s: &str) {}
 
     #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-    #[repr(u16)]
+    #[repr(u32)]
     #[allow(non_camel_case_types)]
     pub enum TestSyntaxKind {
         Plus,
@@ -510,12 +510,12 @@ pub mod testing {
         type Kind = TestSyntaxKind;
 
         fn kind_from_raw(raw: RawSyntaxKind) -> Self::Kind {
-            assert!(raw.0 <= TestSyntaxKind::__LAST as u16);
-            unsafe { std::mem::transmute::<u16, TestSyntaxKind>(raw.0) }
+            assert!(raw.0 <= TestSyntaxKind::__LAST as u32);
+            unsafe { std::mem::transmute::<u32, TestSyntaxKind>(raw.0) }
         }
 
         fn kind_to_raw(kind: Self::Kind) -> RawSyntaxKind {
-            RawSyntaxKind(kind as u16)
+            RawSyntaxKind(kind as u32)
         }
 
         fn static_text(kind: Self::Kind) -> Option<&'static str> {

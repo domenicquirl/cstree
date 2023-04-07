@@ -16,7 +16,7 @@ pub enum Element<'s> {
 
 #[derive(Debug, Clone, Copy)]
 pub enum TestKind {
-    Element { n: u16 },
+    Element { n: u32 },
     Plus,
 }
 
@@ -45,7 +45,7 @@ impl<T: Bool> Language for TestLang<T> {
     type Kind = TestKind;
 
     fn kind_from_raw(raw: RawSyntaxKind) -> Self::Kind {
-        if raw.0 == u16::MAX - 1 {
+        if raw.0 == u32::MAX - 1 {
             TestKind::Plus
         } else {
             TestKind::Element { n: raw.0 }
@@ -55,7 +55,7 @@ impl<T: Bool> Language for TestLang<T> {
     fn kind_to_raw(kind: Self::Kind) -> RawSyntaxKind {
         match kind {
             TestKind::Element { n } => RawSyntaxKind(n),
-            TestKind::Plus => RawSyntaxKind(u16::MAX - 1),
+            TestKind::Plus => RawSyntaxKind(u32::MAX - 1),
         }
     }
 
@@ -85,8 +85,8 @@ where
 pub fn build_recursive<T: Bool, I>(
     root: &Element<'_>,
     builder: &mut GreenNodeBuilder<'_, '_, TestLang<T>, I>,
-    mut from: u16,
-) -> u16
+    mut from: u32,
+) -> u32
 where
     I: Interner,
 {

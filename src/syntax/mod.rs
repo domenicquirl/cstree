@@ -61,7 +61,9 @@ mod tests {
         use std::mem::size_of;
 
         assert_eq!(size_of::<SyntaxNode<TestLang>>(),          size_of::<*const u8>());
-        assert_eq!(size_of::<Option<SyntaxNode<TestLang>>>(),  size_of::<*const u8>()); // verify niche opt of `NonNull`
-        assert_eq!(size_of::<SyntaxToken<TestLang>>(),         size_of::<*const u8>() + size_of::<u32>() * 2);
+        // verify niche opt of `NonNull`
+        assert_eq!(size_of::<Option<SyntaxNode<TestLang>>>(),  size_of::<*const u8>()); 
+        // parent + child index + text len
+        assert_eq!(size_of::<SyntaxToken<TestLang>>(),         size_of::<SyntaxNode<TestLang>>() + size_of::<u32>() * 2);
     }
 }

@@ -7,7 +7,7 @@ use cstree::{
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[repr(u16)]
+#[repr(u32)]
 pub enum SyntaxKind {
     /* Tokens */
     Int,    // 42
@@ -42,7 +42,7 @@ impl Language for Calculator {
     }
 
     fn kind_to_raw(kind: Self::Kind) -> RawSyntaxKind {
-        RawSyntaxKind(kind as u16)
+        RawSyntaxKind(kind as u32)
     }
 
     fn static_text(kind: Self::Kind) -> Option<&'static str> {
