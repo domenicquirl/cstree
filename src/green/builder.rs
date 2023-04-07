@@ -387,9 +387,7 @@ where
         &mut self.cache.interner
     }
 
-    /// Add a new token to the current branch without storing an explicit section of text.
-    /// This is be useful if the text can always be inferred from the token's `kind`, for example
-    /// when using kinds for specific operators or punctuation.
+    /// Add a new token with the given `text` to the current node.
     ///
     /// ## Panics
     /// In debug mode, if `kind` has static text, this function will verify that `text` matches that text.
@@ -409,6 +407,22 @@ where
                 self.cache.token::<L>(kind, Some(text), len)
             }
         };
+        self.children.push(token.into());
+    }
+
+    /// Add a new token to the current node without storing an explicit section of text.
+    /// This is be useful if the text can always be inferred from the token's `kind`, for example
+    /// when using kinds for specific operators or punctuation.
+    ///
+    /// For tokens whose textual representation is not static, such as numbers or identifiers, use
+    /// [`token`](GreenNodeBuilder::token).
+    ///
+    /// ## Panics
+    /// If `kind` does not have static text, i.e., `L::static_text(kind)` returns `None`.
+    #[inline]
+    pub fn static_token(&mut self, kind: L::Kind) {
+        let static_text = L::static_text(kind).unwrap_or_else(|| panic!("Missing static text for '{kind:?}'"));
+        let token = self.cache.token::<L>(kind, None, static_text.len() as u32);
         self.children.push(token.into());
     }
 
