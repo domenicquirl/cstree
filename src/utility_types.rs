@@ -109,7 +109,7 @@ impl<T> std::ops::Deref for MaybeOwned<'_, T> {
     fn deref(&self) -> &T {
         match self {
             MaybeOwned::Owned(it) => it,
-            MaybeOwned::Borrowed(it) => *it,
+            MaybeOwned::Borrowed(it) => it,
         }
     }
 }
@@ -118,7 +118,7 @@ impl<T> std::ops::DerefMut for MaybeOwned<'_, T> {
     fn deref_mut(&mut self) -> &mut T {
         match self {
             MaybeOwned::Owned(it) => it,
-            MaybeOwned::Borrowed(it) => *it,
+            MaybeOwned::Borrowed(it) => it,
         }
     }
 }

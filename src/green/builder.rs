@@ -4,10 +4,11 @@ use fxhash::{FxHashMap, FxHasher32};
 use text_size::TextSize;
 
 use crate::{
-    green::{interner::TokenInterner, GreenElement, GreenNode, GreenToken, SyntaxKind},
-    interning::{Interner, Key},
+    green::{GreenElement, GreenNode, GreenToken},
+    interning::{new_interner, Interner, TokenInterner, TokenKey},
+    util::NodeOrToken,
     utility_types::MaybeOwned,
-    Language, NodeOrToken,
+    Language, RawSyntaxKind,
 };
 
 use super::{node::GreenNodeHead, token::GreenTokenData};
@@ -35,6 +36,8 @@ impl NodeCache<'static> {
     /// # Examples
     /// ```
     /// # use cstree::testing::{*, Language as _};
+    /// use cstree::build::NodeCache;
+    ///
     /// // Build a tree
     /// let mut cache = NodeCache::new();
     /// let mut builder: GreenNodeBuilder<MyLanguage> = GreenNodeBuilder::with_cache(&mut cache);
@@ -53,7 +56,7 @@ impl NodeCache<'static> {
         Self {
             nodes:    FxHashMap::default(),
             tokens:   FxHashMap::default(),
-            interner: MaybeOwned::Owned(TokenInterner::new()),
+            interner: MaybeOwned::Owned(new_interner()),
         }
     }
 }
@@ -66,19 +69,21 @@ impl Default for NodeCache<'static> {
 
 impl<'i, I> NodeCache<'i, I>
 where
-    I: Interner,
+    I: Interner<TokenKey>,
 {
     /// Constructs a new, empty cache that will use the given interner to deduplicate source text
     /// (strings) across tokens.
     /// # Examples
     /// ```
     /// # use cstree::testing::{*, Language as _};
-    /// use lasso::Rodeo;
+    /// # use cstree::interning::*;
+    /// use cstree::build::NodeCache;
     ///
-    /// // Create the builder from a custom `Rodeo`
-    /// let mut interner = Rodeo::new();
+    /// // Create the builder from a custom interner
+    /// let mut interner = new_interner();
     /// let mut cache = NodeCache::with_interner(&mut interner);
-    /// let mut builder: GreenNodeBuilder<MyLanguage, Rodeo> = GreenNodeBuilder::with_cache(&mut cache);
+    /// let mut builder: GreenNodeBuilder<MyLanguage, TokenInterner> =
+    ///     GreenNodeBuilder::with_cache(&mut cache);
     ///
     /// // Construct the tree
     /// # builder.start_node(Root);
@@ -107,12 +112,14 @@ where
     /// # Examples
     /// ```
     /// # use cstree::testing::{*, Language as _};
-    /// use lasso::Rodeo;
+    /// # use cstree::interning::*;
+    /// use cstree::build::NodeCache;
     ///
-    /// // Create the builder from a custom `Rodeo`
-    /// let mut interner = Rodeo::new();
+    /// // Create the builder from a custom interner
+    /// let mut interner = new_interner();
     /// let cache = NodeCache::from_interner(interner);
-    /// let mut builder: GreenNodeBuilder<MyLanguage, Rodeo> = GreenNodeBuilder::from_cache(cache);
+    /// let mut builder: GreenNodeBuilder<MyLanguage, TokenInterner> =
+    ///     GreenNodeBuilder::from_cache(cache);
     ///
     /// // Construct the tree
     /// # builder.start_node(Root);
@@ -142,22 +149,23 @@ where
     /// See also [`interner_mut`](NodeCache::interner_mut).
     #[inline]
     pub fn interner(&self) -> &I {
-        &*self.interner
+        &self.interner
     }
 
     /// Get a mutable reference to the interner used to deduplicate source text (strings).
     /// # Examples
     /// ```
     /// # use cstree::*;
+    /// # use cstree::build::*;
     /// # use cstree::interning::*;
     /// let mut cache = NodeCache::new();
     /// let interner = cache.interner_mut();
     /// let key = interner.get_or_intern("foo");
-    /// assert_eq!(interner.resolve(&key), "foo");
+    /// assert_eq!(interner.resolve(key), "foo");
     /// ```
     #[inline]
     pub fn interner_mut(&mut self) -> &mut I {
-        &mut *self.interner
+        &mut self.interner
     }
 
     /// If this node cache was constructed with [`new`](NodeCache::new) or
@@ -196,7 +204,7 @@ where
     }
 
     #[inline(always)]
-    fn intern(&mut self, text: &str) -> Key {
+    fn intern(&mut self, text: &str) -> TokenKey {
         self.interner.get_or_intern(text)
     }
 
@@ -205,7 +213,7 @@ where
     #[inline]
     fn get_cached_node(
         &mut self,
-        kind: SyntaxKind,
+        kind: RawSyntaxKind,
         children: std::vec::Drain<'_, GreenElement>,
         text_len: TextSize,
         child_hash: u32,
@@ -221,7 +229,7 @@ where
             .clone()
     }
 
-    fn token<L: Language>(&mut self, kind: L::Kind, text: Option<Key>, len: u32) -> GreenToken {
+    fn token<L: Language>(&mut self, kind: L::Kind, text: Option<TokenKey>, len: u32) -> GreenToken {
         let text_len = TextSize::from(len);
         let kind = L::kind_to_raw(kind);
         let data = GreenTokenData { kind, text, text_len };
@@ -246,7 +254,6 @@ pub struct Checkpoint(usize);
 /// # Examples
 /// ```
 /// # use cstree::testing::{*, Language as _};
-/// # use cstree::interning::IntoResolver;
 /// // Build a tree
 /// let mut builder: GreenNodeBuilder<MyLanguage> = GreenNodeBuilder::new();
 /// builder.start_node(Root);
@@ -258,7 +265,7 @@ pub struct Checkpoint(usize);
 /// assert_eq!(tree.kind(), MyLanguage::kind_to_raw(Root));
 /// let int = tree.children().next().unwrap();
 /// assert_eq!(int.kind(), MyLanguage::kind_to_raw(Int));
-/// let resolver = cache.unwrap().into_interner().unwrap().into_resolver();
+/// let resolver = cache.unwrap().into_interner().unwrap();
 /// assert_eq!(int.as_token().unwrap().text(&resolver), Some("42"));
 /// ```
 #[derive(Debug)]
@@ -288,7 +295,7 @@ impl<L: Language> Default for GreenNodeBuilder<'static, 'static, L> {
 impl<'cache, 'interner, L, I> GreenNodeBuilder<'cache, 'interner, L, I>
 where
     L: Language,
-    I: Interner,
+    I: Interner<TokenKey>,
 {
     /// Reusing a [`NodeCache`] between multiple builders saves memory, as it allows to structurally
     /// share underlying trees.
@@ -306,6 +313,7 @@ where
     /// # Examples
     /// ```
     /// # use cstree::testing::{*, Language as _};
+    /// # use cstree::build::*;
     /// // Construct a builder from our own cache
     /// let cache = NodeCache::new();
     /// let mut builder: GreenNodeBuilder<MyLanguage> = GreenNodeBuilder::from_cache(cache);
@@ -358,7 +366,7 @@ where
     /// See also [`interner_mut`](GreenNodeBuilder::interner_mut).
     #[inline]
     pub fn interner(&self) -> &I {
-        &*self.cache.interner
+        &self.cache.interner
     }
 
     /// Get a mutable reference to the interner used to deduplicate source text (strings).
@@ -367,20 +375,19 @@ where
     /// # Examples
     /// ```
     /// # use cstree::testing::*;
+    /// # use cstree::build::*;
     /// # use cstree::interning::*;
     /// let mut builder: GreenNodeBuilder<MyLanguage> = GreenNodeBuilder::new();
     /// let interner = builder.interner_mut();
     /// let key = interner.get_or_intern("foo");
-    /// assert_eq!(interner.resolve(&key), "foo");
+    /// assert_eq!(interner.resolve(key), "foo");
     /// ```
     #[inline]
     pub fn interner_mut(&mut self) -> &mut I {
-        &mut *self.cache.interner
+        &mut self.cache.interner
     }
 
-    /// Add a new token to the current branch without storing an explicit section of text.
-    /// This is be useful if the text can always be inferred from the token's `kind`, for example
-    /// when using kinds for specific operators or punctuation.
+    /// Add a new token with the given `text` to the current node.
     ///
     /// ## Panics
     /// In debug mode, if `kind` has static text, this function will verify that `text` matches that text.
@@ -400,6 +407,22 @@ where
                 self.cache.token::<L>(kind, Some(text), len)
             }
         };
+        self.children.push(token.into());
+    }
+
+    /// Add a new token to the current node without storing an explicit section of text.
+    /// This is be useful if the text can always be inferred from the token's `kind`, for example
+    /// when using kinds for specific operators or punctuation.
+    ///
+    /// For tokens whose textual representation is not static, such as numbers or identifiers, use
+    /// [`token`](GreenNodeBuilder::token).
+    ///
+    /// ## Panics
+    /// If `kind` does not have static text, i.e., `L::static_text(kind)` returns `None`.
+    #[inline]
+    pub fn static_token(&mut self, kind: L::Kind) {
+        let static_text = L::static_text(kind).unwrap_or_else(|| panic!("Missing static text for '{kind:?}'"));
+        let token = self.cache.token::<L>(kind, None, static_text.len() as u32);
         self.children.push(token.into());
     }
 
@@ -427,7 +450,7 @@ where
     /// # Examples
     /// ```
     /// # use cstree::testing::*;
-    /// # use cstree::{GreenNodeBuilder, Language};
+    /// # use cstree::{build::GreenNodeBuilder, Language};
     /// # struct Parser;
     /// # impl Parser {
     /// #     fn peek(&self) -> Option<TestSyntaxKind> { None }

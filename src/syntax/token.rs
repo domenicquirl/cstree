@@ -5,11 +5,15 @@ use std::{
     sync::Arc as StdArc,
 };
 
-use lasso::Resolver;
 use text_size::{TextRange, TextSize};
 
 use super::*;
-use crate::{interning::Key, Direction, GreenNode, GreenToken, Language, SyntaxKind};
+use crate::{
+    green::{GreenNode, GreenToken},
+    interning::{Resolver, TokenKey},
+    traversal::Direction,
+    Language, RawSyntaxKind,
+};
 
 /// Syntax tree token.
 #[derive(Debug)]
@@ -49,7 +53,7 @@ impl<L: Language, D> SyntaxToken<L, D> {
     /// Writes this token's [`Debug`](fmt::Debug) representation into the given `target`.
     pub fn write_debug<R>(&self, resolver: &R, target: &mut impl fmt::Write) -> fmt::Result
     where
-        R: Resolver + ?Sized,
+        R: Resolver<TokenKey> + ?Sized,
     {
         write!(target, "{:?}@{:?}", self.kind(), self.text_range())?;
         let text = self.resolve_text(resolver);
@@ -72,7 +76,7 @@ impl<L: Language, D> SyntaxToken<L, D> {
     #[inline]
     pub fn debug<R>(&self, resolver: &R) -> String
     where
-        R: Resolver + ?Sized,
+        R: Resolver<TokenKey> + ?Sized,
     {
         // NOTE: `fmt::Write` methods on `String` never fail
         let mut res = String::new();
@@ -84,7 +88,7 @@ impl<L: Language, D> SyntaxToken<L, D> {
     #[inline]
     pub fn write_display<R>(&self, resolver: &R, target: &mut impl fmt::Write) -> fmt::Result
     where
-        R: Resolver + ?Sized,
+        R: Resolver<TokenKey> + ?Sized,
     {
         write!(target, "{}", self.resolve_text(resolver))
     }
@@ -95,25 +99,26 @@ impl<L: Language, D> SyntaxToken<L, D> {
     #[inline]
     pub fn display<R>(&self, resolver: &R) -> String
     where
-        R: Resolver + ?Sized,
+        R: Resolver<TokenKey> + ?Sized,
     {
         self.resolve_text(resolver).to_string()
     }
 
     /// If there is a resolver associated with this tree, returns it.
     #[inline]
-    pub fn resolver(&self) -> Option<&StdArc<dyn Resolver>> {
+    pub fn resolver(&self) -> Option<&StdArc<dyn Resolver<TokenKey>>> {
         self.parent.resolver()
     }
 
-    /// Turns this token into a [`ResolvedToken`], but only if there is a resolver associated with this tree.
+    /// Turns this token into a [`ResolvedToken`](crate::syntax::ResolvedToken), but only if there is a resolver
+    /// associated with this tree.
     #[inline]
     pub fn try_resolved(&self) -> Option<&ResolvedToken<L, D>> {
         // safety: we only coerce if `resolver` exists
         self.resolver().map(|_| unsafe { ResolvedToken::coerce_ref(self) })
     }
 
-    /// Turns this token into a [`ResolvedToken`].
+    /// Turns this token into a [`ResolvedToken`](crate::syntax::ResolvedToken).
     /// # Panics
     /// If there is no resolver associated with this tree.
     #[inline]
@@ -153,7 +158,7 @@ impl<L: Language, D> SyntaxToken<L, D> {
 
     /// The internal representation of the kind of this token.
     #[inline]
-    pub fn syntax_kind(&self) -> SyntaxKind {
+    pub fn syntax_kind(&self) -> RawSyntaxKind {
         self.green().kind()
     }
 
@@ -176,7 +181,7 @@ impl<L: Language, D> SyntaxToken<L, D> {
     #[inline]
     pub fn resolve_text<'i, I>(&self, resolver: &'i I) -> &'i str
     where
-        I: Resolver + ?Sized,
+        I: Resolver<TokenKey> + ?Sized,
     {
         // one of the two must be present upon construction
         self.static_text().or_else(|| self.green().text(resolver)).unwrap()
@@ -191,6 +196,7 @@ impl<L: Language, D> SyntaxToken<L, D> {
     ///
     /// ```
     /// # use cstree::testing::*;
+    /// # use cstree::build::*;
     /// let mut builder: GreenNodeBuilder<MyLanguage> = GreenNodeBuilder::new();
     /// # builder.start_node(Root);
     /// # builder.token(Identifier, "x");
@@ -278,18 +284,18 @@ impl<L: Language, D> SyntaxToken<L, D> {
     /// implementation by re-using the interner in both.
     /// ```
     /// # use cstree::testing::*;
-    /// use cstree::interning::{new_interner, Hasher, Key, Rodeo};
+    /// use cstree::interning::{new_interner, TokenInterner, TokenKey};
     /// struct TypeTable {
     ///     // ...
     /// }
     /// impl TypeTable {
-    ///     fn type_of(&self, ident: Key) -> &str {
+    ///     fn type_of(&self, ident: TokenKey) -> &str {
     ///         // ...
     /// #     ""
     ///     }
     /// }
     /// # struct State {
-    /// #   interner: Rodeo,
+    /// #   interner: TokenInterner,
     /// #   type_table: TypeTable,
     /// # }
     /// let interner = new_interner();
@@ -297,7 +303,7 @@ impl<L: Language, D> SyntaxToken<L, D> {
     ///     interner,
     ///     type_table: TypeTable{ /* stuff */},
     /// };
-    /// let mut builder: GreenNodeBuilder<MyLanguage, Rodeo> =
+    /// let mut builder: GreenNodeBuilder<MyLanguage, TokenInterner> =
     ///     GreenNodeBuilder::with_interner(&mut state.interner);
     /// # let input = "";
     /// # builder.start_node(Root);
@@ -315,7 +321,7 @@ impl<L: Language, D> SyntaxToken<L, D> {
     /// let typ = type_table.type_of(ident.text_key().unwrap());
     /// ```
     #[inline]
-    pub fn text_key(&self) -> Option<Key> {
+    pub fn text_key(&self) -> Option<TokenKey> {
         self.green().text_key()
     }
 

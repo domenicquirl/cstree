@@ -1,6 +1,10 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion, Throughput};
-use cstree::*;
-use lasso::{Interner, Rodeo};
+use cstree::{
+    build::*,
+    green::GreenNode,
+    interning::{new_interner, Interner},
+    Language, RawSyntaxKind,
+};
 use std::{fmt, hash::Hash};
 
 #[derive(Debug)]
@@ -40,7 +44,7 @@ impl Bool for UseStaticText {
 impl<T: Bool> Language for TestLang<T> {
     type Kind = TestKind;
 
-    fn kind_from_raw(raw: SyntaxKind) -> Self::Kind {
+    fn kind_from_raw(raw: RawSyntaxKind) -> Self::Kind {
         if raw.0 == u16::MAX - 1 {
             TestKind::Plus
         } else {
@@ -48,10 +52,10 @@ impl<T: Bool> Language for TestLang<T> {
         }
     }
 
-    fn kind_to_raw(kind: Self::Kind) -> SyntaxKind {
+    fn kind_to_raw(kind: Self::Kind) -> RawSyntaxKind {
         match kind {
-            TestKind::Element { n } => SyntaxKind(n),
-            TestKind::Plus => SyntaxKind(u16::MAX - 1),
+            TestKind::Element { n } => RawSyntaxKind(n),
+            TestKind::Plus => RawSyntaxKind(u16::MAX - 1),
         }
     }
 
@@ -67,7 +71,7 @@ impl<T: Bool> Language for TestLang<T> {
     }
 }
 
-pub fn build_tree_with_cache<'c, 'i, T: Bool, I>(root: &Element<'_>, cache: &'c mut NodeCache<'i, I>) -> GreenNode
+pub fn build_tree_with_cache<T: Bool, I>(root: &Element<'_>, cache: &mut NodeCache<'_, I>) -> GreenNode
 where
     I: Interner,
 {
@@ -78,9 +82,9 @@ where
     node
 }
 
-pub fn build_recursive<'c, 'i, T: Bool, I>(
+pub fn build_recursive<T: Bool, I>(
     root: &Element<'_>,
-    builder: &mut GreenNodeBuilder<'c, 'i, TestLang<T>, I>,
+    builder: &mut GreenNodeBuilder<'_, '_, TestLang<T>, I>,
     mut from: u16,
 ) -> u16
 where
@@ -95,7 +99,7 @@ where
             builder.finish_node();
         }
         Element::Token(text) => {
-            builder.token(TestKind::Element { n: from }, *text);
+            builder.token(TestKind::Element { n: from }, text);
         }
         Element::Plus => {
             builder.token(TestKind::Plus, "+");
@@ -114,10 +118,15 @@ fn two_level_tree() -> Element<'static> {
 }
 
 pub fn create(c: &mut Criterion) {
-    let mut group = c.benchmark_group("two-level tree");
+    #[cfg(not(feature = "lasso_compat"))]
+    const GROUP_NAME: &str = "two-level tree (default interner)";
+    #[cfg(feature = "lasso_compat")]
+    const GROUP_NAME: &str = "two-level tree (lasso)";
+
+    let mut group = c.benchmark_group(GROUP_NAME);
     group.throughput(Throughput::Elements(1));
 
-    let mut interner = Rodeo::new();
+    let mut interner = new_interner();
     let mut cache = NodeCache::with_interner(&mut interner);
     let tree = two_level_tree();
 

@@ -31,8 +31,19 @@ jobs:
       - uses: hecrj/setup-rust-action@v1
         with:
           rust-version: ${{ matrix.rust }}
-      - run: cargo test --verbose --all-features
-      - run: cargo test --release --verbose --all-features
+
+      - uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --all-targets --verbose
+      - uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --all-targets --verbose --all-features
+      - uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --all-targets --verbose --all-features --release
 
   check:
     name: Check
@@ -48,6 +59,7 @@ jobs:
       - uses: actions-rs/cargo@v1
         with:
           command: check
+          args: --all-targets --all-features
 
   clippy:
     name: Clippy
@@ -79,11 +91,13 @@ jobs:
     name: Check doc links
     runs-on: ubuntu-latest
     env:
-      RUSTDOCFLAGS: -Dwarnings
+      RUSTDOCFLAGS: -Dwarnings --cfg doc_cfg
 
     steps:
       - uses: actions/checkout@v2
       - uses: hecrj/setup-rust-action@v1
+        with:
+          rust-version: nightly
       - run: cargo doc --all-features --document-private-items --no-deps
         
   miri-test:

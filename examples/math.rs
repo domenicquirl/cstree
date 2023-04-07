@@ -13,10 +13,7 @@
 //!     - "+" Token(Add)
 //!     - "4" Token(Number)
 
-use cstree::{
-    interning::{IntoResolver, Resolver},
-    GreenNodeBuilder, NodeOrToken,
-};
+use cstree::{build::GreenNodeBuilder, interning::Resolver, util::NodeOrToken};
 use std::iter::Peekable;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -36,7 +33,7 @@ enum SyntaxKind {
 }
 use SyntaxKind::*;
 
-impl From<SyntaxKind> for cstree::SyntaxKind {
+impl From<SyntaxKind> for cstree::RawSyntaxKind {
     fn from(kind: SyntaxKind) -> Self {
         Self(kind as u16)
     }
@@ -47,12 +44,12 @@ enum Lang {}
 impl cstree::Language for Lang {
     type Kind = SyntaxKind;
 
-    fn kind_from_raw(raw: cstree::SyntaxKind) -> Self::Kind {
+    fn kind_from_raw(raw: cstree::RawSyntaxKind) -> Self::Kind {
         assert!(raw.0 <= Root as u16);
         unsafe { std::mem::transmute::<u16, SyntaxKind>(raw.0) }
     }
 
-    fn kind_to_raw(kind: Self::Kind) -> cstree::SyntaxKind {
+    fn kind_to_raw(kind: Self::Kind) -> cstree::RawSyntaxKind {
         kind.into()
     }
 
@@ -67,12 +64,12 @@ impl cstree::Language for Lang {
     }
 }
 
-type SyntaxNode = cstree::SyntaxNode<Lang>;
+type SyntaxNode = cstree::syntax::SyntaxNode<Lang>;
 #[allow(unused)]
-type SyntaxToken = cstree::SyntaxToken<Lang>;
+type SyntaxToken = cstree::syntax::SyntaxToken<Lang>;
 #[allow(unused)]
-type SyntaxElement = cstree::NodeOrToken<SyntaxNode, SyntaxToken>;
-type SyntaxElementRef<'a> = cstree::NodeOrToken<&'a SyntaxNode, &'a SyntaxToken>;
+type SyntaxElement = cstree::util::NodeOrToken<SyntaxNode, SyntaxToken>;
+type SyntaxElementRef<'a> = cstree::util::NodeOrToken<&'a SyntaxNode, &'a SyntaxToken>;
 
 struct Parser<'input, I: Iterator<Item = (SyntaxKind, &'input str)>> {
     builder: GreenNodeBuilder<'static, 'static, Lang>,
@@ -128,10 +125,7 @@ impl<'input, I: Iterator<Item = (SyntaxKind, &'input str)>> Parser<'input, I> {
         self.builder.finish_node();
 
         let (tree, cache) = self.builder.finish();
-        (
-            SyntaxNode::new_root(tree),
-            cache.unwrap().into_interner().unwrap().into_resolver(),
-        )
+        (SyntaxNode::new_root(tree), cache.unwrap().into_interner().unwrap())
     }
 }
 

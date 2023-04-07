@@ -9,12 +9,15 @@ use std::{
     sync::Arc as StdArc,
 };
 
-use lasso::Resolver;
 use text_size::{TextRange, TextSize};
 
 use crate::{
-    Direction, GreenNode, Language, NodeOrToken, SyntaxElementRef, SyntaxKind, SyntaxNode, SyntaxText, SyntaxToken,
-    TokenAtOffset, WalkEvent,
+    green::GreenNode,
+    interning::{Resolver, TokenKey},
+    syntax::*,
+    traversal::*,
+    util::*,
+    Language, RawSyntaxKind,
 };
 
 /// Syntax tree node that is guaranteed to belong to a tree that contains an associated
@@ -109,7 +112,7 @@ impl<L: Language, D> DerefMut for ResolvedToken<L, D> {
 /// An element of the tree that is guaranteed to belong to a tree that contains an associated
 /// [`Resolver`](lasso::Resolver), can be either a node or a token.
 /// # See also
-/// [`SyntaxElement`](crate::SyntaxElement)
+/// [`SyntaxElement`](crate::syntax::SyntaxElement)
 pub type ResolvedElement<L, D = ()> = NodeOrToken<ResolvedNode<L, D>, ResolvedToken<L, D>>;
 
 impl<L: Language, D> From<ResolvedNode<L, D>> for ResolvedElement<L, D> {
@@ -126,7 +129,7 @@ impl<L: Language, D> From<ResolvedToken<L, D>> for ResolvedElement<L, D> {
 
 impl<L: Language, D> ResolvedElement<L, D> {
     #[allow(missing_docs)]
-    pub fn display(&self, resolver: &impl Resolver) -> String {
+    pub fn display(&self, resolver: &impl Resolver<TokenKey>) -> String {
         match self {
             NodeOrToken::Node(it) => it.display(resolver),
             NodeOrToken::Token(it) => it.display(resolver),
@@ -177,7 +180,7 @@ impl<L: Language, D> ResolvedNode<L, D> {
     /// source text covered by this node, i.e. the combined text of all token leafs of the subtree
     /// originating in this node.
     #[inline]
-    pub fn text(&self) -> SyntaxText<'_, '_, dyn Resolver, L, D> {
+    pub fn text(&self) -> SyntaxText<'_, '_, dyn Resolver<TokenKey>, L, D> {
         SyntaxText::new(self, &**self.resolver())
     }
 }
@@ -266,13 +269,13 @@ macro_rules! forward_node {
 
 impl<L: Language, D> ResolvedNode<L, D> {
     /// Returns the [`Resolver`] associated with this tree.
-    pub fn resolver(&self) -> &StdArc<dyn Resolver> {
+    pub fn resolver(&self) -> &StdArc<dyn Resolver<TokenKey>> {
         self.syntax.resolver().unwrap()
     }
 
     /// See [`SyntaxNode::new_root_with_resolver`].
     #[inline]
-    pub fn new_root_with_resolver(green: GreenNode, resolver: impl Resolver + 'static) -> Self {
+    pub fn new_root_with_resolver(green: GreenNode, resolver: impl Resolver<TokenKey> + 'static) -> Self {
         SyntaxNode::new_root_with_resolver(green, resolver)
     }
 
@@ -498,7 +501,7 @@ impl<L: Language, D> ResolvedNode<L, D> {
 
 impl<L: Language, D> ResolvedToken<L, D> {
     /// Returns the [`Resolver`] associated with this tree.
-    pub fn resolver(&self) -> &StdArc<dyn Resolver> {
+    pub fn resolver(&self) -> &StdArc<dyn Resolver<TokenKey>> {
         self.syntax.resolver().unwrap()
     }
 
@@ -575,7 +578,7 @@ impl<L: Language, D> ResolvedElement<L, D> {
 
     /// The internal representation of the kind of this element.
     #[inline]
-    pub fn syntax_kind(&self) -> SyntaxKind {
+    pub fn syntax_kind(&self) -> RawSyntaxKind {
         match self {
             NodeOrToken::Node(it) => it.syntax_kind(),
             NodeOrToken::Token(it) => it.syntax_kind(),
@@ -658,7 +661,7 @@ impl<'a, L: Language, D> ResolvedElementRef<'a, L, D> {
 
     /// The internal representation of the kind of this element.
     #[inline]
-    pub fn syntax_kind(&self) -> SyntaxKind {
+    pub fn syntax_kind(&self) -> RawSyntaxKind {
         match self {
             NodeOrToken::Node(it) => it.syntax_kind(),
             NodeOrToken::Token(it) => it.syntax_kind(),

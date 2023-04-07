@@ -6,15 +6,16 @@ use std::{
 use fxhash::FxHasher32;
 
 use crate::{
-    green::{iter::GreenNodeChildren, GreenElement, PackedGreenElement, SyntaxKind},
-    TextSize,
+    green::{iter::GreenNodeChildren, GreenElement, PackedGreenElement},
+    text::TextSize,
+    RawSyntaxKind,
 };
 use triomphe::{Arc, HeaderWithLength, ThinArc};
 
 #[repr(align(2))] //to use 1 bit for pointer tagging. NB: this is an at-least annotation
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub(super) struct GreenNodeHead {
-    pub(super) kind:       SyntaxKind,
+    pub(super) kind:       RawSyntaxKind,
     pub(super) text_len:   TextSize,
     pub(super) child_hash: u32,
 }
@@ -35,7 +36,7 @@ impl std::fmt::Debug for GreenNode {
 impl GreenNode {
     /// Creates a new Node.
     #[inline]
-    pub fn new<I>(kind: SyntaxKind, children: I) -> GreenNode
+    pub fn new<I>(kind: RawSyntaxKind, children: I) -> GreenNode
     where
         I: IntoIterator<Item = GreenElement>,
         I::IntoIter: ExactSizeIterator,
@@ -72,7 +73,7 @@ impl GreenNode {
     /// Creates a new Node.
     #[inline]
     pub(super) fn new_with_len_and_hash<I>(
-        kind: SyntaxKind,
+        kind: RawSyntaxKind,
         children: I,
         text_len: TextSize,
         child_hash: u32,
@@ -115,9 +116,9 @@ impl GreenNode {
         }
     }
 
-    /// [`SyntaxKind`] of this node.
+    /// [`RawSyntaxKind`] of this node.
     #[inline]
-    pub fn kind(&self) -> SyntaxKind {
+    pub fn kind(&self) -> RawSyntaxKind {
         self.data.header.header.kind
     }
 
