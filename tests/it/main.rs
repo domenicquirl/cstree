@@ -56,7 +56,7 @@ where
     node
 }
 
-pub fn build_recursive<L, I>(root: &Element<'_>, builder: &mut GreenNodeBuilder<'_, '_, L, I>, mut from: u16) -> u16
+pub fn build_recursive<L, I>(root: &Element<'_>, builder: &mut GreenNodeBuilder<'_, '_, L, I>, mut from: u32) -> u32
 where
     L: Language<Kind = RawSyntaxKind>,
     I: Interner,

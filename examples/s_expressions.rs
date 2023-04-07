@@ -9,7 +9,7 @@
 
 /// Let's start with defining all kinds of tokens and composite nodes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[repr(u16)]
+#[repr(u32)]
 pub enum SyntaxKind {
     LParen = 0, // '('
     RParen,     // ')'
@@ -32,7 +32,7 @@ use SyntaxKind::*;
 /// First, to easily pass the enum variants into cstree via `.into()`:
 impl From<SyntaxKind> for cstree::RawSyntaxKind {
     fn from(kind: SyntaxKind) -> Self {
-        Self(kind as u16)
+        Self(kind as u32)
     }
 }
 
@@ -45,8 +45,8 @@ impl cstree::Language for Lang {
     type Kind = SyntaxKind;
 
     fn kind_from_raw(raw: cstree::RawSyntaxKind) -> Self::Kind {
-        assert!(raw.0 <= Root as u16);
-        unsafe { std::mem::transmute::<u16, SyntaxKind>(raw.0) }
+        assert!(raw.0 <= Root as u32);
+        unsafe { std::mem::transmute::<u32, SyntaxKind>(raw.0) }
     }
 
     fn kind_to_raw(kind: Self::Kind) -> cstree::RawSyntaxKind {
@@ -421,7 +421,7 @@ nan
 /// Split the input string into a flat list of tokens (such as L_PAREN, WORD, and WHITESPACE)
 fn lex(text: &str) -> VecDeque<(SyntaxKind, &str)> {
     fn tok(t: SyntaxKind) -> m_lexer::TokenKind {
-        m_lexer::TokenKind(cstree::RawSyntaxKind::from(t).0)
+        m_lexer::TokenKind(cstree::RawSyntaxKind::from(t).0 as u16)
     }
     fn kind(t: m_lexer::TokenKind) -> SyntaxKind {
         match t.0 {

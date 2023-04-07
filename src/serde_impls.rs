@@ -244,7 +244,7 @@ impl Serialize for RawSyntaxKind {
     where
         S: serde::Serializer,
     {
-        serializer.serialize_u16(self.0)
+        serializer.serialize_u32(self.0)
     }
 }
 
@@ -253,6 +253,6 @@ impl<'de> Deserialize<'de> for RawSyntaxKind {
     where
         D: serde::Deserializer<'de>,
     {
-        Ok(Self(u16::deserialize(deserializer)?))
+        Ok(Self(u32::deserialize(deserializer)?))
     }
 }

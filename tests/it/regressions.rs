@@ -6,7 +6,7 @@ fn empty_tree_arc() {
     use cstree::{build::GreenNodeBuilder, syntax::SyntaxNode};
     #[allow(non_camel_case_types)]
     #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-    #[repr(u16)]
+    #[repr(u32)]
     enum SyntaxKind {
         Root,
     }
@@ -17,12 +17,12 @@ fn empty_tree_arc() {
         type Kind = SyntaxKind;
 
         fn kind_from_raw(raw: cstree::RawSyntaxKind) -> Self::Kind {
-            assert!(raw.0 <= SyntaxKind::Root as u16);
-            unsafe { std::mem::transmute::<u16, SyntaxKind>(raw.0) }
+            assert!(raw.0 <= SyntaxKind::Root as u32);
+            unsafe { std::mem::transmute::<u32, SyntaxKind>(raw.0) }
         }
 
         fn kind_to_raw(kind: Self::Kind) -> cstree::RawSyntaxKind {
-            cstree::RawSyntaxKind(kind as u16)
+            cstree::RawSyntaxKind(kind as u32)
         }
 
         fn static_text(_kind: Self::Kind) -> Option<&'static str> {

@@ -17,7 +17,7 @@ use cstree::{build::GreenNodeBuilder, interning::Resolver, util::NodeOrToken};
 use std::iter::Peekable;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[repr(u16)]
+#[repr(u32)]
 enum SyntaxKind {
     Whitespace = 0,
 
@@ -35,7 +35,7 @@ use SyntaxKind::*;
 
 impl From<SyntaxKind> for cstree::RawSyntaxKind {
     fn from(kind: SyntaxKind) -> Self {
-        Self(kind as u16)
+        Self(kind as u32)
     }
 }
 
@@ -45,8 +45,8 @@ impl cstree::Language for Lang {
     type Kind = SyntaxKind;
 
     fn kind_from_raw(raw: cstree::RawSyntaxKind) -> Self::Kind {
-        assert!(raw.0 <= Root as u16);
-        unsafe { std::mem::transmute::<u16, SyntaxKind>(raw.0) }
+        assert!(raw.0 <= Root as u32);
+        unsafe { std::mem::transmute::<u32, SyntaxKind>(raw.0) }
     }
 
     fn kind_to_raw(kind: Self::Kind) -> cstree::RawSyntaxKind {
