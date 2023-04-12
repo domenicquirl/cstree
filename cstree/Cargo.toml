@@ -1,18 +1,11 @@
 [package]
-edition = "2021"
-name = "cstree"
-version = "0.12.0-rc.0" # when updating, also update `#![doc(html_root_url)]`
-authors = [
-    "Domenic Quirl <DomenicQuirl@pm.me>",
-    "Aleksey Kladov <aleksey.kladov@gmail.com>",
-]
-description = "Library for generic lossless syntax trees"
-license = "MIT OR Apache-2.0"
-repository = "https://github.com/domenicquirl/cstree"
-readme = "README.md"
-
-[profile.release]
-debug = true
+name                 = "cstree"
+edition.workspace    = true
+version.workspace    = true
+authors.workspace    = true
+license.workspace    = true
+repository.workspace = true
+readme.workspace     = true
 
 [dependencies]
 text-size   = "1.1.0"
