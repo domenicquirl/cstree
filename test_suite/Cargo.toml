@@ -1,0 +1,16 @@
+[package]
+name                   = "cstree_test_suite"
+publish                = false
+version                = "0.0.0"
+edition.workspace      = true
+authors.workspace      = true
+license.workspace      = true
+repository.workspace   = true
+readme.workspace       = true
+rust-version.workspace = true
+
+[dependencies]
+cstree = { path = "../cstree", features = ["derive"] }
+
+[dev-dependencies]
+trybuild = { version = "1.0.80", features = ["diff"] }

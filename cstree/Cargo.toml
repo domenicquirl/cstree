@@ -1,11 +1,12 @@
 [package]
-name                 = "cstree"
-edition.workspace    = true
-version.workspace    = true
-authors.workspace    = true
-license.workspace    = true
-repository.workspace = true
-readme.workspace     = true
+name                   = "cstree"
+edition.workspace      = true
+version.workspace      = true
+authors.workspace      = true
+license.workspace      = true
+repository.workspace   = true
+readme.workspace       = true
+rust-version.workspace = true
 
 [dependencies]
 text-size   = "1.1.0"
@@ -18,6 +19,10 @@ sptr     = "0.3.2"
 
 # Default Interner
 indexmap = "1.9"
+
+[dependencies.cstree_derive]
+path     = "../cstree-derive"
+optional = true
 
 [dependencies.lasso]
 version  = "0.6"
@@ -49,6 +54,8 @@ harness = false
 
 [features]
 default = []
+# Derive macro for `Language`
+derive = ["dep:cstree_derive"]
 # Implementations of `serde::{De,}Serialize` for CSTrees.
 serialize = ["serde", "lasso?/serialize"]
 # Interoperability with the `lasso` interning crate.
