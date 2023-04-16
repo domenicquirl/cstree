@@ -4,7 +4,6 @@ use syn::{Ident, Path};
 #[derive(Copy, Clone)]
 pub struct Symbol(&'static str);
 
-pub const LANGUAGE_NAME: Symbol = Symbol("language_name");
 pub const STATIC_TEXT: Symbol = Symbol("static_text");
 pub const REPR: Symbol = Symbol("repr");
 pub const U32: Symbol = Symbol("u32");

@@ -1,6 +1,5 @@
 mod attributes;
 
-use proc_macro2::Span;
 use syn::{punctuated::Punctuated, Token};
 
 use crate::{errors::ErrorContext, symbols::*};
@@ -11,17 +10,14 @@ use self::attributes::Attr;
 pub(crate) type Result<T, E = ()> = std::result::Result<T, E>;
 
 pub(crate) struct SyntaxKindEnum<'i> {
-    pub(crate) vis: syn::Visibility,
-    pub(crate) name: syn::Ident,
-    pub(crate) repr: Option<syn::Ident>,
-    pub(crate) language_name: syn::Ident,
+    pub(crate) name:     syn::Ident,
+    pub(crate) repr:     Option<syn::Ident>,
     pub(crate) variants: Vec<SyntaxKindVariant<'i>>,
-    pub(crate) source: &'i syn::DeriveInput,
+    pub(crate) source:   &'i syn::DeriveInput,
 }
 
 impl<'i> SyntaxKindEnum<'i> {
     pub(crate) fn parse_from_ast(error_handler: &ErrorContext, item: &'i syn::DeriveInput) -> Result<Self> {
-        let vis = item.vis.clone();
         let syn::Data::Enum(data) = &item.data else {
             error_handler.error_at(item, "`Language` can only be derived on enums");
             return Err(());
@@ -44,20 +40,6 @@ impl<'i> SyntaxKindEnum<'i> {
             }
         }
 
-        let mut language_name = Attr::none(error_handler, LANGUAGE_NAME);
-        for name in item
-            .attrs
-            .iter()
-            .flat_map(|attr| get_name_value(error_handler, attr, LANGUAGE_NAME))
-        {
-            language_name.set(name, name.value());
-        }
-        let Some(language_name) = language_name.get() else {
-            error_handler.error_at(item, "missing language name: maybe you forgot to add a `#[language_name = \"...\"]` attribute?");
-            return Err(());
-        };
-        let language_name = syn::Ident::new(&language_name, Span::call_site());
-
         let variants = data
             .variants
             .iter()
@@ -65,10 +47,8 @@ impl<'i> SyntaxKindEnum<'i> {
             .collect();
 
         Ok(Self {
-            vis,
             name,
             repr: repr.get(),
-            language_name,
             variants,
             source: item,
         })
@@ -105,9 +85,9 @@ impl<'i> SyntaxKindVariant<'i> {
         for text in variant
             .attrs
             .iter()
-            .flat_map(|attr| get_name_value(error_handler, attr, STATIC_TEXT))
+            .flat_map(|attr| get_static_text(error_handler, attr))
         {
-            static_text.set(text, text.value());
+            static_text.set(&text, text.value());
         }
         Self {
             name,
@@ -117,34 +97,35 @@ impl<'i> SyntaxKindVariant<'i> {
     }
 }
 
-fn get_name_value<'i>(error_handler: &ErrorContext, attr: &'i syn::Attribute, path: Symbol) -> Option<&'i syn::LitStr> {
+fn get_static_text(error_handler: &ErrorContext, attr: &syn::Attribute) -> Option<syn::LitStr> {
     use syn::Meta::*;
 
-    if attr.path() != path {
+    if attr.path() != STATIC_TEXT {
         return None;
     }
 
     match &attr.meta {
-        NameValue(attr) if attr.path == path => get_literal_str(error_handler, path, &attr.value).ok(),
-        List(_) | Path(_) | NameValue(_) => {
-            error_handler.error_at(attr, format!("Expected `#[{path} = \"...\"]`"));
+        List(list) => match list.parse_args() {
+            Ok(lit) => Some(lit),
+            Err(e) => {
+                error_handler.error_at(
+                    list,
+                    "argument to `static_text` must be a string literal: `#[static_text(\"...\")]`",
+                );
+                error_handler.syn_error(e);
+                None
+            }
+        },
+        Path(_) => {
+            error_handler.error_at(attr, "missing text for `static_text`: try `#[static_text(\"...\")]`");
+            None
+        }
+        NameValue(_) => {
+            error_handler.error_at(
+                attr,
+                "`static_text` takes the text as a function argument: `#[static_text(\"...\")]`",
+            );
             None
         }
     }
-}
-
-fn get_literal_str<'i>(
-    error_handler: &ErrorContext,
-    attr_name: Symbol,
-    expr: &'i syn::Expr,
-) -> Result<&'i syn::LitStr> {
-    let syn::Expr::Lit(lit) = expr else {
-        error_handler.error_at(expr, format!("expected `{attr_name}` to be a string literal: `{attr_name} = \"...\"`"));
-        return Err(());
-    };
-    let syn::Lit::Str(s) = &lit.lit else {
-        error_handler.error_at(lit, format!("expected `{attr_name}` to be a string: `{attr_name} = \"...\"`"));
-        return Err(());
-    };
-    Ok(s)
 }

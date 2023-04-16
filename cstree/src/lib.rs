@@ -489,7 +489,7 @@ extern crate cstree_derive;
 
 #[cfg(feature = "derive")]
 /// Derive macro available if `cstree` is build with `features = ["derive"]`.
-pub use cstree_derive::Language;
+pub use cstree_derive::Syntax;
 
 #[doc(hidden)]
 #[allow(unsafe_code, unused)]
