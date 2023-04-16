@@ -27,7 +27,7 @@ fn expand_syntax(ast: DeriveInput) -> Result<TokenStream, Vec<syn::Error>> {
         Some(repr) if repr == U32 => (),
         Some(_) | None => error_handler.error_at(
             syntax_kind_enum.source,
-            "syntax kind definitions must be `#[repr(u32)]` to derive `Languge`",
+            "syntax kind definitions must be `#[repr(u32)]` to derive `Syntax`",
         ),
     }
 

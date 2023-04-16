@@ -54,7 +54,7 @@ harness = false
 
 [features]
 default = []
-# Derive macro for `Language`
+# Derive macro for `Syntax`
 derive = ["dep:cstree_derive"]
 # Implementations of `serde::{De,}Serialize` for CSTrees.
 serialize = ["serde", "lasso?/serialize"]

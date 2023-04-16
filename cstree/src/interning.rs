@@ -5,7 +5,7 @@
 //! [`GreenNodeBuilder::token`], which takes the kind of token and a refernce to the text of the token in the source.
 //!
 //! Of course, there are tokens whose text will always be the same, such as punctuation (like a semicolon), keywords
-//! (like `fn`), or operators (like `<=`). Use [`Language::static_text`] when implementing `Language` to make `cstree`
+//! (like `fn`), or operators (like `<=`). Use [`Syntax::static_text`] when implementing `Syntax` to make `cstree`
 //! aware of such tokens.
 //!
 //! There is, however, another category of tokens whose text will appear repeatedly, but for which we cannot know the
@@ -96,7 +96,7 @@
 //! of the `GreenNodeBuilder` appropriately.
 //!
 //! [crate documentation]: crate
-//! [`Language::static_text`]: crate::Language::static_text
+//! [`Syntax::static_text`]: crate::Syntax::static_text
 //! [`GreenNodeBuilder::token`]: crate::build::GreenNodeBuilder::token
 //! [`GreenNodeBuilder::new`]: crate::build::GreenNodeBuilder::new
 //! [`finish`]: crate::build::GreenNodeBuilder::finish

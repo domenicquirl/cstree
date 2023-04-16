@@ -450,7 +450,7 @@ where
     /// # Examples
     /// ```
     /// # use cstree::testing::*;
-    /// # use cstree::{build::GreenNodeBuilder, Language};
+    /// # use cstree::build::GreenNodeBuilder;
     /// # struct Parser;
     /// # impl Parser {
     /// #     fn peek(&self) -> Option<TestSyntaxKind> { None }

@@ -187,12 +187,12 @@ impl<S: Syntax, D> SyntaxToken<S, D> {
         self.static_text().or_else(|| self.green().text(resolver)).unwrap()
     }
 
-    /// If the [syntax kind](Language::Kind) of this token always represents the same text, returns
+    /// If the [syntax kind](Syntax) of this token always represents the same text, returns
     /// that text.
     ///
     /// # Examples
     /// If there is a syntax kind `Plus` that represents just the `+` operator and we implement
-    /// [`Language::static_text`] for it, we can retrieve this text in the resulting syntax tree.
+    /// [`Syntax::static_text`] for it, we can retrieve this text in the resulting syntax tree.
     ///
     /// ```
     /// # use cstree::testing::*;

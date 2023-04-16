@@ -19,7 +19,7 @@ pub(crate) struct SyntaxKindEnum<'i> {
 impl<'i> SyntaxKindEnum<'i> {
     pub(crate) fn parse_from_ast(error_handler: &ErrorContext, item: &'i syn::DeriveInput) -> Result<Self> {
         let syn::Data::Enum(data) = &item.data else {
-            error_handler.error_at(item, "`Language` can only be derived on enums");
+            error_handler.error_at(item, "`Syntax` can only be derived on enums");
             return Err(());
         };
 

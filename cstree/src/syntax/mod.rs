@@ -22,10 +22,10 @@ pub use text::SyntaxText;
 // A note on `#[inline]` usage in this module:
 // In `rowan`, there are two layers of `SyntaxXY`s: the `cursor` layer and the `api` layer.
 // The `cursor` layer handles all of the actual methods on the tree, while the `api` layer is
-// generic over the `Language` of the tree and otherwise forwards its implementation to the `cursor`
+// generic over the `Syntax` of the tree and otherwise forwards its implementation to the `cursor`
 // layer.
 // Here, we have unified the `cursor` and the `api` layer into the `syntax` layer.
-// This means that all of our types here are generic over a `Language`, including the
+// This means that all of our types here are generic over a `Syntax`, including the
 // implementations which, in `rowan`, are part of the `cursor` layer.
 // Very apparently, this makes the compiler less willing to inline. Almost every "regular use"
 // method in this file has some kind of `#[inline]` annotation to counteract that. This is _NOT_

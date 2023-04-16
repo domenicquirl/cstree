@@ -103,7 +103,7 @@
 //!     type Kind = SyntaxKind;
 //!
 //!     fn from_raw(raw: RawSyntaxKind) -> Self {
-//!         // This just needs to be the inverse of `kind_to_raw`, but could also
+//!         // This just needs to be the inverse of `into_raw`, but could also
 //!         // be an `impl TryFrom<u32> for SyntaxKind` or any other conversion.
 //!         match raw.0 {
 //!             0 => SyntaxKind::Int,

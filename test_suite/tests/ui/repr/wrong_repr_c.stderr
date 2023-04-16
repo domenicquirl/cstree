@@ -1,0 +1,10 @@
+error: syntax kind definitions must be `#[repr(u32)]` to derive `Syntax`
+ --> tests/ui/repr/wrong_repr_c.rs:4:1
+  |
+4 | / #[repr(C)]
+5 | | pub enum SyntaxKind {
+6 | |     A,
+7 | |     #[static_text("b")]
+8 | |     B,
+9 | | }
+  | |_^
