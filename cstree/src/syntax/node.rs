@@ -7,7 +7,7 @@ use crate::{
     text::*,
     traversal::*,
     util::*,
-    Language, RawSyntaxKind,
+    RawSyntaxKind, Syntax,
 };
 use parking_lot::RwLock;
 use std::{
@@ -29,14 +29,14 @@ use triomphe::Arc;
 /// individual nodes is relatively cheap.
 #[derive(Debug)]
 #[repr(transparent)]
-pub struct SyntaxNode<L: Language, D: 'static = ()> {
-    data: NonNull<NodeData<L, D>>,
+pub struct SyntaxNode<S: Syntax, D: 'static = ()> {
+    data: NonNull<NodeData<S, D>>,
 }
 
-unsafe impl<L: Language, D: 'static> Send for SyntaxNode<L, D> {}
-unsafe impl<L: Language, D: 'static> Sync for SyntaxNode<L, D> {}
+unsafe impl<S: Syntax, D: 'static> Send for SyntaxNode<S, D> {}
+unsafe impl<S: Syntax, D: 'static> Sync for SyntaxNode<S, D> {}
 
-impl<L: Language, D> SyntaxNode<L, D> {
+impl<S: Syntax, D> SyntaxNode<S, D> {
     /// Writes this node's [`Debug`](fmt::Debug) representation into the given `target`.
     /// If `recursive` is `true`, prints the entire subtree rooted in this node.
     /// Otherwise, only this node's kind and range are written.
@@ -120,7 +120,7 @@ impl<L: Language, D> SyntaxNode<L, D> {
     /// Turns this node into a [`ResolvedNode`](crate::syntax::ResolvedNode), but only if there is a resolver associated
     /// with this tree.
     #[inline]
-    pub fn try_resolved(&self) -> Option<&ResolvedNode<L, D>> {
+    pub fn try_resolved(&self) -> Option<&ResolvedNode<S, D>> {
         // safety: we only coerce if `resolver` exists
         self.resolver().map(|_| unsafe { ResolvedNode::coerce_ref(self) })
     }
@@ -129,12 +129,12 @@ impl<L: Language, D> SyntaxNode<L, D> {
     /// # Panics
     /// If there is no resolver associated with this tree.
     #[inline]
-    pub fn resolved(&self) -> &ResolvedNode<L, D> {
+    pub fn resolved(&self) -> &ResolvedNode<S, D> {
         self.try_resolved().expect("tried to resolve a node without resolver")
     }
 }
 
-impl<L: Language, D> Clone for SyntaxNode<L, D> {
+impl<S: Syntax, D> Clone for SyntaxNode<S, D> {
     fn clone(&self) -> Self {
         // safety:: the ref count is only dropped when there are no more external references (see below)
         // since we are currently cloning such a reference, there is still at least one
@@ -144,7 +144,7 @@ impl<L: Language, D> Clone for SyntaxNode<L, D> {
     }
 }
 
-impl<L: Language, D> Drop for SyntaxNode<L, D> {
+impl<S: Syntax, D> Drop for SyntaxNode<S, D> {
     fn drop(&mut self) {
         // safety:: the ref count is only dropped when there are no more external references (see below)
         // and all nodes but the root have been dropped.
@@ -169,9 +169,9 @@ impl<L: Language, D> Drop for SyntaxNode<L, D> {
     }
 }
 
-impl<L: Language, D> SyntaxNode<L, D> {
+impl<S: Syntax, D> SyntaxNode<S, D> {
     #[inline]
-    fn data(&self) -> &NodeData<L, D> {
+    fn data(&self) -> &NodeData<S, D> {
         unsafe { self.data.as_ref() }
     }
 
@@ -183,7 +183,7 @@ impl<L: Language, D> SyntaxNode<L, D> {
     /// The root of the tree this node belongs to.
     ///
     /// If this node is the root, returns `self`.
-    pub fn root(&self) -> &SyntaxNode<L, D> {
+    pub fn root(&self) -> &SyntaxNode<S, D> {
         let mut current = self;
         while let Some(parent) = current.parent() {
             current = parent;
@@ -222,31 +222,31 @@ impl<L: Language, D> SyntaxNode<L, D> {
 }
 
 // Identity semantics for hash & eq
-impl<L: Language, D> PartialEq for SyntaxNode<L, D> {
-    fn eq(&self, other: &SyntaxNode<L, D>) -> bool {
+impl<S: Syntax, D> PartialEq for SyntaxNode<S, D> {
+    fn eq(&self, other: &SyntaxNode<S, D>) -> bool {
         self.data == other.data
     }
 }
 
-impl<L: Language, D> Eq for SyntaxNode<L, D> {}
+impl<S: Syntax, D> Eq for SyntaxNode<S, D> {}
 
-impl<L: Language, D> Hash for SyntaxNode<L, D> {
+impl<S: Syntax, D> Hash for SyntaxNode<S, D> {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.data.hash(state);
     }
 }
 
-enum Kind<L: Language, D: 'static> {
+enum Kind<S: Syntax, D: 'static> {
     Root(GreenNode, Option<StdArc<dyn Resolver<TokenKey>>>),
     Child {
-        parent: SyntaxNode<L, D>,
+        parent: SyntaxNode<S, D>,
         index:  u32,
         offset: TextSize,
     },
 }
 
-impl<L: Language, D> Kind<L, D> {
-    fn as_child(&self) -> Option<(&SyntaxNode<L, D>, u32, TextSize)> {
+impl<S: Syntax, D> Kind<S, D> {
+    fn as_child(&self) -> Option<(&SyntaxNode<S, D>, u32, TextSize)> {
         match self {
             Kind::Child { parent, index, offset } => Some((parent, *index, *offset)),
             _ => None,
@@ -254,17 +254,17 @@ impl<L: Language, D> Kind<L, D> {
     }
 }
 
-pub(super) struct NodeData<L: Language, D: 'static> {
-    kind:        Kind<L, D>,
+pub(super) struct NodeData<S: Syntax, D: 'static> {
+    kind:        Kind<S, D>,
     green:       NonNull<GreenNode>,
     ref_count:   *mut AtomicU32,
     data:        RwLock<Option<Arc<D>>>,
-    children:    Vec<UnsafeCell<Option<SyntaxElement<L, D>>>>,
+    children:    Vec<UnsafeCell<Option<SyntaxElement<S, D>>>>,
     child_locks: Vec<RwLock<()>>,
 }
 
-impl<L: Language, D> NodeData<L, D> {
-    fn new(kind: Kind<L, D>, green: NonNull<GreenNode>, ref_count: *mut AtomicU32, n_children: usize) -> NonNull<Self> {
+impl<S: Syntax, D> NodeData<S, D> {
+    fn new(kind: Kind<S, D>, green: NonNull<GreenNode>, ref_count: *mut AtomicU32, n_children: usize) -> NonNull<Self> {
         let mut children = Vec::with_capacity(n_children);
         let mut child_locks = Vec::with_capacity(n_children);
         children.extend((0..n_children).map(|_| Default::default()));
@@ -282,17 +282,17 @@ impl<L: Language, D> NodeData<L, D> {
     }
 }
 
-impl<L: Language, D> SyntaxNode<L, D> {
+impl<S: Syntax, D> SyntaxNode<S, D> {
     /// Build a new syntax tree on top of a green tree.
     ///
     /// # Example
     /// ```
     /// # use cstree::testing::*;
-    /// # let mut builder: GreenNodeBuilder<MyLanguage> = GreenNodeBuilder::new();
+    /// # let mut builder: GreenNodeBuilder<MySyntax> = GreenNodeBuilder::new();
     /// # builder.start_node(Root);
     /// # builder.finish_node();
     /// # let (green_root, _) = builder.finish();
-    /// let root: SyntaxNode<MyLanguage> = SyntaxNode::new_root(green_root);
+    /// let root: SyntaxNode<MySyntax> = SyntaxNode::new_root(green_root);
     /// assert_eq!(root.kind(), Root);
     /// ```
     #[inline]
@@ -300,7 +300,7 @@ impl<L: Language, D> SyntaxNode<L, D> {
         Self::make_new_root(green, None)
     }
 
-    fn new(data: NonNull<NodeData<L, D>>) -> Self {
+    fn new(data: NonNull<NodeData<S, D>>) -> Self {
         Self { data }
     }
 
@@ -334,7 +334,7 @@ impl<L: Language, D> SyntaxNode<L, D> {
     /// # use cstree::testing::*;
     /// use cstree::syntax::ResolvedNode;
     ///
-    /// let mut builder: GreenNodeBuilder<MyLanguage> = GreenNodeBuilder::new();
+    /// let mut builder: GreenNodeBuilder<MySyntax> = GreenNodeBuilder::new();
     /// builder.start_node(Root);
     /// builder.token(Identifier, "content");
     /// builder.finish_node();
@@ -344,11 +344,11 @@ impl<L: Language, D> SyntaxNode<L, D> {
     /// // This created a new interner and cache for us owned by the builder,
     /// // and `finish` always returns these.
     /// let interner = cache.unwrap().into_interner().unwrap();
-    /// let root: ResolvedNode<MyLanguage> = SyntaxNode::new_root_with_resolver(green, interner);
+    /// let root: ResolvedNode<MySyntax> = SyntaxNode::new_root_with_resolver(green, interner);
     /// assert_eq!(root.text(), "content");
     /// ```
     #[inline]
-    pub fn new_root_with_resolver(green: GreenNode, resolver: impl Resolver<TokenKey> + 'static) -> ResolvedNode<L, D> {
+    pub fn new_root_with_resolver(green: GreenNode, resolver: impl Resolver<TokenKey> + 'static) -> ResolvedNode<S, D> {
         let ptr: StdArc<dyn Resolver<TokenKey>> = StdArc::new(resolver);
         ResolvedNode {
             syntax: SyntaxNode::make_new_root(green, Some(ptr)),
@@ -412,7 +412,7 @@ impl<L: Language, D> SyntaxNode<L, D> {
     }
 
     #[inline]
-    fn read(&self, index: usize) -> Option<SyntaxElementRef<'_, L, D>> {
+    fn read(&self, index: usize) -> Option<SyntaxElementRef<'_, S, D>> {
         // safety: children are pre-allocated and indices are determined internally
         let _read = unsafe { self.data().child_locks.get_unchecked(index).read() };
         // safety: mutable accesses to the slot only occur below and have to take the lock
@@ -420,7 +420,7 @@ impl<L: Language, D> SyntaxNode<L, D> {
         slot.as_ref().map(|elem| elem.into())
     }
 
-    fn try_write(&self, index: usize, elem: SyntaxElement<L, D>) {
+    fn try_write(&self, index: usize, elem: SyntaxElement<S, D>) {
         // safety: children are pre-allocated and indices are determined internally
         let _write = unsafe { self.data().child_locks.get_unchecked(index).write() };
         // safety: we are the only writer and there are no readers as evidenced by the write lock
@@ -469,7 +469,7 @@ impl<L: Language, D> SyntaxNode<L, D> {
         node: &GreenNode,
         index: usize,
         offset: TextSize,
-    ) -> SyntaxElementRef<'_, L, D> {
+    ) -> SyntaxElementRef<'_, S, D> {
         if let Some(elem) = self.read(index) {
             debug_assert_eq!(elem.text_range().start(), offset);
             return elem;
@@ -487,7 +487,7 @@ impl<L: Language, D> SyntaxNode<L, D> {
         element: GreenElementRef<'_>,
         index: usize,
         offset: TextSize,
-    ) -> SyntaxElementRef<'_, L, D> {
+    ) -> SyntaxElementRef<'_, S, D> {
         if let Some(elem) = self.read(index) {
             debug_assert_eq!(elem.text_range().start(), offset);
             return elem;
@@ -529,8 +529,8 @@ impl<L: Language, D> SyntaxNode<L, D> {
 
     /// The kind of this node in terms of your language.
     #[inline]
-    pub fn kind(&self) -> L::Kind {
-        L::kind_from_raw(self.syntax_kind())
+    pub fn kind(&self) -> S {
+        S::from_raw(self.syntax_kind())
     }
 
     /// The range this node covers in the source text, in bytes.
@@ -547,7 +547,7 @@ impl<L: Language, D> SyntaxNode<L, D> {
     /// by this node, i.e. the combined text of all token leafs of the subtree originating in this
     /// node.
     #[inline]
-    pub fn resolve_text<'n, 'i, I>(&'n self, resolver: &'i I) -> SyntaxText<'n, 'i, I, L, D>
+    pub fn resolve_text<'n, 'i, I>(&'n self, resolver: &'i I) -> SyntaxText<'n, 'i, I, S, D>
     where
         I: Resolver<TokenKey> + ?Sized,
     {
@@ -562,7 +562,7 @@ impl<L: Language, D> SyntaxNode<L, D> {
 
     /// The parent node of this node, except if this node is the root.
     #[inline]
-    pub fn parent(&self) -> Option<&SyntaxNode<L, D>> {
+    pub fn parent(&self) -> Option<&SyntaxNode<S, D>> {
         match &self.data().kind {
             Kind::Root(_, _) => None,
             Kind::Child { parent, .. } => Some(parent),
@@ -585,7 +585,7 @@ impl<L: Language, D> SyntaxNode<L, D> {
 
     /// Returns an iterator along the chain of parents of this node.
     #[inline]
-    pub fn ancestors(&self) -> impl Iterator<Item = &SyntaxNode<L, D>> {
+    pub fn ancestors(&self) -> impl Iterator<Item = &SyntaxNode<S, D>> {
         iter::successors(Some(self), |&node| node.parent())
     }
 
@@ -593,13 +593,13 @@ impl<L: Language, D> SyntaxNode<L, D> {
     ///
     /// If you want to also consider leafs, see [`children_with_tokens`](SyntaxNode::children_with_tokens).
     #[inline]
-    pub fn children(&self) -> SyntaxNodeChildren<'_, L, D> {
+    pub fn children(&self) -> SyntaxNodeChildren<'_, S, D> {
         SyntaxNodeChildren::new(self)
     }
 
     /// Returns an iterator over child elements of this node, including tokens.
     #[inline]
-    pub fn children_with_tokens(&self) -> SyntaxElementChildren<'_, L, D> {
+    pub fn children_with_tokens(&self) -> SyntaxElementChildren<'_, S, D> {
         SyntaxElementChildren::new(self)
     }
 
@@ -608,14 +608,14 @@ impl<L: Language, D> SyntaxNode<L, D> {
     /// If you want to also consider leafs, see [`first_child_or_token`](SyntaxNode::first_child_or_token).
     #[inline]
     #[allow(clippy::map_clone)]
-    pub fn first_child(&self) -> Option<&SyntaxNode<L, D>> {
+    pub fn first_child(&self) -> Option<&SyntaxNode<S, D>> {
         let (node, (index, offset)) = filter_nodes(self.green().children_from(0, self.text_range().start())).next()?;
         self.get_or_add_node(node, index, offset).as_node().map(|node| *node)
     }
 
     /// The first child element of this node, if any, including tokens.
     #[inline]
-    pub fn first_child_or_token(&self) -> Option<SyntaxElementRef<'_, L, D>> {
+    pub fn first_child_or_token(&self) -> Option<SyntaxElementRef<'_, S, D>> {
         let (element, (index, offset)) = self.green().children_from(0, self.text_range().start()).next()?;
         Some(self.get_or_add_element(element, index, offset))
     }
@@ -625,7 +625,7 @@ impl<L: Language, D> SyntaxNode<L, D> {
     /// If you want to also consider leafs, see [`last_child_or_token`](SyntaxNode::last_child_or_token).
     #[inline]
     #[allow(clippy::map_clone)]
-    pub fn last_child(&self) -> Option<&SyntaxNode<L, D>> {
+    pub fn last_child(&self) -> Option<&SyntaxNode<S, D>> {
         let (node, (index, offset)) = filter_nodes(
             self.green()
                 .children_to(self.green().children().len(), self.text_range().end()),
@@ -636,7 +636,7 @@ impl<L: Language, D> SyntaxNode<L, D> {
 
     /// The last child element of this node, if any, including tokens.
     #[inline]
-    pub fn last_child_or_token(&self) -> Option<SyntaxElementRef<'_, L, D>> {
+    pub fn last_child_or_token(&self) -> Option<SyntaxElementRef<'_, S, D>> {
         let (element, (index, offset)) = self
             .green()
             .children_to(self.green().children().len(), self.text_range().end())
@@ -650,7 +650,7 @@ impl<L: Language, D> SyntaxNode<L, D> {
     ///
     /// If you want to also consider leafs, see [`next_child_or_token_after`](SyntaxNode::next_child_or_token_after).
     #[inline]
-    pub fn next_child_after(&self, n: usize, offset: TextSize) -> Option<&SyntaxNode<L, D>> {
+    pub fn next_child_after(&self, n: usize, offset: TextSize) -> Option<&SyntaxNode<S, D>> {
         let (node, (index, offset)) = filter_nodes(self.green().children_from(n + 1, offset)).next()?;
         self.get_or_add_node(node, index, offset).as_node().copied()
     }
@@ -658,7 +658,7 @@ impl<L: Language, D> SyntaxNode<L, D> {
     /// The first child element of this node starting at the (n + 1)-st, if any.
     /// If this method returns `Some`, the contained node is the (n + 1)-st child of this node.
     #[inline]
-    pub fn next_child_or_token_after(&self, n: usize, offset: TextSize) -> Option<SyntaxElementRef<'_, L, D>> {
+    pub fn next_child_or_token_after(&self, n: usize, offset: TextSize) -> Option<SyntaxElementRef<'_, S, D>> {
         let (element, (index, offset)) = self.green().children_from(n + 1, offset).next()?;
         Some(self.get_or_add_element(element, index, offset))
     }
@@ -669,7 +669,7 @@ impl<L: Language, D> SyntaxNode<L, D> {
     ///
     /// If you want to also consider leafs, see [`prev_child_or_token_before`](SyntaxNode::prev_child_or_token_before).
     #[inline]
-    pub fn prev_child_before(&self, n: usize, offset: TextSize) -> Option<&SyntaxNode<L, D>> {
+    pub fn prev_child_before(&self, n: usize, offset: TextSize) -> Option<&SyntaxNode<S, D>> {
         let (node, (index, offset)) = filter_nodes(self.green().children_to(n, offset)).next()?;
         self.get_or_add_node(node, index, offset).as_node().copied()
     }
@@ -677,7 +677,7 @@ impl<L: Language, D> SyntaxNode<L, D> {
     /// The last child node of this node up to the nth, if any.
     /// If this method returns `Some`, the contained node is the (n - 1)-st child.
     #[inline]
-    pub fn prev_child_or_token_before(&self, n: usize, offset: TextSize) -> Option<SyntaxElementRef<'_, L, D>> {
+    pub fn prev_child_or_token_before(&self, n: usize, offset: TextSize) -> Option<SyntaxElementRef<'_, S, D>> {
         let (element, (index, offset)) = self.green().children_to(n, offset).next()?;
         Some(self.get_or_add_element(element, index, offset))
     }
@@ -686,7 +686,7 @@ impl<L: Language, D> SyntaxNode<L, D> {
     ///
     /// If you want to also consider leafs, see [`next_sibling_or_token`](SyntaxNode::next_sibling_or_token).
     #[inline]
-    pub fn next_sibling(&self) -> Option<&SyntaxNode<L, D>> {
+    pub fn next_sibling(&self) -> Option<&SyntaxNode<S, D>> {
         let (parent, index, _) = self.data().kind.as_child()?;
 
         let (node, (index, offset)) = filter_nodes(
@@ -700,7 +700,7 @@ impl<L: Language, D> SyntaxNode<L, D> {
 
     /// The tree element to the right of this one, i.e. the next child of this node's parent after this node.
     #[inline]
-    pub fn next_sibling_or_token(&self) -> Option<SyntaxElementRef<'_, L, D>> {
+    pub fn next_sibling_or_token(&self) -> Option<SyntaxElementRef<'_, S, D>> {
         let (parent, index, _) = self.data().kind.as_child()?;
 
         let (element, (index, offset)) = parent
@@ -714,7 +714,7 @@ impl<L: Language, D> SyntaxNode<L, D> {
     ///
     /// If you want to also consider leafs, see [`prev_sibling_or_token`](SyntaxNode::prev_sibling_or_token).
     #[inline]
-    pub fn prev_sibling(&self) -> Option<&SyntaxNode<L, D>> {
+    pub fn prev_sibling(&self) -> Option<&SyntaxNode<S, D>> {
         let (parent, index, _) = self.data().kind.as_child()?;
 
         let (node, (index, offset)) =
@@ -724,7 +724,7 @@ impl<L: Language, D> SyntaxNode<L, D> {
 
     /// The tree element to the left of this one, i.e. the previous child of this node's parent before this node.
     #[inline]
-    pub fn prev_sibling_or_token(&self) -> Option<SyntaxElementRef<'_, L, D>> {
+    pub fn prev_sibling_or_token(&self) -> Option<SyntaxElementRef<'_, S, D>> {
         let (parent, index, _) = self.data().kind.as_child()?;
 
         let (element, (index, offset)) = parent
@@ -736,13 +736,13 @@ impl<L: Language, D> SyntaxNode<L, D> {
 
     /// Return the leftmost token in the subtree of this node
     #[inline]
-    pub fn first_token(&self) -> Option<&SyntaxToken<L, D>> {
+    pub fn first_token(&self) -> Option<&SyntaxToken<S, D>> {
         self.first_child_or_token()?.first_token()
     }
 
     /// Return the rightmost token in the subtree of this node
     #[inline]
-    pub fn last_token(&self) -> Option<&SyntaxToken<L, D>> {
+    pub fn last_token(&self) -> Option<&SyntaxToken<S, D>> {
         self.last_child_or_token()?.last_token()
     }
 
@@ -752,7 +752,7 @@ impl<L: Language, D> SyntaxNode<L, D> {
     ///
     /// If you want to also consider leafs, see [`siblings_with_tokens`](SyntaxNode::siblings_with_tokens).
     #[inline]
-    pub fn siblings(&self, direction: Direction) -> impl Iterator<Item = &SyntaxNode<L, D>> {
+    pub fn siblings(&self, direction: Direction) -> impl Iterator<Item = &SyntaxNode<S, D>> {
         iter::successors(Some(self), move |node| match direction {
             Direction::Next => node.next_sibling(),
             Direction::Prev => node.prev_sibling(),
@@ -763,8 +763,8 @@ impl<L: Language, D> SyntaxNode<L, D> {
     /// node's parent's children from this node on to the left or the right.
     /// The first item in the iterator will always be this node.
     #[inline]
-    pub fn siblings_with_tokens(&self, direction: Direction) -> impl Iterator<Item = SyntaxElementRef<'_, L, D>> {
-        let me: SyntaxElementRef<'_, L, D> = self.into();
+    pub fn siblings_with_tokens(&self, direction: Direction) -> impl Iterator<Item = SyntaxElementRef<'_, S, D>> {
+        let me: SyntaxElementRef<'_, S, D> = self.into();
         iter::successors(Some(me), move |el| match direction {
             Direction::Next => el.next_sibling_or_token(),
             Direction::Prev => el.prev_sibling_or_token(),
@@ -775,7 +775,7 @@ impl<L: Language, D> SyntaxNode<L, D> {
     ///
     /// If you want to also consider leafs, see [`descendants_with_tokens`](SyntaxNode::descendants_with_tokens).
     #[inline]
-    pub fn descendants(&self) -> impl Iterator<Item = &SyntaxNode<L, D>> {
+    pub fn descendants(&self) -> impl Iterator<Item = &SyntaxNode<S, D>> {
         self.preorder().filter_map(|event| match event {
             WalkEvent::Enter(node) => Some(node),
             WalkEvent::Leave(_) => None,
@@ -784,7 +784,7 @@ impl<L: Language, D> SyntaxNode<L, D> {
 
     /// Returns an iterator over all elements in the subtree starting at this node, including this node.
     #[inline]
-    pub fn descendants_with_tokens(&self) -> impl Iterator<Item = SyntaxElementRef<'_, L, D>> {
+    pub fn descendants_with_tokens(&self) -> impl Iterator<Item = SyntaxElementRef<'_, S, D>> {
         self.preorder_with_tokens().filter_map(|event| match event {
             WalkEvent::Enter(it) => Some(it),
             WalkEvent::Leave(_) => None,
@@ -794,7 +794,7 @@ impl<L: Language, D> SyntaxNode<L, D> {
     /// Traverse the subtree rooted at the current node (including the current
     /// node) in preorder, excluding tokens.
     #[inline(always)]
-    pub fn preorder(&self) -> impl Iterator<Item = WalkEvent<&SyntaxNode<L, D>>> {
+    pub fn preorder(&self) -> impl Iterator<Item = WalkEvent<&SyntaxNode<S, D>>> {
         iter::successors(Some(WalkEvent::Enter(self)), move |pos| {
             let next = match pos {
                 WalkEvent::Enter(node) => match node.first_child() {
@@ -818,7 +818,7 @@ impl<L: Language, D> SyntaxNode<L, D> {
     /// Traverse the subtree rooted at the current node (including the current
     /// node) in preorder, including tokens.
     #[inline(always)]
-    pub fn preorder_with_tokens(&self) -> impl Iterator<Item = WalkEvent<SyntaxElementRef<'_, L, D>>> {
+    pub fn preorder_with_tokens(&self) -> impl Iterator<Item = WalkEvent<SyntaxElementRef<'_, S, D>>> {
         let me = self.into();
         iter::successors(Some(WalkEvent::Enter(me)), move |pos| {
             let next = match pos {
@@ -845,7 +845,7 @@ impl<L: Language, D> SyntaxNode<L, D> {
 
     /// Find a token in the subtree corresponding to this node, which covers the offset.
     /// Precondition: offset must be withing node's range.
-    pub fn token_at_offset(&self, offset: TextSize) -> TokenAtOffset<SyntaxToken<L, D>> {
+    pub fn token_at_offset(&self, offset: TextSize) -> TokenAtOffset<SyntaxToken<S, D>> {
         // TODO: this could be faster if we first drill-down to node, and only
         // then switch to token search. We should also replace explicit
         // recursion with a loop.
@@ -883,8 +883,8 @@ impl<L: Language, D> SyntaxNode<L, D> {
     /// contains the range. If the range is empty and is contained in two leaf
     /// nodes, either one can be returned. Precondition: range must be contained
     /// withing the current node
-    pub fn covering_element(&self, range: TextRange) -> SyntaxElementRef<'_, L, D> {
-        let mut res: SyntaxElementRef<'_, L, D> = self.into();
+    pub fn covering_element(&self, range: TextRange) -> SyntaxElementRef<'_, S, D> {
+        let mut res: SyntaxElementRef<'_, S, D> = self.into();
         loop {
             assert!(
                 res.text_range().contains_range(range),
@@ -909,9 +909,9 @@ impl<L: Language, D> SyntaxNode<L, D> {
 }
 
 #[cfg(feature = "serialize")]
-impl<L, D> SyntaxNode<L, D>
+impl<S, D> SyntaxNode<S, D>
 where
-    L: Language,
+    S: Syntax,
 {
     /// Return an anonymous object that can be used to serialize this node,
     /// including the data and by using an external resolver.

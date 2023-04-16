@@ -1,4 +1,4 @@
-use cstree::Language;
+use cstree::Syntax;
 
 #[test]
 fn basic() {

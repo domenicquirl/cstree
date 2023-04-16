@@ -7,8 +7,10 @@
 //! You may want to follow the conceptual overview of the design alongside this tutorial:
 //! https://github.com/rust-analyzer/rust-analyzer/blob/master/docs/dev/syntax.md
 
+use std::collections::VecDeque;
+
 /// Let's start with defining all kinds of tokens and composite nodes.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u32)]
 pub enum SyntaxKind {
     LParen = 0, // '('
@@ -22,11 +24,14 @@ pub enum SyntaxKind {
     Atom, // `+`, `15`, wraps a WORD token
     Root, // top-level node: a list of s-expressions
 }
-use std::collections::VecDeque;
 
+/// When matching against the kind of the node, `SyntaxKind::Kind` is a fine name to use.
+/// For specifying generic arguments like `Node<MySyntax>`, we'll use this alias to refer to the
+/// syntax as a whole.
+type SExprSyntax = SyntaxKind;
 use SyntaxKind::*;
 
-/// Some boilerplate is needed, as cstree represents kinds as `struct SyntaxKind(u16)` internally,
+/// Some boilerplate is needed, as cstree represents kinds as `struct RawSyntaxKind(u32)` internally,
 /// in order to not need the user's `enum SyntaxKind` as a type parameter.
 ///
 /// First, to easily pass the enum variants into cstree via `.into()`:
@@ -36,25 +41,21 @@ impl From<SyntaxKind> for cstree::RawSyntaxKind {
     }
 }
 
-/// Second, implementing the `Language` trait teaches cstree to convert between these two SyntaxKind
-/// types, allowing for a nicer SyntaxNode API where "kinds" are values from our `enum SyntaxKind`,
-/// instead of plain u16 values.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub enum Lang {}
-impl cstree::Language for Lang {
-    type Kind = SyntaxKind;
-
-    fn kind_from_raw(raw: cstree::RawSyntaxKind) -> Self::Kind {
+/// Second, implementing the `Syntax` trait teaches cstree to convert between these two SyntaxKind
+/// types, allowing for a nicer `SyntaxNode` API where "kinds" are values from our `enum SyntaxKind`,
+/// instead of plain `u32` values.
+impl cstree::Syntax for SExprSyntax {
+    fn from_raw(raw: cstree::RawSyntaxKind) -> Self {
         assert!(raw.0 <= Root as u32);
         unsafe { std::mem::transmute::<u32, SyntaxKind>(raw.0) }
     }
 
-    fn kind_to_raw(kind: Self::Kind) -> cstree::RawSyntaxKind {
-        kind.into()
+    fn into_raw(self) -> cstree::RawSyntaxKind {
+        self.into()
     }
 
-    fn static_text(kind: Self::Kind) -> Option<&'static str> {
-        match kind {
+    fn static_text(self) -> Option<&'static str> {
+        match self {
             LParen => Some("("),
             RParen => Some(")"),
             _ => None,
@@ -62,13 +63,13 @@ impl cstree::Language for Lang {
     }
 }
 
-/// GreenNode is an immutable tree, which caches identical nodes and tokens, but doesn't contain
+/// `GreenNode` is an immutable tree, which caches identical nodes and tokens, but doesn't contain
 /// offsets and parent pointers.
-/// cstree also deduplicates the actual source string in addition to the tree nodes, so we will need
-/// the Resolver to get the real text back from the interned representation.
-use cstree::{green::GreenNode, interning::Resolver, Language};
+/// `cstree` also deduplicates the actual source string in addition to the tree nodes, so we will need
+/// the `Resolver` to get the real text back from the interned representation.
+use cstree::{green::GreenNode, interning::Resolver, Syntax};
 
-/// You can construct GreenNodes by hand, but a builder is helpful for top-down parsers: it maintains
+/// You can construct `GreenNode`s by hand, but a builder is helpful for top-down parsers: it maintains
 /// a stack of currently in-progress nodes.
 use cstree::build::GreenNodeBuilder;
 
@@ -89,13 +90,13 @@ fn parse(text: &str) -> Parse<impl Resolver> {
         /// input tokens, including whitespace.
         tokens:  VecDeque<(SyntaxKind, &'input str)>,
         /// the in-progress green tree.
-        builder: GreenNodeBuilder<'static, 'static, Lang>,
+        builder: GreenNodeBuilder<'static, 'static, SExprSyntax>,
         /// the list of syntax errors we've accumulated so far.
         errors:  Vec<String>,
     }
 
     /// The outcome of parsing a single S-expression
-    enum SexpRes {
+    enum SExprResult {
         /// An S-expression (i.e. an atom, or a list) was successfully parsed
         Ok,
         /// Nothing was parsed, as no significant tokens remained
@@ -111,14 +112,14 @@ fn parse(text: &str) -> Parse<impl Resolver> {
             // Parse zero or more S-expressions
             loop {
                 match self.sexp() {
-                    SexpRes::Eof => break,
-                    SexpRes::RParen => {
+                    SExprResult::Eof => break,
+                    SExprResult::RParen => {
                         self.builder.start_node(Error);
                         self.errors.push("unmatched `)`".to_string());
                         self.bump(); // be sure to advance even in case of an error, so as to not get stuck
                         self.builder.finish_node();
                     }
-                    SexpRes::Ok => {}
+                    SExprResult::Ok => {}
                 }
             }
             // Don't forget to eat *trailing* whitespace
@@ -144,28 +145,28 @@ fn parse(text: &str) -> Parse<impl Resolver> {
             self.bump(); // '('
             loop {
                 match self.sexp() {
-                    SexpRes::Eof => {
+                    SExprResult::Eof => {
                         self.errors.push("expected `)`".to_string());
                         break;
                     }
-                    SexpRes::RParen => {
+                    SExprResult::RParen => {
                         self.bump();
                         break;
                     }
-                    SexpRes::Ok => {}
+                    SExprResult::Ok => {}
                 }
             }
             // close the list node
             self.builder.finish_node();
         }
 
-        fn sexp(&mut self) -> SexpRes {
+        fn sexp(&mut self) -> SExprResult {
             // Eat leading whitespace
             self.skip_ws();
             // Either a list, an atom, a closing paren, or an eof.
             let t = match self.current() {
-                None => return SexpRes::Eof,
-                Some(RParen) => return SexpRes::RParen,
+                None => return SExprResult::Eof,
+                Some(RParen) => return SExprResult::RParen,
                 Some(t) => t,
             };
             match t {
@@ -178,7 +179,7 @@ fn parse(text: &str) -> Parse<impl Resolver> {
                 Error => self.bump(),
                 _ => unreachable!(),
             }
-            SexpRes::Ok
+            SExprResult::Ok
         }
 
         /// Advance one token, adding it to the current branch of the tree builder.
@@ -208,13 +209,13 @@ fn parse(text: &str) -> Parse<impl Resolver> {
 }
 
 /// To work with the parse results we need a view into the green tree - the syntax tree.
-/// It is also immutable, like a GreenNode, but it contains parent pointers, offsets, and has
+/// It is also immutable, like a `GreenNode`, but it contains parent pointers, offsets, and has
 /// identity semantics.
-type SyntaxNode = cstree::syntax::SyntaxNode<Lang>;
+type SyntaxNode = cstree::syntax::SyntaxNode<SExprSyntax>;
 #[allow(unused)]
-type SyntaxToken = cstree::syntax::SyntaxToken<Lang>;
+type SyntaxToken = cstree::syntax::SyntaxToken<SExprSyntax>;
 #[allow(unused)]
-type SyntaxElement = cstree::syntax::SyntaxElement<Lang>;
+type SyntaxElement = cstree::syntax::SyntaxElement<SExprSyntax>;
 
 impl<I> Parse<I> {
     fn syntax(&self) -> SyntaxNode {
@@ -292,21 +293,21 @@ mod ast {
     ast_node!(List, List);
 }
 
-// Sexp is slightly different because it can be both an atom and a list, so let's do it by hand.
+// `SExpr` is slightly different because it can be both an atom and a list, so let's do it by hand.
 #[derive(PartialEq, Eq, Hash)]
 #[repr(transparent)]
-struct Sexp(SyntaxNode);
+struct SExpr(SyntaxNode);
 
 enum SexpKind {
     Atom(ast::Atom),
     List(ast::List),
 }
 
-impl Sexp {
+impl SExpr {
     fn cast(node: SyntaxNode) -> Option<Self> {
         use ast::*;
         if Atom::cast(node.clone()).is_some() || List::cast(node.clone()).is_some() {
-            Some(Sexp(node))
+            Some(SExpr(node))
         } else {
             None
         }
@@ -323,8 +324,8 @@ impl Sexp {
 
 // Let's enhance AST nodes with ancillary functions and eval.
 impl ast::Root {
-    fn sexps(&self) -> impl Iterator<Item = Sexp> + '_ {
-        self.0.children().cloned().filter_map(Sexp::cast)
+    fn sexps(&self) -> impl Iterator<Item = SExpr> + '_ {
+        self.0.children().cloned().filter_map(SExpr::cast)
     }
 }
 
@@ -355,7 +356,7 @@ impl ast::Atom {
         use cstree::util::NodeOrToken;
 
         match self.0.green().children().next() {
-            Some(NodeOrToken::Token(token)) => Lang::static_text(Lang::kind_from_raw(token.kind()))
+            Some(NodeOrToken::Token(token)) => SExprSyntax::static_text(SExprSyntax::from_raw(token.kind()))
                 .or_else(|| token.text(resolver))
                 .unwrap(),
             _ => unreachable!(),
@@ -364,8 +365,8 @@ impl ast::Atom {
 }
 
 impl ast::List {
-    fn sexps(&self) -> impl Iterator<Item = Sexp> + '_ {
-        self.0.children().cloned().filter_map(Sexp::cast)
+    fn sexps(&self) -> impl Iterator<Item = SExpr> + '_ {
+        self.0.children().cloned().filter_map(SExpr::cast)
     }
 
     fn eval(&self, resolver: &impl Resolver) -> Option<i64> {
@@ -386,7 +387,7 @@ impl ast::List {
     }
 }
 
-impl Sexp {
+impl SExpr {
     fn eval(&self, resolver: &impl Resolver) -> Option<i64> {
         match self.kind() {
             SexpKind::Atom(atom) => atom.eval(resolver),
@@ -418,7 +419,7 @@ nan
     assert_eq!(res, vec![Some(92), Some(92), None, None, Some(92),])
 }
 
-/// Split the input string into a flat list of tokens (such as L_PAREN, WORD, and WHITESPACE)
+/// Split the input string into a flat list of tokens (such as LParen, Word, and Whitespace)
 fn lex(text: &str) -> VecDeque<(SyntaxKind, &str)> {
     fn tok(t: SyntaxKind) -> m_lexer::TokenKind {
         m_lexer::TokenKind(cstree::RawSyntaxKind::from(t).0 as u16)

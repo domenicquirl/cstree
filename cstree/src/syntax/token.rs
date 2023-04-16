@@ -12,18 +12,18 @@ use crate::{
     green::{GreenNode, GreenToken},
     interning::{Resolver, TokenKey},
     traversal::Direction,
-    Language, RawSyntaxKind,
+    RawSyntaxKind, Syntax,
 };
 
 /// Syntax tree token.
 #[derive(Debug)]
-pub struct SyntaxToken<L: Language, D: 'static = ()> {
-    parent: SyntaxNode<L, D>,
+pub struct SyntaxToken<S: Syntax, D: 'static = ()> {
+    parent: SyntaxNode<S, D>,
     index:  u32,
     offset: TextSize,
 }
 
-impl<L: Language, D> Clone for SyntaxToken<L, D> {
+impl<S: Syntax, D> Clone for SyntaxToken<S, D> {
     fn clone(&self) -> Self {
         Self {
             parent: self.parent.clone(),
@@ -33,7 +33,7 @@ impl<L: Language, D> Clone for SyntaxToken<L, D> {
     }
 }
 
-impl<L: Language, D> Hash for SyntaxToken<L, D> {
+impl<S: Syntax, D> Hash for SyntaxToken<S, D> {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.parent.hash(state);
         self.index.hash(state);
@@ -41,15 +41,15 @@ impl<L: Language, D> Hash for SyntaxToken<L, D> {
     }
 }
 
-impl<L: Language, D> PartialEq for SyntaxToken<L, D> {
-    fn eq(&self, other: &SyntaxToken<L, D>) -> bool {
+impl<S: Syntax, D> PartialEq for SyntaxToken<S, D> {
+    fn eq(&self, other: &SyntaxToken<S, D>) -> bool {
         self.parent == other.parent && self.index == other.index && self.offset == other.offset
     }
 }
 
-impl<L: Language, D> Eq for SyntaxToken<L, D> {}
+impl<S: Syntax, D> Eq for SyntaxToken<S, D> {}
 
-impl<L: Language, D> SyntaxToken<L, D> {
+impl<S: Syntax, D> SyntaxToken<S, D> {
     /// Writes this token's [`Debug`](fmt::Debug) representation into the given `target`.
     pub fn write_debug<R>(&self, resolver: &R, target: &mut impl fmt::Write) -> fmt::Result
     where
@@ -113,7 +113,7 @@ impl<L: Language, D> SyntaxToken<L, D> {
     /// Turns this token into a [`ResolvedToken`](crate::syntax::ResolvedToken), but only if there is a resolver
     /// associated with this tree.
     #[inline]
-    pub fn try_resolved(&self) -> Option<&ResolvedToken<L, D>> {
+    pub fn try_resolved(&self) -> Option<&ResolvedToken<S, D>> {
         // safety: we only coerce if `resolver` exists
         self.resolver().map(|_| unsafe { ResolvedToken::coerce_ref(self) })
     }
@@ -122,13 +122,13 @@ impl<L: Language, D> SyntaxToken<L, D> {
     /// # Panics
     /// If there is no resolver associated with this tree.
     #[inline]
-    pub fn resolved(&self) -> &ResolvedToken<L, D> {
+    pub fn resolved(&self) -> &ResolvedToken<S, D> {
         self.try_resolved().expect("tried to resolve a node without resolver")
     }
 }
 
-impl<L: Language, D> SyntaxToken<L, D> {
-    pub(super) fn new(parent: &SyntaxNode<L, D>, index: u32, offset: TextSize) -> SyntaxToken<L, D> {
+impl<S: Syntax, D> SyntaxToken<S, D> {
+    pub(super) fn new(parent: &SyntaxNode<S, D>, index: u32, offset: TextSize) -> SyntaxToken<S, D> {
         Self {
             parent: parent.clone_uncounted(),
             index,
@@ -164,8 +164,8 @@ impl<L: Language, D> SyntaxToken<L, D> {
 
     /// The kind of this token in terms of your language.
     #[inline]
-    pub fn kind(&self) -> L::Kind {
-        L::kind_from_raw(self.syntax_kind())
+    pub fn kind(&self) -> S {
+        S::from_raw(self.syntax_kind())
     }
 
     /// The range this token covers in the source text, in bytes.
@@ -197,7 +197,7 @@ impl<L: Language, D> SyntaxToken<L, D> {
     /// ```
     /// # use cstree::testing::*;
     /// # use cstree::build::*;
-    /// let mut builder: GreenNodeBuilder<MyLanguage> = GreenNodeBuilder::new();
+    /// let mut builder: GreenNodeBuilder<MySyntax> = GreenNodeBuilder::new();
     /// # builder.start_node(Root);
     /// # builder.token(Identifier, "x");
     /// # builder.token(Whitespace, " ");
@@ -206,7 +206,7 @@ impl<L: Language, D> SyntaxToken<L, D> {
     /// # builder.token(Int, "3");
     /// # builder.finish_node();
     /// let tree = parse(&mut builder, "x + 3");
-    /// # let tree: SyntaxNode<MyLanguage> = SyntaxNode::new_root(builder.finish().0);
+    /// # let tree: SyntaxNode<MySyntax> = SyntaxNode::new_root(builder.finish().0);
     /// let plus = tree
     ///     .children_with_tokens()
     ///     .nth(2) // `x`, then a space, then `+`
@@ -217,7 +217,7 @@ impl<L: Language, D> SyntaxToken<L, D> {
     /// ```
     #[inline(always)]
     pub fn static_text(&self) -> Option<&'static str> {
-        L::static_text(self.kind())
+        S::static_text(self.kind())
     }
 
     /// Returns `true` if `self` and `other` represent equal source text.
@@ -235,7 +235,7 @@ impl<L: Language, D> SyntaxToken<L, D> {
     /// # Examples
     /// ```
     /// # use cstree::testing::*;
-    /// let mut builder: GreenNodeBuilder<MyLanguage> = GreenNodeBuilder::new();
+    /// let mut builder: GreenNodeBuilder<MySyntax> = GreenNodeBuilder::new();
     /// # builder.start_node(Root);
     /// # builder.token(Identifier, "x");
     /// # builder.token(Whitespace, " ");
@@ -247,7 +247,7 @@ impl<L: Language, D> SyntaxToken<L, D> {
     /// # builder.token(Int, "3");
     /// # builder.finish_node();
     /// let tree = parse(&mut builder, "x + x + 3");
-    /// # let tree: SyntaxNode<MyLanguage> = SyntaxNode::new_root(builder.finish().0);
+    /// # let tree: SyntaxNode<MySyntax> = SyntaxNode::new_root(builder.finish().0);
     /// let mut tokens = tree.children_with_tokens();
     /// let tokens = tokens.by_ref();
     /// let first_x = tokens.next().unwrap().into_token().unwrap();
@@ -303,14 +303,14 @@ impl<L: Language, D> SyntaxToken<L, D> {
     ///     interner,
     ///     type_table: TypeTable{ /* stuff */},
     /// };
-    /// let mut builder: GreenNodeBuilder<MyLanguage, TokenInterner> =
+    /// let mut builder: GreenNodeBuilder<MySyntax, TokenInterner> =
     ///     GreenNodeBuilder::with_interner(&mut state.interner);
     /// # let input = "";
     /// # builder.start_node(Root);
     /// # builder.token(Identifier, "x");
     /// # builder.finish_node();
     /// let tree = parse(&mut builder, "x");
-    /// # let tree: SyntaxNode<MyLanguage> = SyntaxNode::new_root(builder.finish().0);
+    /// # let tree: SyntaxNode<MySyntax> = SyntaxNode::new_root(builder.finish().0);
     /// let type_table = &state.type_table;
     /// let ident = tree
     ///     .children_with_tokens()
@@ -339,26 +339,26 @@ impl<L: Language, D> SyntaxToken<L, D> {
 
     /// The parent node of this token.
     #[inline]
-    pub fn parent(&self) -> &SyntaxNode<L, D> {
+    pub fn parent(&self) -> &SyntaxNode<S, D> {
         &self.parent
     }
 
     /// Returns an iterator along the chain of parents of this token.
     #[inline]
-    pub fn ancestors(&self) -> impl Iterator<Item = &SyntaxNode<L, D>> {
+    pub fn ancestors(&self) -> impl Iterator<Item = &SyntaxNode<S, D>> {
         self.parent().ancestors()
     }
 
     /// The tree element to the right of this one, i.e. the next child of this token's parent after this token.
     #[inline]
-    pub fn next_sibling_or_token(&self) -> Option<SyntaxElementRef<'_, L, D>> {
+    pub fn next_sibling_or_token(&self) -> Option<SyntaxElementRef<'_, S, D>> {
         self.parent()
             .next_child_or_token_after(self.index as usize, self.text_range().end())
     }
 
     /// The tree element to the left of this one, i.e. the previous child of this token's parent after this token.
     #[inline]
-    pub fn prev_sibling_or_token(&self) -> Option<SyntaxElementRef<'_, L, D>> {
+    pub fn prev_sibling_or_token(&self) -> Option<SyntaxElementRef<'_, S, D>> {
         self.parent()
             .prev_child_or_token_before(self.index as usize, self.text_range().start())
     }
@@ -367,8 +367,8 @@ impl<L: Language, D> SyntaxToken<L, D> {
     /// token's parent's children from this token on to the left or the right.
     /// The first item in the iterator will always be this token.
     #[inline]
-    pub fn siblings_with_tokens(&self, direction: Direction) -> impl Iterator<Item = SyntaxElementRef<'_, L, D>> {
-        let me: SyntaxElementRef<'_, L, D> = self.into();
+    pub fn siblings_with_tokens(&self, direction: Direction) -> impl Iterator<Item = SyntaxElementRef<'_, S, D>> {
+        let me: SyntaxElementRef<'_, S, D> = self.into();
         iter::successors(Some(me), move |el| match direction {
             Direction::Next => el.next_sibling_or_token(),
             Direction::Prev => el.prev_sibling_or_token(),
@@ -378,7 +378,7 @@ impl<L: Language, D> SyntaxToken<L, D> {
     /// Returns the next token in the tree.
     /// This is not necessary a direct sibling of this token, but will always be further right in the tree.
     #[inline]
-    pub fn next_token(&self) -> Option<&SyntaxToken<L, D>> {
+    pub fn next_token(&self) -> Option<&SyntaxToken<S, D>> {
         match self.next_sibling_or_token() {
             Some(element) => element.first_token(),
             None => self
@@ -392,7 +392,7 @@ impl<L: Language, D> SyntaxToken<L, D> {
     /// Returns the previous token in the tree.
     /// This is not necessary a direct sibling of this token, but will always be further left in the tree.
     #[inline]
-    pub fn prev_token(&self) -> Option<&SyntaxToken<L, D>> {
+    pub fn prev_token(&self) -> Option<&SyntaxToken<S, D>> {
         match self.prev_sibling_or_token() {
             Some(element) => element.last_token(),
             None => self

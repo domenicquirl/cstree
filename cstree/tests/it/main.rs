@@ -8,18 +8,18 @@ use cstree::{
     build::{GreenNodeBuilder, NodeCache},
     green::GreenNode,
     interning::Interner,
-    Language, RawSyntaxKind,
+    RawSyntaxKind, Syntax,
 };
 
-pub type SyntaxNode<D = ()> = cstree::syntax::SyntaxNode<TestLang, D>;
-pub type SyntaxToken<D = ()> = cstree::syntax::SyntaxToken<TestLang, D>;
-pub type SyntaxElement<D = ()> = cstree::syntax::SyntaxElement<TestLang, D>;
-pub type SyntaxElementRef<'a, D = ()> = cstree::syntax::SyntaxElementRef<'a, TestLang, D>;
+pub type SyntaxNode<D = ()> = cstree::syntax::SyntaxNode<SyntaxKind, D>;
+pub type SyntaxToken<D = ()> = cstree::syntax::SyntaxToken<SyntaxKind, D>;
+pub type SyntaxElement<D = ()> = cstree::syntax::SyntaxElement<SyntaxKind, D>;
+pub type SyntaxElementRef<'a, D = ()> = cstree::syntax::SyntaxElementRef<'a, SyntaxKind, D>;
 
-pub type ResolvedNode<D = ()> = cstree::syntax::ResolvedNode<TestLang, D>;
-pub type ResolvedToken<D = ()> = cstree::syntax::ResolvedToken<TestLang, D>;
-pub type ResolvedElement<D = ()> = cstree::syntax::ResolvedElement<TestLang, D>;
-pub type ResolvedElementRef<'a, D = ()> = cstree::syntax::ResolvedElementRef<'a, TestLang, D>;
+pub type ResolvedNode<D = ()> = cstree::syntax::ResolvedNode<SyntaxKind, D>;
+pub type ResolvedToken<D = ()> = cstree::syntax::ResolvedToken<SyntaxKind, D>;
+pub type ResolvedElement<D = ()> = cstree::syntax::ResolvedElement<SyntaxKind, D>;
+pub type ResolvedElementRef<'a, D = ()> = cstree::syntax::ResolvedElementRef<'a, SyntaxKind, D>;
 
 #[derive(Debug)]
 pub enum Element<'s> {
@@ -27,20 +27,20 @@ pub enum Element<'s> {
     Token(&'s str),
 }
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
-pub enum TestLang {}
-impl Language for TestLang {
-    type Kind = RawSyntaxKind;
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(transparent)]
+pub struct SyntaxKind(u32);
 
-    fn kind_from_raw(raw: RawSyntaxKind) -> Self::Kind {
-        raw
+impl Syntax for SyntaxKind {
+    fn from_raw(raw: RawSyntaxKind) -> Self {
+        Self(raw.0)
     }
 
-    fn kind_to_raw(kind: Self::Kind) -> RawSyntaxKind {
-        kind
+    fn into_raw(self) -> RawSyntaxKind {
+        RawSyntaxKind(self.0)
     }
 
-    fn static_text(_kind: Self::Kind) -> Option<&'static str> {
+    fn static_text(self) -> Option<&'static str> {
         None
     }
 }
@@ -49,28 +49,31 @@ pub fn build_tree_with_cache<I>(root: &Element<'_>, cache: &mut NodeCache<'_, I>
 where
     I: Interner,
 {
-    let mut builder: GreenNodeBuilder<TestLang, I> = GreenNodeBuilder::with_cache(cache);
+    let mut builder: GreenNodeBuilder<SyntaxKind, I> = GreenNodeBuilder::with_cache(cache);
     build_recursive(root, &mut builder, 0);
     let (node, cache) = builder.finish();
     assert!(cache.is_none());
     node
 }
 
-pub fn build_recursive<L, I>(root: &Element<'_>, builder: &mut GreenNodeBuilder<'_, '_, L, I>, mut from: u32) -> u32
+pub fn build_recursive<I>(
+    root: &Element<'_>,
+    builder: &mut GreenNodeBuilder<'_, '_, SyntaxKind, I>,
+    mut from: u32,
+) -> u32
 where
-    L: Language<Kind = RawSyntaxKind>,
     I: Interner,
 {
     match root {
         Element::Node(children) => {
-            builder.start_node(RawSyntaxKind(from));
+            builder.start_node(SyntaxKind(from));
             for child in children {
                 from = build_recursive(child, builder, from + 1);
             }
             builder.finish_node();
         }
         Element::Token(text) => {
-            builder.token(RawSyntaxKind(from), text);
+            builder.token(SyntaxKind(from), text);
         }
     }
     from

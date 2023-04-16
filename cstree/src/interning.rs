@@ -71,11 +71,11 @@
 //! [`Resolver`] and [`Interner`] will be implemented for `&interner` if `interner` is multi-threaded:
 //!
 //! ```
-//! # use cstree::testing::{*, Language as _};
+//! # use cstree::testing::*;
 //! # use cstree::interning::*;
 //!
 //! let interner = new_threaded_interner();
-//! let mut builder: GreenNodeBuilder<MyLanguage, &MultiThreadedTokenInterner> =
+//! let mut builder: GreenNodeBuilder<MySyntax, &MultiThreadedTokenInterner> =
 //!     GreenNodeBuilder::from_interner(&interner);
 //!
 //! # builder.start_node(Root);

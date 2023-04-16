@@ -52,12 +52,12 @@ compound expression. They will, however, be allowed to write nested expressions 
 ### Defining the language
 First, we need to list the different part of our language's grammar.
 We can do that using an `enum` with a unit variant for any terminal and non-terminal.
-The `enum` needs to be convertible to a `u16`, so we use the `repr` attribute to ensure it uses the correct
+The `enum` needs to be convertible to a `u32`, so we use the `repr` attribute to ensure it uses the correct
 representation.
 
 ```rust
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[repr(u16)]
+#[repr(u32)]
 enum SyntaxKind {
     /* Tokens */
     Int,    // 42
@@ -78,7 +78,7 @@ expressions containing a sequence of arithmetic operations potentially involving
 expression nodes.
 
 To use our `SyntaxKind`s with `cstree`, we need to tell it how to convert it back to just a number (the
-`#[repr(u16)]` that we added) by implementing the `Language` trait. We can also tell `cstree` about tokens that
+`#[repr(u32)]` that we added) by implementing the `Language` trait. We can also tell `cstree` about tokens that
 always have the same text through the `static_text` method on the trait. This is useful for the operators and
 parentheses, but not possible for numbers, since an integer token may be produced from the input `3`, but also from
 other numbers like `7` or `12`. We implement `Language` on an empty type, just so we can give it a name.
@@ -93,7 +93,7 @@ impl Language for Calculator {
 
     fn kind_from_raw(raw: RawSyntaxKind) -> Self::Kind {
         // This just needs to be the inverse of `kind_to_raw`, but could also
-        // be an `impl TryFrom<u16> for SyntaxKind` or any other conversion.
+        // be an `impl TryFrom<u32> for SyntaxKind` or any other conversion.
         match raw.0 {
             0 => SyntaxKind::Int,
             1 => SyntaxKind::Plus,
@@ -107,7 +107,7 @@ impl Language for Calculator {
     }
 
     fn kind_to_raw(kind: Self::Kind) -> RawSyntaxKind {
-        RawSyntaxKind(kind as u16)
+        RawSyntaxKind(kind as u32)
     }
 
     fn static_text(kind: Self::Kind) -> Option<&'static str> {

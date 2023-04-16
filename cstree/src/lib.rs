@@ -40,7 +40,7 @@
 //! to happen to go from input text to a `cstree` syntax tree:
 //!
 //!  1. Define an enumeration of the types of tokens (like keywords) and nodes (like "an expression") that you want to
-//! have in your syntax and implement [`Language`]
+//! have in your syntax and implement [`Syntax`]
 //!
 //!  2. Create a [`GreenNodeBuilder`](build::GreenNodeBuilder) and call
 //! [`start_node`](build::GreenNodeBuilder::start_node), [`token`](build::GreenNodeBuilder::token) and
@@ -62,7 +62,7 @@
 //! representation.
 //!
 //! ```rust,ignore
-//! #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+//! #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 //! #[repr(u32)]
 //! enum SyntaxKind {
 //!     /* Tokens */
@@ -77,6 +77,14 @@
 //! }
 //! ```
 //!
+//! For convenience when we're working with generic `cstree` types like `SyntaxNode`, we'll also give a name to our
+//! syntax as a whole and add a type alias for it. That way, we can match against `SyntaxKind`s using the original name,
+//! but use the more informative `Node<Calculator>` to instantiate `cstree`'s types.
+//!
+//! ```rust,ignore
+//! type Calculator = SyntaxKind;
+//! ```
+//!
 //! Most of these are tokens to lex the input string into, like numbers (`Int`) and operators (`Plus`, `Minus`).
 //! We only really need one type of node; expressions.
 //! Our syntax tree's root node will have the special kind `Root`, all other nodes will be
@@ -84,21 +92,19 @@
 //! expression nodes.
 //!
 //! To use our `SyntaxKind`s with `cstree`, we need to tell it how to convert it back to just a number (the
-//! `#[repr(u16)]` that we added) by implementing the [`Language`] trait. We can also tell `cstree` about tokens that
+//! `#[repr(u32)]` that we added) by implementing the [`Syntax`] trait. We can also tell `cstree` about tokens that
 //! always have the same text through the `static_text` method on the trait. This is useful for the operators and
 //! parentheses, but not possible for numbers, since an integer token may be produced from the input `3`, but also from
-//! other numbers like `7` or `12`. We implement `Language` on an empty type, just so we can give it a name.
+//! other numbers like `7` or `12`.
 //!
 //! ```rust,ignore
-//! #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-//! pub struct Calculator;
-//! impl Language for Calculator {
+//! impl Syntax for Calculator {
 //!     // The tokens and nodes we just defined
 //!     type Kind = SyntaxKind;
 //!
-//!     fn kind_from_raw(raw: RawSyntaxKind) -> Self::Kind {
+//!     fn from_raw(raw: RawSyntaxKind) -> Self {
 //!         // This just needs to be the inverse of `kind_to_raw`, but could also
-//!         // be an `impl TryFrom<u16> for SyntaxKind` or any other conversion.
+//!         // be an `impl TryFrom<u32> for SyntaxKind` or any other conversion.
 //!         match raw.0 {
 //!             0 => SyntaxKind::Int,
 //!             1 => SyntaxKind::Plus,
@@ -111,12 +117,12 @@
 //!         }
 //!     }
 //!
-//!     fn kind_to_raw(kind: Self::Kind) -> RawSyntaxKind {
-//!         RawSyntaxKind(kind as u32)
+//!     fn into_raw(self) -> RawSyntaxKind {
+//!         RawSyntaxKind(self as u32)
 //!     }
 //!
-//!     fn static_text(kind: Self::Kind) -> Option<&'static str> {
-//!         match kind {
+//!     fn static_text(self) -> Option<&'static str> {
+//!         match self {
 //!             SyntaxKind::Plus => Some("+"),
 //!             SyntaxKind::Minus => Some("-"),
 //!             SyntaxKind::LParen => Some("("),
@@ -391,7 +397,7 @@ pub mod prelude {
         build::GreenNodeBuilder,
         green::{GreenNode, GreenToken},
         syntax::{SyntaxElement, SyntaxNode, SyntaxToken},
-        Language, RawSyntaxKind,
+        RawSyntaxKind, Syntax,
     };
 }
 
@@ -415,7 +421,10 @@ pub mod sync {
     pub use triomphe::Arc;
 }
 
-/// The `Language` trait is the bridge between the internal `cstree` representation and your
+/// A type that represents what items in your language can be.
+/// Typically, this is an `enum` with variants such as `Identifier`, `Literal`, ...
+///
+/// The `Syntax` trait is the bridge between the internal `cstree` representation and your
 /// language's types.
 /// This is essential for providing a [`SyntaxNode`] API that can be used with your types, as in the
 /// `s_expressions` example:
@@ -435,23 +444,18 @@ pub mod sync {
 /// }
 /// use SyntaxKind::*;
 ///
-/// #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-/// enum Lang {}
-///
-/// impl cstree::Language for Lang {
-///     type Kind = SyntaxKind;
-///
-///     fn kind_from_raw(raw: cstree::RawSyntaxKind) -> Self::Kind {
+/// impl cstree::Syntax for SyntaxKind {
+///     fn from_raw(raw: cstree::RawSyntaxKind) -> Self {
 ///         assert!(raw.0 <= __LAST as u32);
-///         unsafe { std::mem::transmute::<u32, SyntaxKind>(raw.0) }
+///         unsafe { std::mem::transmute::<u32, Self>(raw.0) }
 ///     }
 ///
-///     fn kind_to_raw(kind: Self::Kind) -> cstree::RawSyntaxKind {
-///         cstree::RawSyntaxKind(kind as u32)
+///     fn into_raw(self) -> cstree::RawSyntaxKind {
+///         cstree::RawSyntaxKind(self as u32)
 ///     }
 ///
-///     fn static_text(kind: Self::Kind) -> Option<&'static str> {
-///         match kind {
+///     fn static_text(self) -> Option<&'static str> {
+///         match self {
 ///             Plus => Some("+"),
 ///             Minus => Some("-"),
 ///             _ => None,
@@ -461,16 +465,12 @@ pub mod sync {
 /// ```
 ///
 /// [`SyntaxNode`]: crate::syntax::SyntaxNode
-pub trait Language: Sized + Clone + Copy + fmt::Debug + Eq + Ord + std::hash::Hash {
-    /// A type that represents what items in your Language can be.
-    /// Typically, this is an `enum` with variants such as `Identifier`, `Literal`, ...
-    type Kind: Sized + Clone + Copy + fmt::Debug;
-
+pub trait Syntax: Sized + Copy + fmt::Debug + Eq {
     /// Construct a semantic item kind from the compact representation.
-    fn kind_from_raw(raw: RawSyntaxKind) -> Self::Kind;
+    fn from_raw(raw: RawSyntaxKind) -> Self;
 
     /// Convert a semantic item kind into a more compact representation.
-    fn kind_to_raw(kind: Self::Kind) -> RawSyntaxKind;
+    fn into_raw(self) -> RawSyntaxKind;
 
     /// Fixed text for a particular syntax kind.
     /// Implement for kinds that will only ever represent the same text, such as punctuation (like a
@@ -479,7 +479,7 @@ pub trait Language: Sized + Clone + Copy + fmt::Debug + Eq + Ord + std::hash::Ha
     /// Indicating tokens that have a `static_text` this way allows `cstree` to store them more efficiently, which makes
     /// it faster to add them to a syntax tree and to look up their text. Since there can often be many occurrences
     /// of these tokens inside a file, doing so will improve the performance of using `cstree`.
-    fn static_text(kind: Self::Kind) -> Option<&'static str>;
+    fn static_text(self) -> Option<&'static str>;
 }
 
 #[cfg(feature = "derive")]
@@ -495,9 +495,9 @@ pub use cstree_derive::Language;
 #[allow(unsafe_code, unused)]
 pub mod testing {
     pub use crate::prelude::*;
-    pub fn parse<L: Language, I>(_b: &mut GreenNodeBuilder<L, I>, _s: &str) {}
+    pub fn parse<S: Syntax, I>(_b: &mut GreenNodeBuilder<S, I>, _s: &str) {}
 
-    #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     #[repr(u32)]
     #[allow(non_camel_case_types)]
     pub enum TestSyntaxKind {
@@ -510,25 +510,21 @@ pub mod testing {
         Whitespace,
         __LAST,
     }
+    pub type MySyntax = TestSyntaxKind;
     pub use TestSyntaxKind::*;
 
-    #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-    pub enum TestLang {}
-    pub type MyLanguage = TestLang;
-    impl Language for TestLang {
-        type Kind = TestSyntaxKind;
-
-        fn kind_from_raw(raw: RawSyntaxKind) -> Self::Kind {
+    impl Syntax for TestSyntaxKind {
+        fn from_raw(raw: RawSyntaxKind) -> Self {
             assert!(raw.0 <= TestSyntaxKind::__LAST as u32);
-            unsafe { std::mem::transmute::<u32, TestSyntaxKind>(raw.0) }
+            unsafe { std::mem::transmute::<u32, Self>(raw.0) }
         }
 
-        fn kind_to_raw(kind: Self::Kind) -> RawSyntaxKind {
-            RawSyntaxKind(kind as u32)
+        fn into_raw(self) -> RawSyntaxKind {
+            RawSyntaxKind(self as u32)
         }
 
-        fn static_text(kind: Self::Kind) -> Option<&'static str> {
-            match kind {
+        fn static_text(self) -> Option<&'static str> {
+            match self {
                 TestSyntaxKind::Plus => Some("+"),
                 _ => None,
             }

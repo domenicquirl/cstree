@@ -43,15 +43,15 @@ mod tests {
     #[cfg_attr(miri, ignore)]
     fn assert_send_sync() {
         fn f<T: Send + Sync>() {}
-        f::<SyntaxNode<TestLang>>();
-        f::<SyntaxToken<TestLang>>();
-        f::<SyntaxElement<TestLang>>();
-        f::<SyntaxElementRef<'static, TestLang>>();
+        f::<SyntaxNode<TestSyntaxKind>>();
+        f::<SyntaxToken<TestSyntaxKind>>();
+        f::<SyntaxElement<TestSyntaxKind>>();
+        f::<SyntaxElementRef<'static, TestSyntaxKind>>();
 
-        f::<ResolvedNode<TestLang>>();
-        f::<ResolvedToken<TestLang>>();
-        f::<ResolvedElement<TestLang>>();
-        f::<ResolvedElementRef<'static, TestLang>>();
+        f::<ResolvedNode<TestSyntaxKind>>();
+        f::<ResolvedToken<TestSyntaxKind>>();
+        f::<ResolvedElement<TestSyntaxKind>>();
+        f::<ResolvedElementRef<'static, TestSyntaxKind>>();
     }
 
     #[test]
@@ -60,10 +60,10 @@ mod tests {
     fn assert_syntax_sizes() {
         use std::mem::size_of;
 
-        assert_eq!(size_of::<SyntaxNode<TestLang>>(),          size_of::<*const u8>());
+        assert_eq!(size_of::<SyntaxNode<TestSyntaxKind>>(),          size_of::<*const u8>());
         // verify niche opt of `NonNull`
-        assert_eq!(size_of::<Option<SyntaxNode<TestLang>>>(),  size_of::<*const u8>()); 
+        assert_eq!(size_of::<Option<SyntaxNode<TestSyntaxKind>>>(),  size_of::<*const u8>()); 
         // parent + child index + text len
-        assert_eq!(size_of::<SyntaxToken<TestLang>>(),         size_of::<SyntaxNode<TestLang>>() + size_of::<u32>() * 2);
+        assert_eq!(size_of::<SyntaxToken<TestSyntaxKind>>(),         size_of::<SyntaxNode<TestSyntaxKind>>() + size_of::<u32>() * 2);
     }
 }

@@ -6,7 +6,7 @@ use cstree::{
     syntax::{ResolvedElementRef, ResolvedNode},
 };
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u32)]
 pub enum SyntaxKind {
     /* Tokens */
@@ -19,16 +19,12 @@ pub enum SyntaxKind {
     Expr,
     Root,
 }
+type Calculator = SyntaxKind;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct Calculator;
-impl Language for Calculator {
-    // The tokens and nodes we just defined
-    type Kind = SyntaxKind;
-
-    fn kind_from_raw(raw: RawSyntaxKind) -> Self::Kind {
-        // This just needs to be the inverse of `kind_to_raw`, but could also
-        // be an `impl TryFrom<u16> for SyntaxKind` or any other conversion.
+impl Syntax for Calculator {
+    fn from_raw(raw: RawSyntaxKind) -> Self {
+        // This just needs to be the inverse of `into_raw`, but could also
+        // be an `impl TryFrom<u32> for SyntaxKind` or any other conversion.
         match raw.0 {
             0 => SyntaxKind::Int,
             1 => SyntaxKind::Plus,
@@ -41,12 +37,12 @@ impl Language for Calculator {
         }
     }
 
-    fn kind_to_raw(kind: Self::Kind) -> RawSyntaxKind {
-        RawSyntaxKind(kind as u32)
+    fn into_raw(self) -> RawSyntaxKind {
+        RawSyntaxKind(self as u32)
     }
 
-    fn static_text(kind: Self::Kind) -> Option<&'static str> {
-        match kind {
+    fn static_text(self) -> Option<&'static str> {
+        match self {
             SyntaxKind::Plus => Some("+"),
             SyntaxKind::Minus => Some("-"),
             SyntaxKind::LParen => Some("("),

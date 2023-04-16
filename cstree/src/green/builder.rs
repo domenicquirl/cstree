@@ -8,7 +8,7 @@ use crate::{
     interning::{new_interner, Interner, TokenInterner, TokenKey},
     util::NodeOrToken,
     utility_types::MaybeOwned,
-    Language, RawSyntaxKind,
+    RawSyntaxKind, Syntax,
 };
 
 use super::{node::GreenNodeHead, token::GreenTokenData};
@@ -35,12 +35,12 @@ impl NodeCache<'static> {
     /// tokens. To re-use an existing interner, see [`with_interner`](NodeCache::with_interner).
     /// # Examples
     /// ```
-    /// # use cstree::testing::{*, Language as _};
+    /// # use cstree::testing::*;
     /// use cstree::build::NodeCache;
     ///
     /// // Build a tree
     /// let mut cache = NodeCache::new();
-    /// let mut builder: GreenNodeBuilder<MyLanguage> = GreenNodeBuilder::with_cache(&mut cache);
+    /// let mut builder: GreenNodeBuilder<MySyntax> = GreenNodeBuilder::with_cache(&mut cache);
     /// # builder.start_node(Root);
     /// # builder.token(Int, "42");
     /// # builder.finish_node();
@@ -48,9 +48,9 @@ impl NodeCache<'static> {
     /// let (tree, _) = builder.finish();
     ///
     /// // Check it out!
-    /// assert_eq!(tree.kind(), MyLanguage::kind_to_raw(Root));
+    /// assert_eq!(tree.kind(), MySyntax::into_raw(Root));
     /// let int = tree.children().next().unwrap();
-    /// assert_eq!(int.kind(), MyLanguage::kind_to_raw(Int));
+    /// assert_eq!(int.kind(), MySyntax::into_raw(Int));
     /// ```
     pub fn new() -> Self {
         Self {
@@ -75,14 +75,14 @@ where
     /// (strings) across tokens.
     /// # Examples
     /// ```
-    /// # use cstree::testing::{*, Language as _};
+    /// # use cstree::testing::*;
     /// # use cstree::interning::*;
     /// use cstree::build::NodeCache;
     ///
     /// // Create the builder from a custom interner
     /// let mut interner = new_interner();
     /// let mut cache = NodeCache::with_interner(&mut interner);
-    /// let mut builder: GreenNodeBuilder<MyLanguage, TokenInterner> =
+    /// let mut builder: GreenNodeBuilder<MySyntax, TokenInterner> =
     ///     GreenNodeBuilder::with_cache(&mut cache);
     ///
     /// // Construct the tree
@@ -93,9 +93,9 @@ where
     /// let (tree, _) = builder.finish();
     ///
     /// // Use the tree
-    /// assert_eq!(tree.kind(), MyLanguage::kind_to_raw(Root));
+    /// assert_eq!(tree.kind(), MySyntax::into_raw(Root));
     /// let int = tree.children().next().unwrap();
-    /// assert_eq!(int.kind(), MyLanguage::kind_to_raw(Int));
+    /// assert_eq!(int.kind(), MySyntax::into_raw(Int));
     /// assert_eq!(int.as_token().unwrap().text(&interner), Some("42"));
     /// ```
     #[inline]
@@ -111,14 +111,14 @@ where
     /// (strings) across tokens.
     /// # Examples
     /// ```
-    /// # use cstree::testing::{*, Language as _};
+    /// # use cstree::testing::*;
     /// # use cstree::interning::*;
     /// use cstree::build::NodeCache;
     ///
     /// // Create the builder from a custom interner
     /// let mut interner = new_interner();
     /// let cache = NodeCache::from_interner(interner);
-    /// let mut builder: GreenNodeBuilder<MyLanguage, TokenInterner> =
+    /// let mut builder: GreenNodeBuilder<MySyntax, TokenInterner> =
     ///     GreenNodeBuilder::from_cache(cache);
     ///
     /// // Construct the tree
@@ -130,9 +130,9 @@ where
     ///
     /// // Use the tree
     /// let interner = cache.unwrap().into_interner().unwrap();
-    /// assert_eq!(tree.kind(), MyLanguage::kind_to_raw(Root));
+    /// assert_eq!(tree.kind(), MySyntax::into_raw(Root));
     /// let int = tree.children().next().unwrap();
-    /// assert_eq!(int.kind(), MyLanguage::kind_to_raw(Int));
+    /// assert_eq!(int.kind(), MySyntax::into_raw(Int));
     /// assert_eq!(int.as_token().unwrap().text(&interner), Some("42"));
     /// ```
     #[inline]
@@ -177,9 +177,9 @@ where
         self.interner.into_owned()
     }
 
-    fn node<L: Language>(&mut self, kind: L::Kind, all_children: &mut Vec<GreenElement>, offset: usize) -> GreenNode {
+    fn node<S: Syntax>(&mut self, kind: S, all_children: &mut Vec<GreenElement>, offset: usize) -> GreenNode {
         // NOTE: this fn must remove all children starting at `first_child` from `all_children` before returning
-        let kind = L::kind_to_raw(kind);
+        let kind = S::into_raw(kind);
         let mut hasher = FxHasher32::default();
         let mut text_len: TextSize = 0.into();
         for child in &all_children[offset..] {
@@ -229,9 +229,9 @@ where
             .clone()
     }
 
-    fn token<L: Language>(&mut self, kind: L::Kind, text: Option<TokenKey>, len: u32) -> GreenToken {
+    fn token<S: Syntax>(&mut self, kind: S, text: Option<TokenKey>, len: u32) -> GreenToken {
         let text_len = TextSize::from(len);
-        let kind = L::kind_to_raw(kind);
+        let kind = S::into_raw(kind);
         let data = GreenTokenData { kind, text, text_len };
         self.tokens
             .entry(data)
@@ -253,29 +253,29 @@ pub struct Checkpoint(usize);
 ///
 /// # Examples
 /// ```
-/// # use cstree::testing::{*, Language as _};
+/// # use cstree::testing::*;
 /// // Build a tree
-/// let mut builder: GreenNodeBuilder<MyLanguage> = GreenNodeBuilder::new();
+/// let mut builder: GreenNodeBuilder<MySyntax> = GreenNodeBuilder::new();
 /// builder.start_node(Root);
 /// builder.token(Int, "42");
 /// builder.finish_node();
 /// let (tree, cache) = builder.finish();
 ///
 /// // Check it out!
-/// assert_eq!(tree.kind(), MyLanguage::kind_to_raw(Root));
+/// assert_eq!(tree.kind(), MySyntax::into_raw(Root));
 /// let int = tree.children().next().unwrap();
-/// assert_eq!(int.kind(), MyLanguage::kind_to_raw(Int));
+/// assert_eq!(int.kind(), MySyntax::into_raw(Int));
 /// let resolver = cache.unwrap().into_interner().unwrap();
 /// assert_eq!(int.as_token().unwrap().text(&resolver), Some("42"));
 /// ```
 #[derive(Debug)]
-pub struct GreenNodeBuilder<'cache, 'interner, L: Language, I = TokenInterner> {
+pub struct GreenNodeBuilder<'cache, 'interner, S: Syntax, I = TokenInterner> {
     cache:    MaybeOwned<'cache, NodeCache<'interner, I>>,
-    parents:  Vec<(L::Kind, usize)>,
+    parents:  Vec<(S, usize)>,
     children: Vec<GreenElement>,
 }
 
-impl<L: Language> GreenNodeBuilder<'static, 'static, L> {
+impl<S: Syntax> GreenNodeBuilder<'static, 'static, S> {
     /// Creates new builder with an empty [`NodeCache`].
     pub fn new() -> Self {
         Self {
@@ -286,15 +286,15 @@ impl<L: Language> GreenNodeBuilder<'static, 'static, L> {
     }
 }
 
-impl<L: Language> Default for GreenNodeBuilder<'static, 'static, L> {
+impl<S: Syntax> Default for GreenNodeBuilder<'static, 'static, S> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<'cache, 'interner, L, I> GreenNodeBuilder<'cache, 'interner, L, I>
+impl<'cache, 'interner, S, I> GreenNodeBuilder<'cache, 'interner, S, I>
 where
-    L: Language,
+    S: Syntax,
     I: Interner<TokenKey>,
 {
     /// Reusing a [`NodeCache`] between multiple builders saves memory, as it allows to structurally
@@ -312,11 +312,11 @@ where
     /// The `cache` given will be returned on [`finish`](GreenNodeBuilder::finish).
     /// # Examples
     /// ```
-    /// # use cstree::testing::{*, Language as _};
+    /// # use cstree::testing::*;
     /// # use cstree::build::*;
     /// // Construct a builder from our own cache
     /// let cache = NodeCache::new();
-    /// let mut builder: GreenNodeBuilder<MyLanguage> = GreenNodeBuilder::from_cache(cache);
+    /// let mut builder: GreenNodeBuilder<MySyntax> = GreenNodeBuilder::from_cache(cache);
     ///
     /// // Build a tree
     /// # builder.start_node(Root);
@@ -327,9 +327,9 @@ where
     ///
     /// // Use the tree
     /// let interner = cache.unwrap().into_interner().unwrap();
-    /// assert_eq!(tree.kind(), MyLanguage::kind_to_raw(Root));
+    /// assert_eq!(tree.kind(), MySyntax::into_raw(Root));
     /// let int = tree.children().next().unwrap();
-    /// assert_eq!(int.kind(), MyLanguage::kind_to_raw(Int));
+    /// assert_eq!(int.kind(), MySyntax::into_raw(Int));
     /// assert_eq!(int.as_token().unwrap().text(&interner), Some("42"));
     /// ```
     pub fn from_cache(cache: NodeCache<'interner, I>) -> Self {
@@ -377,7 +377,7 @@ where
     /// # use cstree::testing::*;
     /// # use cstree::build::*;
     /// # use cstree::interning::*;
-    /// let mut builder: GreenNodeBuilder<MyLanguage> = GreenNodeBuilder::new();
+    /// let mut builder: GreenNodeBuilder<MySyntax> = GreenNodeBuilder::new();
     /// let interner = builder.interner_mut();
     /// let key = interner.get_or_intern("foo");
     /// assert_eq!(interner.resolve(key), "foo");
@@ -392,19 +392,19 @@ where
     /// ## Panics
     /// In debug mode, if `kind` has static text, this function will verify that `text` matches that text.
     #[inline]
-    pub fn token(&mut self, kind: L::Kind, text: &str) {
-        let token = match L::static_text(kind) {
+    pub fn token(&mut self, kind: S, text: &str) {
+        let token = match S::static_text(kind) {
             Some(static_text) => {
                 debug_assert_eq!(
                     static_text, text,
                     r#"Received `{kind:?}` token which should have text "{static_text}", but "{text}" was given."#
                 );
-                self.cache.token::<L>(kind, None, static_text.len() as u32)
+                self.cache.token::<S>(kind, None, static_text.len() as u32)
             }
             None => {
                 let len = text.len() as u32;
                 let text = self.cache.intern(text);
-                self.cache.token::<L>(kind, Some(text), len)
+                self.cache.token::<S>(kind, Some(text), len)
             }
         };
         self.children.push(token.into());
@@ -420,15 +420,15 @@ where
     /// ## Panics
     /// If `kind` does not have static text, i.e., `L::static_text(kind)` returns `None`.
     #[inline]
-    pub fn static_token(&mut self, kind: L::Kind) {
-        let static_text = L::static_text(kind).unwrap_or_else(|| panic!("Missing static text for '{kind:?}'"));
-        let token = self.cache.token::<L>(kind, None, static_text.len() as u32);
+    pub fn static_token(&mut self, kind: S) {
+        let static_text = S::static_text(kind).unwrap_or_else(|| panic!("Missing static text for '{kind:?}'"));
+        let token = self.cache.token::<S>(kind, None, static_text.len() as u32);
         self.children.push(token.into());
     }
 
     /// Start new node of the given `kind` and make it current.
     #[inline]
-    pub fn start_node(&mut self, kind: L::Kind) {
+    pub fn start_node(&mut self, kind: S) {
         let len = self.children.len();
         self.parents.push((kind, len));
     }
@@ -438,7 +438,7 @@ where
     pub fn finish_node(&mut self) {
         let (kind, first_child) = self.parents.pop().unwrap();
         // NOTE: we rely on the node cache to remove all children starting at `first_child` from `self.children`
-        let node = self.cache.node::<L>(kind, &mut self.children, first_child);
+        let node = self.cache.node::<S>(kind, &mut self.children, first_child);
         self.children.push(node.into());
     }
 
@@ -456,7 +456,7 @@ where
     /// #     fn peek(&self) -> Option<TestSyntaxKind> { None }
     /// #     fn parse_expr(&mut self) {}
     /// # }
-    /// # let mut builder: GreenNodeBuilder<MyLanguage> = GreenNodeBuilder::new();
+    /// # let mut builder: GreenNodeBuilder<MySyntax> = GreenNodeBuilder::new();
     /// # let mut parser = Parser;
     /// let checkpoint = builder.checkpoint();
     /// parser.parse_expr();
@@ -475,7 +475,7 @@ where
     /// Wrap the previous branch marked by [`checkpoint`](GreenNodeBuilder::checkpoint) in a new
     /// branch and make it current.
     #[inline]
-    pub fn start_node_at(&mut self, checkpoint: Checkpoint, kind: L::Kind) {
+    pub fn start_node_at(&mut self, checkpoint: Checkpoint, kind: S) {
         let Checkpoint(checkpoint) = checkpoint;
         assert!(
             checkpoint <= self.children.len(),

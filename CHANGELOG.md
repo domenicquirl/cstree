@@ -3,6 +3,9 @@
 ## `v0.12.0`
 
  * Documentation has been improved in most areas, together with a switch to a more principled module structure that allows explicitly documenting submodules.
+ * The `Language` trait has been deprecated in favour of a new `Syntax` trait. `Syntax` provides the same methods that `Language` did before, but is implemented directly on the syntax kind enum instead of an additional type representing the language.
+   * The supertrait requirements on `PartialOrd`, `Ord`, and `Hash` have been dropped.
+ * TODO: this allows to optionally provide derive. To enable, add feature flag
  * The `interning` module has been rewritten. It now provides fuctions for obtaining a default interner (`new_interner` and `new_threaded_interner`) and provides a small, dependency-free interner implementation.
    * Compatibility with other interners can be enable via feature flags. 
    * **Note** that compatibilty with `lasso` is not enabled by default. Use the `lasso_compat` feature to match the previous default.

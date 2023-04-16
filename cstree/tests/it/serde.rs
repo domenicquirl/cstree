@@ -1,6 +1,6 @@
 use crate::{build_recursive, build_tree_with_cache, ResolvedNode};
 
-use super::{Element, SyntaxNode, TestLang};
+use super::{Element, SyntaxKind, SyntaxNode};
 use cstree::{
     build::{GreenNodeBuilder, NodeCache},
     interning::new_interner,
@@ -225,7 +225,7 @@ fn three_level_tree() -> Element<'static> {
 }
 
 fn build_tree(root: Element<'_>) -> ResolvedNode<String> {
-    let mut builder: GreenNodeBuilder<TestLang> = GreenNodeBuilder::new();
+    let mut builder: GreenNodeBuilder<SyntaxKind> = GreenNodeBuilder::new();
     build_recursive(&root, &mut builder, 0);
     let (node, cache) = builder.finish();
     SyntaxNode::new_root_with_resolver(node, cache.unwrap().into_interner().unwrap())

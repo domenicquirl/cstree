@@ -31,6 +31,7 @@ enum SyntaxKind {
     Operation,
     Root,
 }
+type MySyntax = SyntaxKind;
 use SyntaxKind::*;
 
 impl From<SyntaxKind> for cstree::RawSyntaxKind {
@@ -39,22 +40,18 @@ impl From<SyntaxKind> for cstree::RawSyntaxKind {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-enum Lang {}
-impl cstree::Language for Lang {
-    type Kind = SyntaxKind;
-
-    fn kind_from_raw(raw: cstree::RawSyntaxKind) -> Self::Kind {
+impl cstree::Syntax for MySyntax {
+    fn from_raw(raw: cstree::RawSyntaxKind) -> Self {
         assert!(raw.0 <= Root as u32);
         unsafe { std::mem::transmute::<u32, SyntaxKind>(raw.0) }
     }
 
-    fn kind_to_raw(kind: Self::Kind) -> cstree::RawSyntaxKind {
-        kind.into()
+    fn into_raw(self) -> cstree::RawSyntaxKind {
+        self.into()
     }
 
-    fn static_text(kind: Self::Kind) -> Option<&'static str> {
-        match kind {
+    fn static_text(self) -> Option<&'static str> {
+        match self {
             Add => Some("+"),
             Sub => Some("-"),
             Mul => Some("*"),
@@ -64,15 +61,15 @@ impl cstree::Language for Lang {
     }
 }
 
-type SyntaxNode = cstree::syntax::SyntaxNode<Lang>;
+type SyntaxNode = cstree::syntax::SyntaxNode<MySyntax>;
 #[allow(unused)]
-type SyntaxToken = cstree::syntax::SyntaxToken<Lang>;
+type SyntaxToken = cstree::syntax::SyntaxToken<MySyntax>;
 #[allow(unused)]
 type SyntaxElement = cstree::util::NodeOrToken<SyntaxNode, SyntaxToken>;
 type SyntaxElementRef<'a> = cstree::util::NodeOrToken<&'a SyntaxNode, &'a SyntaxToken>;
 
 struct Parser<'input, I: Iterator<Item = (SyntaxKind, &'input str)>> {
-    builder: GreenNodeBuilder<'static, 'static, Lang>,
+    builder: GreenNodeBuilder<'static, 'static, MySyntax>,
     iter:    Peekable<I>,
 }
 impl<'input, I: Iterator<Item = (SyntaxKind, &'input str)>> Parser<'input, I> {

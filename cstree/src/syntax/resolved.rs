@@ -17,7 +17,7 @@ use crate::{
     syntax::*,
     traversal::*,
     util::*,
-    Language, RawSyntaxKind,
+    RawSyntaxKind, Syntax,
 };
 
 /// Syntax tree node that is guaranteed to belong to a tree that contains an associated
@@ -26,24 +26,24 @@ use crate::{
 /// [`SyntaxNode`]
 /// [`SyntaxNode::new_root_with_resolver`]
 #[repr(transparent)]
-pub struct ResolvedNode<L: Language, D: 'static = ()> {
-    pub(super) syntax: SyntaxNode<L, D>,
+pub struct ResolvedNode<S: Syntax, D: 'static = ()> {
+    pub(super) syntax: SyntaxNode<S, D>,
 }
 
-impl<L: Language, D> ResolvedNode<L, D> {
+impl<S: Syntax, D> ResolvedNode<S, D> {
     /// # Safety:
     /// `syntax` must belong to a tree that contains an associated inline resolver.
-    pub(super) unsafe fn coerce_ref(syntax: &SyntaxNode<L, D>) -> &Self {
+    pub(super) unsafe fn coerce_ref(syntax: &SyntaxNode<S, D>) -> &Self {
         &*(syntax as *const _ as *const Self)
     }
 
     /// Returns this node as a [`SyntaxNode`].
-    pub fn syntax(&self) -> &SyntaxNode<L, D> {
+    pub fn syntax(&self) -> &SyntaxNode<S, D> {
         &self.syntax
     }
 }
 
-impl<L: Language, D> Clone for ResolvedNode<L, D> {
+impl<S: Syntax, D> Clone for ResolvedNode<S, D> {
     fn clone(&self) -> Self {
         Self {
             syntax: self.syntax.clone(),
@@ -51,15 +51,15 @@ impl<L: Language, D> Clone for ResolvedNode<L, D> {
     }
 }
 
-impl<L: Language, D> Deref for ResolvedNode<L, D> {
-    type Target = SyntaxNode<L, D>;
+impl<S: Syntax, D> Deref for ResolvedNode<S, D> {
+    type Target = SyntaxNode<S, D>;
 
     fn deref(&self) -> &Self::Target {
         &self.syntax
     }
 }
 
-impl<L: Language, D> DerefMut for ResolvedNode<L, D> {
+impl<S: Syntax, D> DerefMut for ResolvedNode<S, D> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.syntax
     }
@@ -70,24 +70,24 @@ impl<L: Language, D> DerefMut for ResolvedNode<L, D> {
 /// # See also
 /// [`SyntaxToken`]
 #[repr(transparent)]
-pub struct ResolvedToken<L: Language, D: 'static = ()> {
-    syntax: SyntaxToken<L, D>,
+pub struct ResolvedToken<S: Syntax, D: 'static = ()> {
+    syntax: SyntaxToken<S, D>,
 }
 
-impl<L: Language, D> ResolvedToken<L, D> {
+impl<S: Syntax, D> ResolvedToken<S, D> {
     /// # Safety:
     /// `syntax` must belong to a tree that contains an associated inline resolver.
-    pub(super) unsafe fn coerce_ref(syntax: &SyntaxToken<L, D>) -> &Self {
+    pub(super) unsafe fn coerce_ref(syntax: &SyntaxToken<S, D>) -> &Self {
         &*(syntax as *const _ as *const Self)
     }
 
     /// Returns this token as a [`SyntaxToken`].
-    pub fn syntax(&self) -> &SyntaxToken<L, D> {
+    pub fn syntax(&self) -> &SyntaxToken<S, D> {
         &self.syntax
     }
 }
 
-impl<L: Language, D> Clone for ResolvedToken<L, D> {
+impl<S: Syntax, D> Clone for ResolvedToken<S, D> {
     fn clone(&self) -> Self {
         Self {
             syntax: self.syntax.clone(),
@@ -95,15 +95,15 @@ impl<L: Language, D> Clone for ResolvedToken<L, D> {
     }
 }
 
-impl<L: Language, D> Deref for ResolvedToken<L, D> {
-    type Target = SyntaxToken<L, D>;
+impl<S: Syntax, D> Deref for ResolvedToken<S, D> {
+    type Target = SyntaxToken<S, D>;
 
     fn deref(&self) -> &Self::Target {
         &self.syntax
     }
 }
 
-impl<L: Language, D> DerefMut for ResolvedToken<L, D> {
+impl<S: Syntax, D> DerefMut for ResolvedToken<S, D> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.syntax
     }
@@ -113,21 +113,21 @@ impl<L: Language, D> DerefMut for ResolvedToken<L, D> {
 /// [`Resolver`](lasso::Resolver), can be either a node or a token.
 /// # See also
 /// [`SyntaxElement`](crate::syntax::SyntaxElement)
-pub type ResolvedElement<L, D = ()> = NodeOrToken<ResolvedNode<L, D>, ResolvedToken<L, D>>;
+pub type ResolvedElement<S, D = ()> = NodeOrToken<ResolvedNode<S, D>, ResolvedToken<S, D>>;
 
-impl<L: Language, D> From<ResolvedNode<L, D>> for ResolvedElement<L, D> {
-    fn from(node: ResolvedNode<L, D>) -> ResolvedElement<L, D> {
+impl<S: Syntax, D> From<ResolvedNode<S, D>> for ResolvedElement<S, D> {
+    fn from(node: ResolvedNode<S, D>) -> ResolvedElement<S, D> {
         NodeOrToken::Node(node)
     }
 }
 
-impl<L: Language, D> From<ResolvedToken<L, D>> for ResolvedElement<L, D> {
-    fn from(token: ResolvedToken<L, D>) -> ResolvedElement<L, D> {
+impl<S: Syntax, D> From<ResolvedToken<S, D>> for ResolvedElement<S, D> {
+    fn from(token: ResolvedToken<S, D>) -> ResolvedElement<S, D> {
         NodeOrToken::Token(token)
     }
 }
 
-impl<L: Language, D> ResolvedElement<L, D> {
+impl<S: Syntax, D> ResolvedElement<S, D> {
     #[allow(missing_docs)]
     pub fn display(&self, resolver: &impl Resolver<TokenKey>) -> String {
         match self {
@@ -141,12 +141,12 @@ impl<L: Language, D> ResolvedElement<L, D> {
 /// associated [`Resolver`](lasso::Resolver), can be either a reference to a node or one to a token.
 /// # See also
 /// [`SyntaxElementRef`]
-pub type ResolvedElementRef<'a, L, D = ()> = NodeOrToken<&'a ResolvedNode<L, D>, &'a ResolvedToken<L, D>>;
+pub type ResolvedElementRef<'a, S, D = ()> = NodeOrToken<&'a ResolvedNode<S, D>, &'a ResolvedToken<S, D>>;
 
-impl<'a, L: Language, D> ResolvedElementRef<'a, L, D> {
+impl<'a, S: Syntax, D> ResolvedElementRef<'a, S, D> {
     /// # Safety:
     /// `syntax` must belong to a tree that contains an associated inline resolver.
-    pub(super) unsafe fn coerce_ref(syntax: SyntaxElementRef<'a, L, D>) -> Self {
+    pub(super) unsafe fn coerce_ref(syntax: SyntaxElementRef<'a, S, D>) -> Self {
         match syntax {
             NodeOrToken::Node(node) => Self::Node(ResolvedNode::coerce_ref(node)),
             NodeOrToken::Token(token) => Self::Token(ResolvedToken::coerce_ref(token)),
@@ -154,20 +154,20 @@ impl<'a, L: Language, D> ResolvedElementRef<'a, L, D> {
     }
 }
 
-impl<'a, L: Language, D> From<&'a ResolvedNode<L, D>> for ResolvedElementRef<'a, L, D> {
-    fn from(node: &'a ResolvedNode<L, D>) -> Self {
+impl<'a, S: Syntax, D> From<&'a ResolvedNode<S, D>> for ResolvedElementRef<'a, S, D> {
+    fn from(node: &'a ResolvedNode<S, D>) -> Self {
         NodeOrToken::Node(node)
     }
 }
 
-impl<'a, L: Language, D> From<&'a ResolvedToken<L, D>> for ResolvedElementRef<'a, L, D> {
-    fn from(token: &'a ResolvedToken<L, D>) -> Self {
+impl<'a, S: Syntax, D> From<&'a ResolvedToken<S, D>> for ResolvedElementRef<'a, S, D> {
+    fn from(token: &'a ResolvedToken<S, D>) -> Self {
         NodeOrToken::Token(token)
     }
 }
 
-impl<'a, L: Language, D> From<&'a ResolvedElement<L, D>> for ResolvedElementRef<'a, L, D> {
-    fn from(element: &'a ResolvedElement<L, D>) -> Self {
+impl<'a, S: Syntax, D> From<&'a ResolvedElement<S, D>> for ResolvedElementRef<'a, S, D> {
+    fn from(element: &'a ResolvedElement<S, D>) -> Self {
         match element {
             NodeOrToken::Node(it) => Self::Node(it),
             NodeOrToken::Token(it) => Self::Token(it),
@@ -175,29 +175,29 @@ impl<'a, L: Language, D> From<&'a ResolvedElement<L, D>> for ResolvedElementRef<
     }
 }
 
-impl<L: Language, D> ResolvedNode<L, D> {
+impl<S: Syntax, D> ResolvedNode<S, D> {
     /// Uses the resolver associated with this tree to return an efficient representation of all
     /// source text covered by this node, i.e. the combined text of all token leafs of the subtree
     /// originating in this node.
     #[inline]
-    pub fn text(&self) -> SyntaxText<'_, '_, dyn Resolver<TokenKey>, L, D> {
+    pub fn text(&self) -> SyntaxText<'_, '_, dyn Resolver<TokenKey>, S, D> {
         SyntaxText::new(self, &**self.resolver())
     }
 }
 
-impl<L: Language, D> fmt::Debug for ResolvedNode<L, D> {
+impl<S: Syntax, D> fmt::Debug for ResolvedNode<S, D> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.write_debug(&**self.resolver(), f, f.alternate())
     }
 }
 
-impl<L: Language, D> fmt::Display for ResolvedNode<L, D> {
+impl<S: Syntax, D> fmt::Display for ResolvedNode<S, D> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.write_display(&**self.resolver(), f)
     }
 }
 
-impl<L: Language, D> ResolvedToken<L, D> {
+impl<S: Syntax, D> ResolvedToken<S, D> {
     /// Uses the resolver associated with this tree to return the source text of this token.
     #[inline]
     pub fn text(&self) -> &str {
@@ -208,22 +208,22 @@ impl<L: Language, D> ResolvedToken<L, D> {
     }
 }
 
-impl<L: Language, D> fmt::Debug for ResolvedToken<L, D> {
+impl<S: Syntax, D> fmt::Debug for ResolvedToken<S, D> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.write_debug(&**self.resolver(), f)
     }
 }
 
-impl<L: Language, D> fmt::Display for ResolvedToken<L, D> {
+impl<S: Syntax, D> fmt::Display for ResolvedToken<S, D> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.write_display(&**self.resolver(), f)
     }
 }
 
 #[cfg(feature = "serialize")]
-impl<L, D> ResolvedNode<L, D>
+impl<S, D> ResolvedNode<S, D>
 where
-    L: Language,
+    S: Syntax,
 {
     /// Return an anonymous object that can be used to serialize this node,
     /// including the data for each node.
@@ -267,7 +267,7 @@ macro_rules! forward_node {
     };
 }
 
-impl<L: Language, D> ResolvedNode<L, D> {
+impl<S: Syntax, D> ResolvedNode<S, D> {
     /// Returns the [`Resolver`] associated with this tree.
     pub fn resolver(&self) -> &StdArc<dyn Resolver<TokenKey>> {
         self.syntax.resolver().unwrap()
@@ -283,7 +283,7 @@ impl<L: Language, D> ResolvedNode<L, D> {
     ///
     /// This method mostly exists to allow the convenience of being agnostic over [`SyntaxNode`] vs [`ResolvedNode`].
     #[inline]
-    pub fn try_resolved(&self) -> Option<&ResolvedNode<L, D>> {
+    pub fn try_resolved(&self) -> Option<&ResolvedNode<S, D>> {
         Some(self)
     }
 
@@ -291,7 +291,7 @@ impl<L: Language, D> ResolvedNode<L, D> {
     ///
     /// This method mostly exists to allow the convenience of being agnostic over [`SyntaxNode`] vs [`ResolvedNode`].
     #[inline]
-    pub fn resolved(&self) -> &ResolvedNode<L, D> {
+    pub fn resolved(&self) -> &ResolvedNode<S, D> {
         self
     }
 
@@ -299,7 +299,7 @@ impl<L: Language, D> ResolvedNode<L, D> {
     ///
     /// If this node is the root, returns `self`.
     #[inline]
-    pub fn root(&self) -> &SyntaxNode<L, D> {
+    pub fn root(&self) -> &SyntaxNode<S, D> {
         unsafe { Self::coerce_ref(self.syntax.root()) }
     }
 
@@ -325,7 +325,7 @@ impl<L: Language, D> ResolvedNode<L, D> {
 
     /// Returns an iterator over child elements of this node, including tokens.
     #[inline]
-    pub fn children_with_tokens(&self) -> impl Iterator<Item = ResolvedElementRef<'_, L, D>> {
+    pub fn children_with_tokens(&self) -> impl Iterator<Item = ResolvedElementRef<'_, S, D>> {
         forward_as_elem!(self.syntax.children_with_tokens())
     }
 
@@ -333,13 +333,13 @@ impl<L: Language, D> ResolvedNode<L, D> {
     ///
     /// If you want to also consider leafs, see [`first_child_or_token`](ResolvedNode::first_child_or_token).
     #[inline]
-    pub fn first_child(&self) -> Option<&ResolvedNode<L, D>> {
+    pub fn first_child(&self) -> Option<&ResolvedNode<S, D>> {
         forward!(self.syntax.first_child())
     }
 
     /// The first child element of this node, if any, including tokens.
     #[inline]
-    pub fn first_child_or_token(&self) -> Option<ResolvedElementRef<'_, L, D>> {
+    pub fn first_child_or_token(&self) -> Option<ResolvedElementRef<'_, S, D>> {
         forward_as_elem!(self.syntax.first_child_or_token())
     }
 
@@ -347,13 +347,13 @@ impl<L: Language, D> ResolvedNode<L, D> {
     ///
     /// If you want to also consider leafs, see [`last_child_or_token`](ResolvedNode::last_child_or_token).
     #[inline]
-    pub fn last_child(&self) -> Option<&ResolvedNode<L, D>> {
+    pub fn last_child(&self) -> Option<&ResolvedNode<S, D>> {
         forward!(self.syntax.last_child())
     }
 
     /// The last child element of this node, if any, including tokens.
     #[inline]
-    pub fn last_child_or_token(&self) -> Option<ResolvedElementRef<'_, L, D>> {
+    pub fn last_child_or_token(&self) -> Option<ResolvedElementRef<'_, S, D>> {
         forward_as_elem!(self.syntax.last_child_or_token())
     }
 
@@ -363,14 +363,14 @@ impl<L: Language, D> ResolvedNode<L, D> {
     ///
     /// If you want to also consider leafs, see [`next_child_or_token_after`](ResolvedNode::next_child_or_token_after).
     #[inline]
-    pub fn next_child_after(&self, n: usize, offset: TextSize) -> Option<&ResolvedNode<L, D>> {
+    pub fn next_child_after(&self, n: usize, offset: TextSize) -> Option<&ResolvedNode<S, D>> {
         forward!(self.syntax.next_child_after(n, offset))
     }
 
     /// The first child element of this node starting at the (n + 1)-st, if any.
     /// If this method returns `Some`, the contained node is the (n + 1)-st child of this node.
     #[inline]
-    pub fn next_child_or_token_after(&self, n: usize, offset: TextSize) -> Option<ResolvedElementRef<'_, L, D>> {
+    pub fn next_child_or_token_after(&self, n: usize, offset: TextSize) -> Option<ResolvedElementRef<'_, S, D>> {
         forward_as_elem!(self.syntax.next_child_or_token_after(n, offset))
     }
 
@@ -381,14 +381,14 @@ impl<L: Language, D> ResolvedNode<L, D> {
     /// If you want to also consider leafs, see
     /// [`prev_child_or_token_before`](ResolvedNode::prev_child_or_token_before).
     #[inline]
-    pub fn prev_child_before(&self, n: usize, offset: TextSize) -> Option<&ResolvedNode<L, D>> {
+    pub fn prev_child_before(&self, n: usize, offset: TextSize) -> Option<&ResolvedNode<S, D>> {
         forward!(self.syntax.prev_child_before(n, offset))
     }
 
     /// The last child node of this node up to the nth, if any.
     /// If this method returns `Some`, the contained node is the (n - 1)-st child.
     #[inline]
-    pub fn prev_child_or_token_before(&self, n: usize, offset: TextSize) -> Option<ResolvedElementRef<'_, L, D>> {
+    pub fn prev_child_or_token_before(&self, n: usize, offset: TextSize) -> Option<ResolvedElementRef<'_, S, D>> {
         forward_as_elem!(self.syntax.prev_child_or_token_before(n, offset))
     }
 
@@ -396,13 +396,13 @@ impl<L: Language, D> ResolvedNode<L, D> {
     ///
     /// If you want to also consider leafs, see [`next_sibling_or_token`](ResolvedNode::next_sibling_or_token).
     #[inline]
-    pub fn next_sibling(&self) -> Option<&ResolvedNode<L, D>> {
+    pub fn next_sibling(&self) -> Option<&ResolvedNode<S, D>> {
         forward!(self.syntax.next_sibling())
     }
 
     /// The tree element to the right of this one, i.e. the next child of this node's parent after this node.
     #[inline]
-    pub fn next_sibling_or_token(&self) -> Option<ResolvedElementRef<'_, L, D>> {
+    pub fn next_sibling_or_token(&self) -> Option<ResolvedElementRef<'_, S, D>> {
         forward_as_elem!(self.syntax.next_sibling_or_token())
     }
 
@@ -410,25 +410,25 @@ impl<L: Language, D> ResolvedNode<L, D> {
     ///
     /// If you want to also consider leafs, see [`prev_sibling_or_token`](ResolvedNode::prev_sibling_or_token).
     #[inline]
-    pub fn prev_sibling(&self) -> Option<&ResolvedNode<L, D>> {
+    pub fn prev_sibling(&self) -> Option<&ResolvedNode<S, D>> {
         forward!(self.syntax.prev_sibling())
     }
 
     /// The tree element to the left of this one, i.e. the previous child of this node's parent before this node.
     #[inline]
-    pub fn prev_sibling_or_token(&self) -> Option<ResolvedElementRef<'_, L, D>> {
+    pub fn prev_sibling_or_token(&self) -> Option<ResolvedElementRef<'_, S, D>> {
         forward_as_elem!(self.syntax.prev_sibling_or_token())
     }
 
     /// Return the leftmost token in the subtree of this node
     #[inline]
-    pub fn first_token(&self) -> Option<&ResolvedToken<L, D>> {
+    pub fn first_token(&self) -> Option<&ResolvedToken<S, D>> {
         forward_token!(self.syntax.first_token())
     }
 
     /// Return the rightmost token in the subtree of this node
     #[inline]
-    pub fn last_token(&self) -> Option<&ResolvedToken<L, D>> {
+    pub fn last_token(&self) -> Option<&ResolvedToken<S, D>> {
         forward_token!(self.syntax.last_token())
     }
 
@@ -438,7 +438,7 @@ impl<L: Language, D> ResolvedNode<L, D> {
     ///
     /// If you want to also consider leafs, see [`siblings_with_tokens`](ResolvedNode::siblings_with_tokens).
     #[inline]
-    pub fn siblings(&self, direction: Direction) -> impl Iterator<Item = &ResolvedNode<L, D>> {
+    pub fn siblings(&self, direction: Direction) -> impl Iterator<Item = &ResolvedNode<S, D>> {
         forward!(self.syntax.siblings(direction))
     }
 
@@ -446,7 +446,7 @@ impl<L: Language, D> ResolvedNode<L, D> {
     /// node's parent's children from this node on to the left or the right.
     /// The first item in the iterator will always be this node.
     #[inline]
-    pub fn siblings_with_tokens(&self, direction: Direction) -> impl Iterator<Item = ResolvedElementRef<'_, L, D>> {
+    pub fn siblings_with_tokens(&self, direction: Direction) -> impl Iterator<Item = ResolvedElementRef<'_, S, D>> {
         forward_as_elem!(self.syntax.siblings_with_tokens(direction))
     }
 
@@ -454,20 +454,20 @@ impl<L: Language, D> ResolvedNode<L, D> {
     ///
     /// If you want to also consider leafs, see [`descendants_with_tokens`](ResolvedNode::descendants_with_tokens).
     #[inline]
-    pub fn descendants(&self) -> impl Iterator<Item = &ResolvedNode<L, D>> {
+    pub fn descendants(&self) -> impl Iterator<Item = &ResolvedNode<S, D>> {
         forward!(self.syntax.descendants())
     }
 
     /// Returns an iterator over all elements in the subtree starting at this node, including this node.
     #[inline]
-    pub fn descendants_with_tokens(&self) -> impl Iterator<Item = ResolvedElementRef<'_, L, D>> {
+    pub fn descendants_with_tokens(&self) -> impl Iterator<Item = ResolvedElementRef<'_, S, D>> {
         forward_as_elem!(self.syntax.descendants_with_tokens())
     }
 
     /// Traverse the subtree rooted at the current node (including the current
     /// node) in preorder, excluding tokens.
     #[inline(always)]
-    pub fn preorder(&self) -> impl Iterator<Item = WalkEvent<&ResolvedNode<L, D>>> {
+    pub fn preorder(&self) -> impl Iterator<Item = WalkEvent<&ResolvedNode<S, D>>> {
         self.syntax
             .preorder()
             .map(|event| event.map(|node| unsafe { Self::coerce_ref(node) }))
@@ -476,7 +476,7 @@ impl<L: Language, D> ResolvedNode<L, D> {
     /// Traverse the subtree rooted at the current node (including the current
     /// node) in preorder, including tokens.
     #[inline(always)]
-    pub fn preorder_with_tokens(&self) -> impl Iterator<Item = WalkEvent<ResolvedElementRef<'_, L, D>>> {
+    pub fn preorder_with_tokens(&self) -> impl Iterator<Item = WalkEvent<ResolvedElementRef<'_, S, D>>> {
         self.syntax
             .preorder_with_tokens()
             .map(|event| event.map(|elem| unsafe { ResolvedElementRef::coerce_ref(elem) }))
@@ -484,7 +484,7 @@ impl<L: Language, D> ResolvedNode<L, D> {
 
     /// Find a token in the subtree corresponding to this node, which covers the offset.
     /// Precondition: offset must be withing node's range.
-    pub fn token_at_offset(&self, offset: TextSize) -> TokenAtOffset<ResolvedToken<L, D>> {
+    pub fn token_at_offset(&self, offset: TextSize) -> TokenAtOffset<ResolvedToken<S, D>> {
         self.syntax
             .token_at_offset(offset)
             .map(|token| ResolvedToken { syntax: token })
@@ -494,12 +494,12 @@ impl<L: Language, D> ResolvedNode<L, D> {
     /// contains the range. If the range is empty and is contained in two leaf
     /// nodes, either one can be returned. Precondition: range must be contained
     /// withing the current node
-    pub fn covering_element(&self, range: TextRange) -> ResolvedElementRef<'_, L, D> {
+    pub fn covering_element(&self, range: TextRange) -> ResolvedElementRef<'_, S, D> {
         unsafe { ResolvedElementRef::coerce_ref(self.syntax.covering_element(range)) }
     }
 }
 
-impl<L: Language, D> ResolvedToken<L, D> {
+impl<S: Syntax, D> ResolvedToken<S, D> {
     /// Returns the [`Resolver`] associated with this tree.
     pub fn resolver(&self) -> &StdArc<dyn Resolver<TokenKey>> {
         self.syntax.resolver().unwrap()
@@ -509,7 +509,7 @@ impl<L: Language, D> ResolvedToken<L, D> {
     ///
     /// This method mostly exists to allow the convenience of being agnostic over [`SyntaxToken`] vs [`ResolvedToken`].
     #[inline]
-    pub fn try_resolved(&self) -> Option<&ResolvedToken<L, D>> {
+    pub fn try_resolved(&self) -> Option<&ResolvedToken<S, D>> {
         Some(self)
     }
 
@@ -517,31 +517,31 @@ impl<L: Language, D> ResolvedToken<L, D> {
     ///
     /// This method mostly exists to allow the convenience of being agnostic over [`SyntaxToken`] vs [`ResolvedToken`].
     #[inline]
-    pub fn resolved(&self) -> &ResolvedToken<L, D> {
+    pub fn resolved(&self) -> &ResolvedToken<S, D> {
         self
     }
 
     /// The parent node of this token.
     #[inline]
-    pub fn parent(&self) -> &ResolvedNode<L, D> {
+    pub fn parent(&self) -> &ResolvedNode<S, D> {
         unsafe { ResolvedNode::coerce_ref(self.syntax.parent()) }
     }
 
     /// Returns an iterator along the chain of parents of this token.
     #[inline]
-    pub fn ancestors(&self) -> impl Iterator<Item = &ResolvedNode<L, D>> {
+    pub fn ancestors(&self) -> impl Iterator<Item = &ResolvedNode<S, D>> {
         forward_node!(self.syntax.ancestors())
     }
 
     /// The tree element to the right of this one, i.e. the next child of this token's parent after this token.
     #[inline]
-    pub fn next_sibling_or_token(&self) -> Option<ResolvedElementRef<'_, L, D>> {
+    pub fn next_sibling_or_token(&self) -> Option<ResolvedElementRef<'_, S, D>> {
         forward_as_elem!(self.syntax.next_sibling_or_token())
     }
 
     /// The tree element to the left of this one, i.e. the previous child of this token's parent after this token.
     #[inline]
-    pub fn prev_sibling_or_token(&self) -> Option<ResolvedElementRef<'_, L, D>> {
+    pub fn prev_sibling_or_token(&self) -> Option<ResolvedElementRef<'_, S, D>> {
         forward_as_elem!(self.syntax.prev_sibling_or_token())
     }
 
@@ -549,24 +549,24 @@ impl<L: Language, D> ResolvedToken<L, D> {
     /// token's parent's children from this token on to the left or the right.
     /// The first item in the iterator will always be this token.
     #[inline]
-    pub fn siblings_with_tokens(&self, direction: Direction) -> impl Iterator<Item = ResolvedElementRef<'_, L, D>> {
+    pub fn siblings_with_tokens(&self, direction: Direction) -> impl Iterator<Item = ResolvedElementRef<'_, S, D>> {
         forward_as_elem!(self.syntax.siblings_with_tokens(direction))
     }
 
     /// Returns the next token in the tree.
     /// This is not necessary a direct sibling of this token, but will always be further right in the tree.
-    pub fn next_token(&self) -> Option<&ResolvedToken<L, D>> {
+    pub fn next_token(&self) -> Option<&ResolvedToken<S, D>> {
         forward!(self.syntax.next_token())
     }
 
     /// Returns the previous token in the tree.
     /// This is not necessary a direct sibling of this token, but will always be further left in the tree.
-    pub fn prev_token(&self) -> Option<&ResolvedToken<L, D>> {
+    pub fn prev_token(&self) -> Option<&ResolvedToken<S, D>> {
         forward!(self.syntax.prev_token())
     }
 }
 
-impl<L: Language, D> ResolvedElement<L, D> {
+impl<S: Syntax, D> ResolvedElement<S, D> {
     /// The range this element covers in the source text, in bytes.
     #[inline]
     pub fn text_range(&self) -> TextRange {
@@ -587,7 +587,7 @@ impl<L: Language, D> ResolvedElement<L, D> {
 
     /// The kind of this element in terms of your language.
     #[inline]
-    pub fn kind(&self) -> L::Kind {
+    pub fn kind(&self) -> S {
         match self {
             NodeOrToken::Node(it) => it.kind(),
             NodeOrToken::Token(it) => it.kind(),
@@ -596,7 +596,7 @@ impl<L: Language, D> ResolvedElement<L, D> {
 
     /// The parent node of this element, except if this element is the root.
     #[inline]
-    pub fn parent(&self) -> Option<&ResolvedNode<L, D>> {
+    pub fn parent(&self) -> Option<&ResolvedNode<S, D>> {
         match self {
             NodeOrToken::Node(it) => it.parent(),
             NodeOrToken::Token(it) => Some(it.parent()),
@@ -605,7 +605,7 @@ impl<L: Language, D> ResolvedElement<L, D> {
 
     /// Returns an iterator along the chain of parents of this node.
     #[inline]
-    pub fn ancestors(&self) -> impl Iterator<Item = &ResolvedNode<L, D>> {
+    pub fn ancestors(&self) -> impl Iterator<Item = &ResolvedNode<S, D>> {
         match self {
             NodeOrToken::Node(it) => it.ancestors(),
             NodeOrToken::Token(it) => it.parent().ancestors(),
@@ -614,7 +614,7 @@ impl<L: Language, D> ResolvedElement<L, D> {
 
     /// Return the leftmost token in the subtree of this element.
     #[inline]
-    pub fn first_token(&self) -> Option<&ResolvedToken<L, D>> {
+    pub fn first_token(&self) -> Option<&ResolvedToken<S, D>> {
         match self {
             NodeOrToken::Node(it) => it.first_token(),
             NodeOrToken::Token(it) => Some(it),
@@ -623,7 +623,7 @@ impl<L: Language, D> ResolvedElement<L, D> {
 
     /// Return the rightmost token in the subtree of this element.
     #[inline]
-    pub fn last_token(&self) -> Option<&ResolvedToken<L, D>> {
+    pub fn last_token(&self) -> Option<&ResolvedToken<S, D>> {
         match self {
             NodeOrToken::Node(it) => it.last_token(),
             NodeOrToken::Token(it) => Some(it),
@@ -632,7 +632,7 @@ impl<L: Language, D> ResolvedElement<L, D> {
 
     /// The tree element to the right of this one, i.e. the next child of this element's parent after this element.
     #[inline]
-    pub fn next_sibling_or_token(&self) -> Option<ResolvedElementRef<'_, L, D>> {
+    pub fn next_sibling_or_token(&self) -> Option<ResolvedElementRef<'_, S, D>> {
         match self {
             NodeOrToken::Node(it) => it.next_sibling_or_token(),
             NodeOrToken::Token(it) => it.next_sibling_or_token(),
@@ -641,7 +641,7 @@ impl<L: Language, D> ResolvedElement<L, D> {
 
     /// The tree element to the left of this one, i.e. the previous child of this element's parent after this element.
     #[inline]
-    pub fn prev_sibling_or_token(&self) -> Option<ResolvedElementRef<'_, L, D>> {
+    pub fn prev_sibling_or_token(&self) -> Option<ResolvedElementRef<'_, S, D>> {
         match self {
             NodeOrToken::Node(it) => it.prev_sibling_or_token(),
             NodeOrToken::Token(it) => it.prev_sibling_or_token(),
@@ -649,7 +649,7 @@ impl<L: Language, D> ResolvedElement<L, D> {
     }
 }
 
-impl<'a, L: Language, D> ResolvedElementRef<'a, L, D> {
+impl<'a, S: Syntax, D> ResolvedElementRef<'a, S, D> {
     /// The range this element covers in the source text, in bytes.
     #[inline]
     pub fn text_range(&self) -> TextRange {
@@ -670,7 +670,7 @@ impl<'a, L: Language, D> ResolvedElementRef<'a, L, D> {
 
     /// The kind of this element in terms of your language.
     #[inline]
-    pub fn kind(&self) -> L::Kind {
+    pub fn kind(&self) -> S {
         match self {
             NodeOrToken::Node(it) => it.kind(),
             NodeOrToken::Token(it) => it.kind(),
@@ -679,7 +679,7 @@ impl<'a, L: Language, D> ResolvedElementRef<'a, L, D> {
 
     /// The parent node of this element, except if this element is the root.
     #[inline]
-    pub fn parent(&self) -> Option<&'a ResolvedNode<L, D>> {
+    pub fn parent(&self) -> Option<&'a ResolvedNode<S, D>> {
         match self {
             NodeOrToken::Node(it) => it.parent(),
             NodeOrToken::Token(it) => Some(it.parent()),
@@ -688,7 +688,7 @@ impl<'a, L: Language, D> ResolvedElementRef<'a, L, D> {
 
     /// Returns an iterator along the chain of parents of this node.
     #[inline]
-    pub fn ancestors(&self) -> impl Iterator<Item = &'a ResolvedNode<L, D>> {
+    pub fn ancestors(&self) -> impl Iterator<Item = &'a ResolvedNode<S, D>> {
         match self {
             NodeOrToken::Node(it) => it.ancestors(),
             NodeOrToken::Token(it) => it.parent().ancestors(),
@@ -697,7 +697,7 @@ impl<'a, L: Language, D> ResolvedElementRef<'a, L, D> {
 
     /// Return the leftmost token in the subtree of this element.
     #[inline]
-    pub fn first_token(&self) -> Option<&'a ResolvedToken<L, D>> {
+    pub fn first_token(&self) -> Option<&'a ResolvedToken<S, D>> {
         match self {
             NodeOrToken::Node(it) => it.first_token(),
             NodeOrToken::Token(it) => Some(it),
@@ -706,7 +706,7 @@ impl<'a, L: Language, D> ResolvedElementRef<'a, L, D> {
 
     /// Return the rightmost token in the subtree of this element.
     #[inline]
-    pub fn last_token(&self) -> Option<&'a ResolvedToken<L, D>> {
+    pub fn last_token(&self) -> Option<&'a ResolvedToken<S, D>> {
         match self {
             NodeOrToken::Node(it) => it.last_token(),
             NodeOrToken::Token(it) => Some(it),
@@ -715,7 +715,7 @@ impl<'a, L: Language, D> ResolvedElementRef<'a, L, D> {
 
     /// The tree element to the right of this one, i.e. the next child of this element's parent after this element.
     #[inline]
-    pub fn next_sibling_or_token(&self) -> Option<ResolvedElementRef<'a, L, D>> {
+    pub fn next_sibling_or_token(&self) -> Option<ResolvedElementRef<'a, S, D>> {
         match self {
             NodeOrToken::Node(it) => it.next_sibling_or_token(),
             NodeOrToken::Token(it) => it.next_sibling_or_token(),
@@ -724,7 +724,7 @@ impl<'a, L: Language, D> ResolvedElementRef<'a, L, D> {
 
     /// The tree element to the left of this one, i.e. the previous child of this element's parent after this element.
     #[inline]
-    pub fn prev_sibling_or_token(&self) -> Option<ResolvedElementRef<'a, L, D>> {
+    pub fn prev_sibling_or_token(&self) -> Option<ResolvedElementRef<'a, S, D>> {
         match self {
             NodeOrToken::Node(it) => it.prev_sibling_or_token(),
             NodeOrToken::Token(it) => it.prev_sibling_or_token(),

@@ -6,7 +6,7 @@ use crate::{
     syntax::{ResolvedNode, SyntaxNode},
     traversal::WalkEvent,
     util::NodeOrToken,
-    Language, RawSyntaxKind,
+    RawSyntaxKind, Syntax,
 };
 use serde::{
     de::{Error, SeqAccess, Visitor},
@@ -40,7 +40,7 @@ macro_rules! data_list {
 /// contains a boolean which indicates if this node has a data. If it has one,
 /// the deserializer should pop the first element from the data list and continue.
 ///
-/// Takes the `Language` (`$l`), `SyntaxNode` (`$node`), `Resolver` (`$resolver`),
+/// Takes the `Syntax` (`$l`), `SyntaxNode` (`$node`), `Resolver` (`$resolver`),
 /// `Serializer` (`$serializer`), and an optional `data_list` which must be a `mut Vec<D>`.
 macro_rules! gen_serialize {
     ($l:ident, $node:expr, $resolver:expr, $ser:ident, $($data_list:ident)?) => {{
@@ -56,9 +56,9 @@ macro_rules! gen_serialize {
                     })
                     .unwrap_or(false);)?
 
-                Some(Event::EnterNode($l::kind_to_raw(node.kind()), has_data))
+                Some(Event::EnterNode($l::into_raw(node.kind()), has_data))
             }
-            WalkEvent::Enter(NodeOrToken::Token(tok)) => Some(Event::Token($l::kind_to_raw(tok.kind()), tok.resolve_text($resolver))),
+            WalkEvent::Enter(NodeOrToken::Token(tok)) => Some(Event::Token($l::into_raw(tok.kind()), tok.resolve_text($resolver))),
 
             WalkEvent::Leave(NodeOrToken::Node(_)) => Some(Event::LeaveNode),
             WalkEvent::Leave(NodeOrToken::Token(_)) => None,
@@ -87,53 +87,53 @@ enum Event<'text> {
 }
 
 /// Make a `SyntaxNode` serializable but without serializing the data.
-pub(crate) struct SerializeWithResolver<'node, 'resolver, L: Language, D: 'static, R: ?Sized> {
-    pub(crate) node:     &'node SyntaxNode<L, D>,
+pub(crate) struct SerializeWithResolver<'node, 'resolver, S: Syntax, D: 'static, R: ?Sized> {
+    pub(crate) node:     &'node SyntaxNode<S, D>,
     pub(crate) resolver: &'resolver R,
 }
 
 /// Make a `SyntaxNode` serializable which will include the data for serialization.
-pub(crate) struct SerializeWithData<'node, 'resolver, L: Language, D: 'static, R: ?Sized> {
-    pub(crate) node:     &'node SyntaxNode<L, D>,
+pub(crate) struct SerializeWithData<'node, 'resolver, S: Syntax, D: 'static, R: ?Sized> {
+    pub(crate) node:     &'node SyntaxNode<S, D>,
     pub(crate) resolver: &'resolver R,
 }
 
-impl<L, D, R> Serialize for SerializeWithData<'_, '_, L, D, R>
+impl<S, D, R> Serialize for SerializeWithData<'_, '_, S, D, R>
 where
-    L: Language,
+    S: Syntax,
     R: Resolver<TokenKey> + ?Sized,
     D: Serialize,
 {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    fn serialize<Ser>(&self, serializer: Ser) -> Result<Ser::Ok, Ser::Error>
     where
-        S: serde::Serializer,
+        Ser: serde::Serializer,
     {
         let mut data_list = Vec::new();
-        gen_serialize!(L, self.node, self.resolver, serializer, data_list)
+        gen_serialize!(S, self.node, self.resolver, serializer, data_list)
     }
 }
 
-impl<L, D, R> Serialize for SerializeWithResolver<'_, '_, L, D, R>
+impl<S, D, R> Serialize for SerializeWithResolver<'_, '_, S, D, R>
 where
-    L: Language,
+    S: Syntax,
     R: Resolver<TokenKey> + ?Sized,
 {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    fn serialize<Ser>(&self, serializer: Ser) -> Result<Ser::Ok, Ser::Error>
     where
-        S: serde::Serializer,
+        Ser: serde::Serializer,
     {
-        gen_serialize!(L, self.node, self.resolver, serializer,)
+        gen_serialize!(S, self.node, self.resolver, serializer,)
     }
 }
 
-impl<L, D> Serialize for ResolvedNode<L, D>
+impl<S, D> Serialize for ResolvedNode<S, D>
 where
-    L: Language,
+    S: Syntax,
     D: Serialize,
 {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    fn serialize<Ser>(&self, serializer: Ser) -> Result<Ser::Ok, Ser::Error>
     where
-        S: serde::Serializer,
+        Ser: serde::Serializer,
     {
         let node = SerializeWithResolver {
             node:     self,
@@ -143,9 +143,9 @@ where
     }
 }
 
-impl<'de, L, D> Deserialize<'de> for ResolvedNode<L, D>
+impl<'de, S, D> Deserialize<'de> for ResolvedNode<S, D>
 where
-    L: Language,
+    S: Syntax,
     D: Deserialize<'de>,
 {
     // Deserialization is done by walking down the deserialized event stream,
@@ -158,20 +158,20 @@ where
     // we walk down the nodes, check if the bool at `data_list[idx]` is true,
     // and if so, pop the first element of the data list and attach the data
     // to the current node.
-    fn deserialize<DE>(deserializer: DE) -> Result<Self, DE::Error>
+    fn deserialize<De>(deserializer: De) -> Result<Self, De::Error>
     where
-        DE: serde::Deserializer<'de>,
+        De: serde::Deserializer<'de>,
     {
-        struct EventVisitor<L: Language, D: 'static> {
-            _marker: PhantomData<fn() -> ResolvedNode<L, D>>,
+        struct EventVisitor<S: Syntax, D: 'static> {
+            _marker: PhantomData<fn() -> ResolvedNode<S, D>>,
         }
 
-        impl<'de, L, D> Visitor<'de> for EventVisitor<L, D>
+        impl<'de, S, D> Visitor<'de> for EventVisitor<S, D>
         where
-            L: Language,
+            S: Syntax,
             D: Deserialize<'de>,
         {
-            type Value = (ResolvedNode<L, D>, VecDeque<bool>);
+            type Value = (ResolvedNode<S, D>, VecDeque<bool>);
 
             fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
                 formatter.write_str("a list of tree events")
@@ -181,16 +181,16 @@ where
             where
                 A: SeqAccess<'de>,
             {
-                let mut builder: GreenNodeBuilder<L> = GreenNodeBuilder::new();
+                let mut builder: GreenNodeBuilder<S> = GreenNodeBuilder::new();
                 let mut data_indices = VecDeque::new();
 
                 while let Some(next) = seq.next_element::<Event<'_>>()? {
                     match next {
                         Event::EnterNode(kind, has_data) => {
-                            builder.start_node(L::kind_from_raw(kind));
+                            builder.start_node(S::from_raw(kind));
                             data_indices.push_back(has_data);
                         }
-                        Event::Token(kind, text) => builder.token(L::kind_from_raw(kind), text),
+                        Event::Token(kind, text) => builder.token(S::from_raw(kind), text),
                         Event::LeaveNode => builder.finish_node(),
                     }
                 }
@@ -201,10 +201,10 @@ where
             }
         }
 
-        struct ProcessedEvents<L: Language, D: 'static>(ResolvedNode<L, D>, VecDeque<bool>);
-        impl<'de, L, D> Deserialize<'de> for ProcessedEvents<L, D>
+        struct ProcessedEvents<S: Syntax, D: 'static>(ResolvedNode<S, D>, VecDeque<bool>);
+        impl<'de, S, D> Deserialize<'de> for ProcessedEvents<S, D>
         where
-            L: Language,
+            S: Syntax,
             D: Deserialize<'de>,
         {
             fn deserialize<DE>(deserializer: DE) -> Result<Self, DE::Error>
@@ -217,20 +217,20 @@ where
         }
 
         let (ProcessedEvents(tree, data_indices), mut data) =
-            <(ProcessedEvents<L, D>, VecDeque<D>)>::deserialize(deserializer)?;
+            <(ProcessedEvents<S, D>, VecDeque<D>)>::deserialize(deserializer)?;
 
         tree.descendants().zip(data_indices).try_for_each(|(node, has_data)| {
             if has_data {
                 let data = data
                     .pop_front()
-                    .ok_or_else(|| DE::Error::custom("invalid serialized tree"))?;
+                    .ok_or_else(|| De::Error::custom("invalid serialized tree"))?;
                 node.set_data(data);
             }
-            <Result<(), DE::Error>>::Ok(())
+            <Result<(), De::Error>>::Ok(())
         })?;
 
         if !data.is_empty() {
-            Err(DE::Error::custom(
+            Err(De::Error::custom(
                 "serialized SyntaxNode contained too many data elements",
             ))
         } else {
@@ -240,18 +240,18 @@ where
 }
 
 impl Serialize for RawSyntaxKind {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    fn serialize<Ser>(&self, serializer: Ser) -> Result<Ser::Ok, Ser::Error>
     where
-        S: serde::Serializer,
+        Ser: serde::Serializer,
     {
         serializer.serialize_u32(self.0)
     }
 }
 
 impl<'de> Deserialize<'de> for RawSyntaxKind {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    fn deserialize<De>(deserializer: De) -> Result<Self, De::Error>
     where
-        D: serde::Deserializer<'de>,
+        De: serde::Deserializer<'de>,
     {
         Ok(Self(u32::deserialize(deserializer)?))
     }

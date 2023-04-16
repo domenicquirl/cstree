@@ -7,25 +7,25 @@ use crate::{
     green::GreenElementRef,
     interning::{Resolver, TokenKey},
     util::{NodeOrToken, TokenAtOffset},
-    Language, RawSyntaxKind,
+    RawSyntaxKind, Syntax,
 };
 
 /// An element of the tree, can be either a node or a token.
-pub type SyntaxElement<L, D = ()> = NodeOrToken<SyntaxNode<L, D>, SyntaxToken<L, D>>;
+pub type SyntaxElement<S, D = ()> = NodeOrToken<SyntaxNode<S, D>, SyntaxToken<S, D>>;
 
-impl<L: Language, D> From<SyntaxNode<L, D>> for SyntaxElement<L, D> {
-    fn from(node: SyntaxNode<L, D>) -> SyntaxElement<L, D> {
+impl<S: Syntax, D> From<SyntaxNode<S, D>> for SyntaxElement<S, D> {
+    fn from(node: SyntaxNode<S, D>) -> SyntaxElement<S, D> {
         NodeOrToken::Node(node)
     }
 }
 
-impl<L: Language, D> From<SyntaxToken<L, D>> for SyntaxElement<L, D> {
-    fn from(token: SyntaxToken<L, D>) -> SyntaxElement<L, D> {
+impl<S: Syntax, D> From<SyntaxToken<S, D>> for SyntaxElement<S, D> {
+    fn from(token: SyntaxToken<S, D>) -> SyntaxElement<S, D> {
         NodeOrToken::Token(token)
     }
 }
 
-impl<L: Language, D> SyntaxElement<L, D> {
+impl<S: Syntax, D> SyntaxElement<S, D> {
     /// Returns this element's [`Display`](fmt::Display) representation as a string.
     ///
     /// To avoid allocating for every element, see [`write_display`](type.SyntaxElement.html#method.write_display).
@@ -80,22 +80,22 @@ impl<L: Language, D> SyntaxElement<L, D> {
 }
 
 /// A reference to an element of the tree, can be either a reference to a node or one to a token.
-pub type SyntaxElementRef<'a, L, D = ()> = NodeOrToken<&'a SyntaxNode<L, D>, &'a SyntaxToken<L, D>>;
+pub type SyntaxElementRef<'a, S, D = ()> = NodeOrToken<&'a SyntaxNode<S, D>, &'a SyntaxToken<S, D>>;
 
-impl<'a, L: Language, D> From<&'a SyntaxNode<L, D>> for SyntaxElementRef<'a, L, D> {
-    fn from(node: &'a SyntaxNode<L, D>) -> Self {
+impl<'a, S: Syntax, D> From<&'a SyntaxNode<S, D>> for SyntaxElementRef<'a, S, D> {
+    fn from(node: &'a SyntaxNode<S, D>) -> Self {
         NodeOrToken::Node(node)
     }
 }
 
-impl<'a, L: Language, D> From<&'a SyntaxToken<L, D>> for SyntaxElementRef<'a, L, D> {
-    fn from(token: &'a SyntaxToken<L, D>) -> Self {
+impl<'a, S: Syntax, D> From<&'a SyntaxToken<S, D>> for SyntaxElementRef<'a, S, D> {
+    fn from(token: &'a SyntaxToken<S, D>) -> Self {
         NodeOrToken::Token(token)
     }
 }
 
-impl<'a, L: Language, D> From<&'a SyntaxElement<L, D>> for SyntaxElementRef<'a, L, D> {
-    fn from(element: &'a SyntaxElement<L, D>) -> Self {
+impl<'a, S: Syntax, D> From<&'a SyntaxElement<S, D>> for SyntaxElementRef<'a, S, D> {
+    fn from(element: &'a SyntaxElement<S, D>) -> Self {
         match element {
             NodeOrToken::Node(it) => Self::Node(it),
             NodeOrToken::Token(it) => Self::Token(it),
@@ -103,7 +103,7 @@ impl<'a, L: Language, D> From<&'a SyntaxElement<L, D>> for SyntaxElementRef<'a, 
     }
 }
 
-impl<'a, L: Language, D> SyntaxElementRef<'a, L, D> {
+impl<'a, S: Syntax, D> SyntaxElementRef<'a, S, D> {
     /// Returns this element's [`Display`](fmt::Display) representation as a string.
     ///
     /// To avoid allocating for every element, see [`write_display`](type.SyntaxElementRef.html#method.write_display).
@@ -157,14 +157,14 @@ impl<'a, L: Language, D> SyntaxElementRef<'a, L, D> {
     }
 }
 
-impl<L: Language, D> SyntaxElement<L, D> {
+impl<S: Syntax, D> SyntaxElement<S, D> {
     pub(super) fn new(
         element: GreenElementRef<'_>,
-        parent: &SyntaxNode<L, D>,
+        parent: &SyntaxNode<S, D>,
         index: u32,
         offset: TextSize,
         ref_count: *mut AtomicU32,
-    ) -> SyntaxElement<L, D> {
+    ) -> SyntaxElement<S, D> {
         match element {
             NodeOrToken::Node(node) => SyntaxNode::new_child(node, parent, index, offset, ref_count).into(),
             NodeOrToken::Token(_) => SyntaxToken::new(parent, index, offset).into(),
@@ -191,7 +191,7 @@ impl<L: Language, D> SyntaxElement<L, D> {
 
     /// The kind of this element in terms of your language.
     #[inline]
-    pub fn kind(&self) -> L::Kind {
+    pub fn kind(&self) -> S {
         match self {
             NodeOrToken::Node(it) => it.kind(),
             NodeOrToken::Token(it) => it.kind(),
@@ -200,7 +200,7 @@ impl<L: Language, D> SyntaxElement<L, D> {
 
     /// The parent node of this element, except if this element is the root.
     #[inline]
-    pub fn parent(&self) -> Option<&SyntaxNode<L, D>> {
+    pub fn parent(&self) -> Option<&SyntaxNode<S, D>> {
         match self {
             NodeOrToken::Node(it) => it.parent(),
             NodeOrToken::Token(it) => Some(it.parent()),
@@ -209,7 +209,7 @@ impl<L: Language, D> SyntaxElement<L, D> {
 
     /// Returns an iterator along the chain of parents of this node.
     #[inline]
-    pub fn ancestors(&self) -> impl Iterator<Item = &SyntaxNode<L, D>> {
+    pub fn ancestors(&self) -> impl Iterator<Item = &SyntaxNode<S, D>> {
         match self {
             NodeOrToken::Node(it) => it.ancestors(),
             NodeOrToken::Token(it) => it.parent().ancestors(),
@@ -218,7 +218,7 @@ impl<L: Language, D> SyntaxElement<L, D> {
 
     /// Return the leftmost token in the subtree of this element.
     #[inline]
-    pub fn first_token(&self) -> Option<&SyntaxToken<L, D>> {
+    pub fn first_token(&self) -> Option<&SyntaxToken<S, D>> {
         match self {
             NodeOrToken::Node(it) => it.first_token(),
             NodeOrToken::Token(it) => Some(it),
@@ -227,7 +227,7 @@ impl<L: Language, D> SyntaxElement<L, D> {
 
     /// Return the rightmost token in the subtree of this element.
     #[inline]
-    pub fn last_token(&self) -> Option<&SyntaxToken<L, D>> {
+    pub fn last_token(&self) -> Option<&SyntaxToken<S, D>> {
         match self {
             NodeOrToken::Node(it) => it.last_token(),
             NodeOrToken::Token(it) => Some(it),
@@ -236,7 +236,7 @@ impl<L: Language, D> SyntaxElement<L, D> {
 
     /// The tree element to the right of this one, i.e. the next child of this element's parent after this element.
     #[inline]
-    pub fn next_sibling_or_token(&self) -> Option<SyntaxElementRef<'_, L, D>> {
+    pub fn next_sibling_or_token(&self) -> Option<SyntaxElementRef<'_, S, D>> {
         match self {
             NodeOrToken::Node(it) => it.next_sibling_or_token(),
             NodeOrToken::Token(it) => it.next_sibling_or_token(),
@@ -245,7 +245,7 @@ impl<L: Language, D> SyntaxElement<L, D> {
 
     /// The tree element to the left of this one, i.e. the previous child of this element's parent after this element.
     #[inline]
-    pub fn prev_sibling_or_token(&self) -> Option<SyntaxElementRef<'_, L, D>> {
+    pub fn prev_sibling_or_token(&self) -> Option<SyntaxElementRef<'_, S, D>> {
         match self {
             NodeOrToken::Node(it) => it.prev_sibling_or_token(),
             NodeOrToken::Token(it) => it.prev_sibling_or_token(),
@@ -253,7 +253,7 @@ impl<L: Language, D> SyntaxElement<L, D> {
     }
 }
 
-impl<'a, L: Language, D> SyntaxElementRef<'a, L, D> {
+impl<'a, S: Syntax, D> SyntaxElementRef<'a, S, D> {
     /// The range this element covers in the source text, in bytes.
     #[inline]
     pub fn text_range(&self) -> TextRange {
@@ -274,7 +274,7 @@ impl<'a, L: Language, D> SyntaxElementRef<'a, L, D> {
 
     /// The kind of this element in terms of your language.
     #[inline]
-    pub fn kind(&self) -> L::Kind {
+    pub fn kind(&self) -> S {
         match self {
             NodeOrToken::Node(it) => it.kind(),
             NodeOrToken::Token(it) => it.kind(),
@@ -283,7 +283,7 @@ impl<'a, L: Language, D> SyntaxElementRef<'a, L, D> {
 
     /// The parent node of this element, except if this element is the root.
     #[inline]
-    pub fn parent(&self) -> Option<&'a SyntaxNode<L, D>> {
+    pub fn parent(&self) -> Option<&'a SyntaxNode<S, D>> {
         match self {
             NodeOrToken::Node(it) => it.parent(),
             NodeOrToken::Token(it) => Some(it.parent()),
@@ -292,7 +292,7 @@ impl<'a, L: Language, D> SyntaxElementRef<'a, L, D> {
 
     /// Returns an iterator along the chain of parents of this node.
     #[inline]
-    pub fn ancestors(&self) -> impl Iterator<Item = &'a SyntaxNode<L, D>> {
+    pub fn ancestors(&self) -> impl Iterator<Item = &'a SyntaxNode<S, D>> {
         match self {
             NodeOrToken::Node(it) => it.ancestors(),
             NodeOrToken::Token(it) => it.parent().ancestors(),
@@ -301,7 +301,7 @@ impl<'a, L: Language, D> SyntaxElementRef<'a, L, D> {
 
     /// Return the leftmost token in the subtree of this element.
     #[inline]
-    pub fn first_token(&self) -> Option<&'a SyntaxToken<L, D>> {
+    pub fn first_token(&self) -> Option<&'a SyntaxToken<S, D>> {
         match self {
             NodeOrToken::Node(it) => it.first_token(),
             NodeOrToken::Token(it) => Some(it),
@@ -310,7 +310,7 @@ impl<'a, L: Language, D> SyntaxElementRef<'a, L, D> {
 
     /// Return the rightmost token in the subtree of this element.
     #[inline]
-    pub fn last_token(&self) -> Option<&'a SyntaxToken<L, D>> {
+    pub fn last_token(&self) -> Option<&'a SyntaxToken<S, D>> {
         match self {
             NodeOrToken::Node(it) => it.last_token(),
             NodeOrToken::Token(it) => Some(it),
@@ -319,7 +319,7 @@ impl<'a, L: Language, D> SyntaxElementRef<'a, L, D> {
 
     /// The tree element to the right of this one, i.e. the next child of this element's parent after this element.
     #[inline]
-    pub fn next_sibling_or_token(&self) -> Option<SyntaxElementRef<'a, L, D>> {
+    pub fn next_sibling_or_token(&self) -> Option<SyntaxElementRef<'a, S, D>> {
         match self {
             NodeOrToken::Node(it) => it.next_sibling_or_token(),
             NodeOrToken::Token(it) => it.next_sibling_or_token(),
@@ -328,7 +328,7 @@ impl<'a, L: Language, D> SyntaxElementRef<'a, L, D> {
 
     /// The tree element to the left of this one, i.e. the previous child of this element's parent after this element.
     #[inline]
-    pub fn prev_sibling_or_token(&self) -> Option<SyntaxElementRef<'a, L, D>> {
+    pub fn prev_sibling_or_token(&self) -> Option<SyntaxElementRef<'a, S, D>> {
         match self {
             NodeOrToken::Node(it) => it.prev_sibling_or_token(),
             NodeOrToken::Token(it) => it.prev_sibling_or_token(),
@@ -336,7 +336,7 @@ impl<'a, L: Language, D> SyntaxElementRef<'a, L, D> {
     }
 
     #[inline]
-    pub(super) fn token_at_offset(&self, offset: TextSize) -> TokenAtOffset<SyntaxToken<L, D>> {
+    pub(super) fn token_at_offset(&self, offset: TextSize) -> TokenAtOffset<SyntaxToken<S, D>> {
         assert!(self.text_range().start() <= offset && offset <= self.text_range().end());
         match self {
             NodeOrToken::Token(token) => TokenAtOffset::Single((*token).clone()),

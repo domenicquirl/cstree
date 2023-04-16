@@ -7,7 +7,7 @@ use text_size::TextSize;
 use crate::{
     green::{GreenElementRef, GreenNodeChildren},
     syntax::{SyntaxElementRef, SyntaxNode},
-    Language,
+    Syntax,
 };
 
 #[derive(Clone, Debug)]
@@ -18,7 +18,7 @@ struct Iter<'n> {
 }
 
 impl<'n> Iter<'n> {
-    fn new<L: Language, D>(parent: &'n SyntaxNode<L, D>) -> Self {
+    fn new<S: Syntax, D>(parent: &'n SyntaxNode<S, D>) -> Self {
         let offset = parent.text_range().start();
         let green: GreenNodeChildren<'_> = parent.green().children();
         Iter {
@@ -67,14 +67,14 @@ impl<'n> FusedIterator for Iter<'n> {}
 
 /// An iterator over the child nodes of a [`SyntaxNode`].
 #[derive(Clone, Debug)]
-pub struct SyntaxNodeChildren<'n, L: Language, D: 'static = ()> {
+pub struct SyntaxNodeChildren<'n, S: Syntax, D: 'static = ()> {
     inner:  Iter<'n>,
-    parent: &'n SyntaxNode<L, D>,
+    parent: &'n SyntaxNode<S, D>,
 }
 
-impl<'n, L: Language, D> SyntaxNodeChildren<'n, L, D> {
+impl<'n, S: Syntax, D> SyntaxNodeChildren<'n, S, D> {
     #[inline]
-    pub(super) fn new(parent: &'n SyntaxNode<L, D>) -> Self {
+    pub(super) fn new(parent: &'n SyntaxNode<S, D>) -> Self {
         Self {
             inner: Iter::new(parent),
             parent,
@@ -82,8 +82,8 @@ impl<'n, L: Language, D> SyntaxNodeChildren<'n, L, D> {
     }
 }
 
-impl<'n, L: Language, D> Iterator for SyntaxNodeChildren<'n, L, D> {
-    type Item = &'n SyntaxNode<L, D>;
+impl<'n, S: Syntax, D> Iterator for SyntaxNodeChildren<'n, S, D> {
+    type Item = &'n SyntaxNode<S, D>;
 
     #[inline(always)]
     fn next(&mut self) -> Option<Self::Item> {
@@ -109,24 +109,24 @@ impl<'n, L: Language, D> Iterator for SyntaxNodeChildren<'n, L, D> {
     }
 }
 
-impl<'n, L: Language, D> ExactSizeIterator for SyntaxNodeChildren<'n, L, D> {
+impl<'n, S: Syntax, D> ExactSizeIterator for SyntaxNodeChildren<'n, S, D> {
     #[inline(always)]
     fn len(&self) -> usize {
         self.inner.len()
     }
 }
-impl<'n, L: Language, D> FusedIterator for SyntaxNodeChildren<'n, L, D> {}
+impl<'n, S: Syntax, D> FusedIterator for SyntaxNodeChildren<'n, S, D> {}
 
 /// An iterator over the children of a [`SyntaxNode`].
 #[derive(Clone, Debug)]
-pub struct SyntaxElementChildren<'n, L: Language, D: 'static = ()> {
+pub struct SyntaxElementChildren<'n, S: Syntax, D: 'static = ()> {
     inner:  Iter<'n>,
-    parent: &'n SyntaxNode<L, D>,
+    parent: &'n SyntaxNode<S, D>,
 }
 
-impl<'n, L: Language, D> SyntaxElementChildren<'n, L, D> {
+impl<'n, S: Syntax, D> SyntaxElementChildren<'n, S, D> {
     #[inline]
-    pub(super) fn new(parent: &'n SyntaxNode<L, D>) -> Self {
+    pub(super) fn new(parent: &'n SyntaxNode<S, D>) -> Self {
         Self {
             inner: Iter::new(parent),
             parent,
@@ -134,8 +134,8 @@ impl<'n, L: Language, D> SyntaxElementChildren<'n, L, D> {
     }
 }
 
-impl<'n, L: Language, D> Iterator for SyntaxElementChildren<'n, L, D> {
-    type Item = SyntaxElementRef<'n, L, D>;
+impl<'n, S: Syntax, D> Iterator for SyntaxElementChildren<'n, S, D> {
+    type Item = SyntaxElementRef<'n, S, D>;
 
     #[inline(always)]
     fn next(&mut self) -> Option<Self::Item> {
@@ -159,10 +159,10 @@ impl<'n, L: Language, D> Iterator for SyntaxElementChildren<'n, L, D> {
     }
 }
 
-impl<'n, L: Language, D> ExactSizeIterator for SyntaxElementChildren<'n, L, D> {
+impl<'n, S: Syntax, D> ExactSizeIterator for SyntaxElementChildren<'n, S, D> {
     #[inline(always)]
     fn len(&self) -> usize {
         self.inner.len()
     }
 }
-impl<'n, L: Language, D> FusedIterator for SyntaxElementChildren<'n, L, D> {}
+impl<'n, S: Syntax, D> FusedIterator for SyntaxElementChildren<'n, S, D> {}
