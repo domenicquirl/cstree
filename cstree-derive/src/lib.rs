@@ -38,7 +38,7 @@ fn expand_language(ast: DeriveInput) -> Result<TokenStream, Vec<syn::Error>> {
     let language_type = quote! {
         #[automatically_derived]
         #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-        #vis enum #language_name {};
+        #vis enum #language_name {}
     };
 
     let name = &syntax_kind_enum.name;
@@ -64,11 +64,11 @@ fn expand_language(ast: DeriveInput) -> Result<TokenStream, Vec<syn::Error>> {
                 unsafe { ::std::mem::transmute::<u32, #name>(raw.0) }
             }
 
-            fn kind_to_raw(kind: Self::Kind) -> RawSyntaxKind {
+            fn kind_to_raw(kind: Self::Kind) -> ::cstree::RawSyntaxKind {
                 ::cstree::RawSyntaxKind(kind as u32)
             }
 
-            fn static_text(kind: Self::Kind) -> Option<&'static str> {
+            fn static_text(kind: Self::Kind) -> ::core::option::Option<&'static str> {
                 match kind {
                     #( #static_texts )*
                 }
