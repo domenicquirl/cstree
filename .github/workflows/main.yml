@@ -50,7 +50,7 @@ jobs:
         with:
           command: test
           args: --doc --verbose --all-features
-      - uses: actions/upload-artifact@v2  # upload test results
+      - uses: actions/upload-artifact@v3  # upload test results
         if: success() || failure()        # run this step even if previous step failed
         with:
           name: test-results-${{ matrix.rust }}-${{ matrix.os }}
