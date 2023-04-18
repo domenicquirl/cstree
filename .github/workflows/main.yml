@@ -37,15 +37,15 @@ jobs:
       - uses: actions-rs/cargo@v1
         with:
           command: nextest
-          args: --profile ci-default-features --tests --examples --verbose
+          args: run --profile ci-default-features --tests --examples --verbose
       - uses: actions-rs/cargo@v1
         with:
           command: nextest
-          args: --profile ci-all-features --tests --examples --verbose --all-features
+          args: run --profile ci-all-features --tests --examples --verbose --all-features
       - uses: actions-rs/cargo@v1
         with:
           command: nextest
-          args: --profile ci-all-features-release --tests --examples --verbose --all-features --release
+          args: run --profile ci-all-features-release --tests --examples --verbose --all-features --release
       - uses: actions-rs/cargo@v1
         with:
           command: test
