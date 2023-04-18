@@ -41,7 +41,7 @@ jobs:
       - name: Library Tests | All Features
         run: cargo nextest run --profile ci-all-features --tests --examples --verbose --all-features
       - name: Library Tests | All Features (Release)
-        run: cargo nextest run --profile ci-all-features --tests --examples --verbose --all-features --release
+        run: cargo nextest run --profile ci-all-features-release --tests --examples --verbose --all-features --release
       - name: Doc Tests 
         run: cargo test --doc --verbose --all-features
 
