@@ -14,6 +14,7 @@ on:
 env:
   RUST_LOG: info
   RUST_BACKTRACE: 1
+  CARGO_TERM_COLOR: always
 
 jobs:
   test:
@@ -31,19 +32,29 @@ jobs:
       - uses: hecrj/setup-rust-action@v1
         with:
           rust-version: ${{ matrix.rust }}
+      - uses: taiki-e/install-action@nextest
 
       - uses: actions-rs/cargo@v1
         with:
-          command: test
-          args: --all-targets --verbose
+          command: nextest
+          args: --profile ci-default-features --tests --examples --verbose
+      - uses: actions-rs/cargo@v1
+        with:
+          command: nextest
+          args: --profile ci-all-features --tests --examples --verbose --all-features
+      - uses: actions-rs/cargo@v1
+        with:
+          command: nextest
+          args: --profile ci-all-features-release --tests --examples --verbose --all-features --release
       - uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --all-targets --verbose --all-features
-      - uses: actions-rs/cargo@v1
+          args: --doc --verbose --all-features
+      - uses: actions/upload-artifact@v2  # upload test results
+        if: success() || failure()        # run this step even if previous step failed
         with:
-          command: test
-          args: --all-targets --verbose --all-features --release
+          name: test-results
+          path: target/nextest/**/junit-*.xml
 
   check:
     name: Check
