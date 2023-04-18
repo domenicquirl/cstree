@@ -125,7 +125,14 @@ impl Syntax for Calculator {
 }
 ```
 
+#### Deriving `Syntax`
+To save yourself the hassle of defining this conversion (and, perhaps more importantly, continually updating it
+while your language's syntax is in flux), `cstree` includes a derive macro for `Syntax` when built with the `derive`
+feature. With the macro, the `Syntax` trait implementation above can be replaced by simply adding
+`#[derive(Syntax)]` to `SyntaxKind`.
+
 ### Parsing into a green tree
+
 With that out of the way, we can start writing the parser for our expressions.
 For the purposes of this introduction to `cstree`, I'll assume that there is a lexer that yields the following
 tokens:

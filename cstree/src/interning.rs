@@ -59,41 +59,42 @@
 //! capabilities with `cstree` as well. Support for this is experimental, and you have to opt in via the
 //! `salsa_2022_compat` feature. For instructions on how to do this, and whether you actually want to, please refer to
 //! [the `salsa_compat` module documentation].
-//!
-//! ## Multi-threaded interners
-//! If you want to use your interner on more than one thread, the interner needs to support interning new text through
-//! shared access. With the `multi_threaded_interning` feature, you can get such an interner by calling
-//! [`new_threaded_interner`]. The feature also enables support for `ThreadedRodeo`, the multi-threaded interner from
-//! `lasso`.
-//!
-//! **You can pass a reference to that interner to anything that expects an [`Interner`]!**
-//! While the interning methods on [`Interner`] require a `&mut self` to also work for single-threaded interners, both
-//! [`Resolver`] and [`Interner`] will be implemented for `&interner` if `interner` is multi-threaded:
-//!
-//! ```
-//! # use cstree::testing::*;
-//! # use cstree::interning::*;
-//!
-//! let interner = new_threaded_interner();
-//! let mut builder: GreenNodeBuilder<MySyntax, &MultiThreadedTokenInterner> =
-//!     GreenNodeBuilder::from_interner(&interner);
-//!
-//! # builder.start_node(Root);
-//! # builder.token(Int, "42");
-//! # builder.finish_node();
-//! parse(&mut builder, "42");
-//! let (tree, cache) = builder.finish();
-//!
-//! // Note that we get a cache and interner back, because we passed an "owned" reference to `from_interner`
-//! let used_interner = cache.unwrap().into_interner().unwrap();
-//! assert_eq!(used_interner as *const _, &interner as *const _);
-//!
-//! let int = tree.children().next().unwrap();
-//! assert_eq!(int.as_token().unwrap().text(&interner), Some("42"));
-//! ```
-//!
-//! Here, we use `from_interner`, but pass it only a shared reference to "own". Take care to denote the type signature
-//! of the `GreenNodeBuilder` appropriately.
+#![cfg_attr(
+    feature = "multi_threaded_interning",
+    doc = r###"
+## Multi-threaded interners
+
+If you want to use your interner on more than one thread, the interner needs to support interning new text through
+shared access. With the `multi_threaded_interning` feature, you can get such an interner by calling
+[`new_threaded_interner`]. The feature also enables support for `ThreadedRodeo`, the multi-threaded interner from
+`lasso`.
+
+**You can pass a reference to that interner to anything that expects an [`Interner`]!**
+While the interning methods on [`Interner`] require a `&mut self` to also work for single-threaded interners, both
+[`Resolver`] and [`Interner`] will be implemented for `&interner` if `interner` is multi-threaded:
+
+```
+# use cstree::testing::*;
+# use cstree::interning::*;
+let interner = new_threaded_interner();
+let mut builder: GreenNodeBuilder<MySyntax, &MultiThreadedTokenInterner> =
+    GreenNodeBuilder::from_interner(&interner);
+# builder.start_node(Root);
+# builder.token(Int, "42");
+# builder.finish_node();
+parse(&mut builder, "42");
+let (tree, cache) = builder.finish();
+// Note that we get a cache and interner back, because we passed an "owned" reference to `from_interner`
+let used_interner = cache.unwrap().into_interner().unwrap();
+assert_eq!(used_interner as *const _, &interner as *const _);
+let int = tree.children().next().unwrap();
+assert_eq!(int.as_token().unwrap().text(&interner), Some("42"));
+```
+
+Here, we use `from_interner`, but pass it only a shared reference to "own". Take care to denote the type signature
+of the `GreenNodeBuilder` appropriately.
+"###
+)]
 //!
 //! [crate documentation]: crate
 //! [`Syntax::static_text`]: crate::Syntax::static_text

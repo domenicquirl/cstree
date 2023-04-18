@@ -61,7 +61,7 @@
 //! The `enum` needs to be convertible to a `u32`, so we use the `repr` attribute to ensure it uses the correct
 //! representation.
 //!
-//! ```rust,ignore
+//! ```rust,no_run
 //! #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 //! #[repr(u32)]
 //! enum SyntaxKind {
@@ -81,7 +81,8 @@
 //! syntax as a whole and add a type alias for it. That way, we can match against `SyntaxKind`s using the original name,
 //! but use the more informative `Node<Calculator>` to instantiate `cstree`'s types.
 //!
-//! ```rust,ignore
+//! ```rust,no_run
+//! # enum SyntaxKind {}
 //! type Calculator = SyntaxKind;
 //! ```
 //!
@@ -97,11 +98,14 @@
 //! parentheses, but not possible for numbers, since an integer token may be produced from the input `3`, but also from
 //! other numbers like `7` or `12`.
 //!
-//! ```rust,ignore
-//! impl Syntax for Calculator {
-//!     // The tokens and nodes we just defined
-//!     type Kind = SyntaxKind;
+//! ```rust,no_run
+//! # #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+//! # #[repr(u32)]
+//! # enum SyntaxKind { Int, Plus, Minus, LParen, RParen, Expr, Root }
+//! # type Calculator = SyntaxKind;
+//! # use cstree::{Syntax, RawSyntaxKind};
 //!
+//! impl Syntax for Calculator {
 //!     fn from_raw(raw: RawSyntaxKind) -> Self {
 //!         // This just needs to be the inverse of `into_raw`, but could also
 //!         // be an `impl TryFrom<u32> for SyntaxKind` or any other conversion.
@@ -133,12 +137,21 @@
 //! }
 //! ```
 //!
+//! #### Deriving `Syntax`
+//!
+//! To save yourself the hassle of defining this conversion (and, perhaps more importantly,
+//! continually updating it while your language's syntax is in flux), `cstree` includes a derive
+//! macro for [`Syntax`](macro@crate::Syntax) when built with the `derive` feature. With the macro,
+//! the `Syntax` trait implementation above can be replaced by simply adding `#[derive(Syntax)]` to
+//! `SyntaxKind`.
+//!
 //! ### Parsing into a green tree
+//!
 //! With that out of the way, we can start writing the parser for our expressions.
 //! For the purposes of this introduction to `cstree`, I'll assume that there is a lexer that yields the following
 //! tokens:
 //!
-//! ```rust,ignore
+//! ```rust,no_run
 //! #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 //! pub enum Token<'input> {
 //!     // Note that number strings are not yet parsed into actual numbers,
@@ -156,7 +169,19 @@
 //! A simple lexer that yields such tokens is part of the full `readme` example, but we'll be busy enough with the
 //! combination of `cstree` and the actual parser, which we define like this:
 //!
-//! ```rust,ignore
+//! ```rust,no_run
+//! # use std::iter::Peekable;
+//! # use cstree::build::GreenNodeBuilder;
+//! # struct Lexer<'a> { input: &'a str }
+//! # impl<'a> Lexer<'a> { fn new(input: &'a str) -> Self { Self { input } } }
+//! # struct Token<'a> { input: &'a str }
+//! # impl<'a> Iterator for Lexer<'a> {
+//! #     type Item = Token<'a>;
+//! #     fn next(&mut self) -> Option<Self::Item> { None }
+//! # }
+//! # #[derive(Debug, Clone, Copy, PartialEq, Eq, cstree::Syntax)]
+//! # #[repr(u32)] enum Calculator { A }
+//!
 //! pub struct Parser<'input> {
 //!     // `Peekable` is a standard library iterator adapter that allows
 //!     // looking ahead at the next item without removing it from the iterator yet
@@ -430,39 +455,22 @@ pub mod sync {
 /// `s_expressions` example:
 ///
 /// ```
-/// #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+/// #[derive(Debug, Clone, Copy, PartialEq, Eq, cstree::Syntax)]
 /// # #[allow(non_camel_case_types)]
 /// #[repr(u32)]
 /// enum SyntaxKind {
-///     Plus,       // `+`
-///     Minus,      // `-`
+///     #[static_text("+")]
+///     Plus, // `+`
+///     #[static_text("-")]
+///     Minus, // `-`
 ///     Integer,    // like `15`
 ///     Expression, // combined expression, like `5 + 4 - 3`
-///     Whitespace, // whitespaces is explicit
-///     #[doc(hidden)]
-///     __LAST,
-/// }
-/// use SyntaxKind::*;
-///
-/// impl cstree::Syntax for SyntaxKind {
-///     fn from_raw(raw: cstree::RawSyntaxKind) -> Self {
-///         assert!(raw.0 <= __LAST as u32);
-///         unsafe { std::mem::transmute::<u32, Self>(raw.0) }
-///     }
-///
-///     fn into_raw(self) -> cstree::RawSyntaxKind {
-///         cstree::RawSyntaxKind(self as u32)
-///     }
-///
-///     fn static_text(self) -> Option<&'static str> {
-///         match self {
-///             Plus => Some("+"),
-///             Minus => Some("-"),
-///             _ => None,
-///         }
-///     }
+///     Whitespace, // whitespace is explicit
 /// }
 /// ```
+///
+/// `cstree` provides a procedural macro called `cstree_derive` to automatically generate `Syntax` implementations for
+/// syntax kind enums if its `derive` feature is enabled.
 ///
 /// [`SyntaxNode`]: crate::syntax::SyntaxNode
 pub trait Syntax: Sized + Copy + fmt::Debug + Eq {
@@ -488,7 +496,7 @@ pub trait Syntax: Sized + Copy + fmt::Debug + Eq {
 extern crate cstree_derive;
 
 #[cfg(feature = "derive")]
-/// Derive macro available if `cstree` is build with `features = ["derive"]`.
+/// Derive macro available if `cstree` is built with `features = ["derive"]`.
 pub use cstree_derive::Syntax;
 
 #[doc(hidden)]

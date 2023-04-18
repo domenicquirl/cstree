@@ -12,7 +12,7 @@ use cstree::build::GreenNodeBuilder;
 use cstree::interning::{new_threaded_interner, MultiThreadedTokenInterner};
 
 #[cfg(not(feature = "multi_threaded_interning"))]
-fn get_builder() -> GreenNodeBuilder<'static, 'static, TestLang> {
+fn get_builder() -> GreenNodeBuilder<'static, 'static, SyntaxKind> {
     GreenNodeBuilder::new()
 }
 

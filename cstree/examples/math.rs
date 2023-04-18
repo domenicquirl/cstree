@@ -13,17 +13,21 @@
 //!     - "+" Token(Add)
 //!     - "4" Token(Number)
 
-use cstree::{build::GreenNodeBuilder, interning::Resolver, util::NodeOrToken};
+use cstree::{build::GreenNodeBuilder, interning::Resolver, util::NodeOrToken, Syntax};
 use std::iter::Peekable;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Syntax)]
 #[repr(u32)]
 enum SyntaxKind {
-    Whitespace = 0,
+    Whitespace,
 
+    #[static_text("+")]
     Add,
+    #[static_text("-")]
     Sub,
+    #[static_text("*")]
     Mul,
+    #[static_text("/")]
     Div,
 
     Number,
@@ -37,27 +41,6 @@ use SyntaxKind::*;
 impl From<SyntaxKind> for cstree::RawSyntaxKind {
     fn from(kind: SyntaxKind) -> Self {
         Self(kind as u32)
-    }
-}
-
-impl cstree::Syntax for MySyntax {
-    fn from_raw(raw: cstree::RawSyntaxKind) -> Self {
-        assert!(raw.0 <= Root as u32);
-        unsafe { std::mem::transmute::<u32, SyntaxKind>(raw.0) }
-    }
-
-    fn into_raw(self) -> cstree::RawSyntaxKind {
-        self.into()
-    }
-
-    fn static_text(self) -> Option<&'static str> {
-        match self {
-            Add => Some("+"),
-            Sub => Some("-"),
-            Mul => Some("*"),
-            Div => Some("/"),
-            _ => None,
-        }
     }
 }
 

@@ -9,12 +9,21 @@
 
 use std::collections::VecDeque;
 
-/// Let's start with defining all kinds of tokens and composite nodes.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// Let's start with defining all kinds of syntactical elements that we want to have in our
+/// language's grammar.  These correspond to tokens and composite nodes in the syntax tree that we
+/// want to parse the S-expressions into.
+use cstree::Syntax;
+
+/// Implementing the `Syntax` trait teaches `cstree` to convert our `SyntaxKind`s to its internal
+/// types, allowing for a nicer `SyntaxNode` API where "kinds" are values from our `enum` instead of
+/// plain `u32` values.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Syntax)]
 #[repr(u32)]
 pub enum SyntaxKind {
-    LParen = 0, // '('
-    RParen,     // ')'
+    #[static_text("(")]
+    LParen, // '('
+    #[static_text(")")]
+    RParen, // ')'
     Word,       // '+', '15'
     Whitespace, // whitespaces is explicit
     Error,      // as well as errors
@@ -31,43 +40,11 @@ pub enum SyntaxKind {
 type SExprSyntax = SyntaxKind;
 use SyntaxKind::*;
 
-/// Some boilerplate is needed, as cstree represents kinds as `struct RawSyntaxKind(u32)` internally,
-/// in order to not need the user's `enum SyntaxKind` as a type parameter.
-///
-/// First, to easily pass the enum variants into cstree via `.into()`:
-impl From<SyntaxKind> for cstree::RawSyntaxKind {
-    fn from(kind: SyntaxKind) -> Self {
-        Self(kind as u32)
-    }
-}
-
-/// Second, implementing the `Syntax` trait teaches cstree to convert between these two SyntaxKind
-/// types, allowing for a nicer `SyntaxNode` API where "kinds" are values from our `enum SyntaxKind`,
-/// instead of plain `u32` values.
-impl cstree::Syntax for SExprSyntax {
-    fn from_raw(raw: cstree::RawSyntaxKind) -> Self {
-        assert!(raw.0 <= Root as u32);
-        unsafe { std::mem::transmute::<u32, SyntaxKind>(raw.0) }
-    }
-
-    fn into_raw(self) -> cstree::RawSyntaxKind {
-        self.into()
-    }
-
-    fn static_text(self) -> Option<&'static str> {
-        match self {
-            LParen => Some("("),
-            RParen => Some(")"),
-            _ => None,
-        }
-    }
-}
-
 /// `GreenNode` is an immutable tree, which caches identical nodes and tokens, but doesn't contain
 /// offsets and parent pointers.
 /// `cstree` also deduplicates the actual source string in addition to the tree nodes, so we will need
 /// the `Resolver` to get the real text back from the interned representation.
-use cstree::{green::GreenNode, interning::Resolver, Syntax};
+use cstree::{green::GreenNode, interning::Resolver};
 
 /// You can construct `GreenNode`s by hand, but a builder is helpful for top-down parsers: it maintains
 /// a stack of currently in-progress nodes.
@@ -419,10 +396,10 @@ nan
     assert_eq!(res, vec![Some(92), Some(92), None, None, Some(92),])
 }
 
-/// Split the input string into a flat list of tokens (such as LParen, Word, and Whitespace)
+/// Split the input string into a flat list of tokens (such as `LParen`, `Word`, and `Whitespace`)
 fn lex(text: &str) -> VecDeque<(SyntaxKind, &str)> {
     fn tok(t: SyntaxKind) -> m_lexer::TokenKind {
-        m_lexer::TokenKind(cstree::RawSyntaxKind::from(t).0 as u16)
+        m_lexer::TokenKind(t.into_raw().0 as u16)
     }
     fn kind(t: m_lexer::TokenKind) -> SyntaxKind {
         match t.0 {
