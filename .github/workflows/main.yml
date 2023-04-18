@@ -60,7 +60,7 @@ jobs:
     name: Check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
@@ -80,7 +80,7 @@ jobs:
       RUSTFLAGS: -Dwarnings
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: hecrj/setup-rust-action@v1
         with:
           components: clippy
@@ -91,7 +91,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: hecrj/setup-rust-action@v1
         with:
           rust-version: nightly
@@ -105,7 +105,7 @@ jobs:
       RUSTDOCFLAGS: -Dwarnings --cfg doc_cfg
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: hecrj/setup-rust-action@v1
         with:
           rust-version: nightly
@@ -121,7 +121,7 @@ jobs:
         os: [ubuntu-latest, windows-latest, macos-latest]
     
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: hecrj/setup-rust-action@v1
         with:
           rust-version: nightly
@@ -138,7 +138,7 @@ jobs:
       matrix:
         sanitizer: [address, memory, thread, leak]
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: hecrj/setup-rust-action@v1
         with:
           rust-version: nightly
