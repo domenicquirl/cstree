@@ -28,29 +28,25 @@ jobs:
         rust: [stable, nightly]
 
     steps:
+      # setup
       - uses: actions/checkout@v3
       - uses: hecrj/setup-rust-action@v1
         with:
           rust-version: ${{ matrix.rust }}
       - uses: taiki-e/install-action@nextest
 
-      - uses: actions-rs/cargo@v1
-        with:
-          command: nextest
-          args: run --profile ci-default-features --tests --examples --verbose
-      - uses: actions-rs/cargo@v1
-        with:
-          command: nextest
-          args: run --profile ci-all-features --tests --examples --verbose --all-features
-      - uses: actions-rs/cargo@v1
-        with:
-          command: nextest
-          args: run --profile ci-all-features-release --tests --examples --verbose --all-features --release
-      - uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --doc --verbose --all-features
-      - uses: actions/upload-artifact@v3  # upload test results
+      # tests
+      - name: Library Tests | Default Features
+        run: cargo nextest run --profile ci-default-features --tests --examples --verbose
+      - name: Library Tests | All Features
+        run: cargo nextest run --profile ci-all-features --tests --examples --verbose --all-features
+      - name: Library Tests | All Features (Release)
+        run: cargo nextest run --profile ci-all-features --tests --examples --verbose --all-features --release
+      - name: Doc Tests 
+        run: cargo test --doc --verbose --all-features
+
+      # upload test results
+      - uses: actions/upload-artifact@v3  
         if: success() || failure()        # run this step even if previous step failed
         with:
           name: test-results-${{ matrix.rust }}-${{ matrix.os }}
@@ -64,11 +60,8 @@ jobs:
       - uses: hecrj/setup-rust-action@v1
         with:
           rust-version: nightly
-
-      - uses: actions-rs/cargo@v1
-        with:
-          command: check
-          args: --all-targets --all-features
+      - name: Cargo Check
+        run: cargo check --all-targets --all-features
 
   clippy:
     name: Clippy
