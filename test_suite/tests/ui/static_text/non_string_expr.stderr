@@ -1,0 +1,11 @@
+error: argument to `static_text` must be a string literal: `#[static_text("...")]`
+ --> tests/ui/static_text/non_string_expr.rs:7:7
+  |
+7 |     #[static_text(foo + 3)]
+  |       ^^^^^^^^^^^^^^^^^^^^
+
+error: expected string literal
+ --> tests/ui/static_text/non_string_expr.rs:7:19
+  |
+7 |     #[static_text(foo + 3)]
+  |                   ^^^

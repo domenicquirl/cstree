@@ -1,6 +1,12 @@
-[package]
+[workspace]
+members = [
+    "cstree",
+    "cstree-derive",
+    "test_suite",
+]
+
+[workspace.package]
 edition = "2021"
-name = "cstree"
 version = "0.12.0-rc.0" # when updating, also update `#![doc(html_root_url)]`
 authors = [
     "Domenic Quirl <DomenicQuirl@pm.me>",
@@ -10,70 +16,7 @@ description = "Library for generic lossless syntax trees"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/domenicquirl/cstree"
 readme = "README.md"
+rust-version = "1.68"
 
 [profile.release]
 debug = true
-
-[dependencies]
-text-size   = "1.1.0"
-fxhash      = "0.2.1"
-parking_lot = "0.12.1"
-
-# Arc
-triomphe = "0.1.7"
-sptr     = "0.3.2"
-
-# Default Interner
-indexmap = "1.9"
-
-[dependencies.lasso]
-version  = "0.6"
-features = ["inline-more"]
-optional = true
-
-[dependencies.salsa]
-git      = "https://github.com/salsa-rs/salsa/"
-version  = "0.1"
-optional = true
-package  = "salsa-2022"
-
-[dependencies.serde]
-version          = "1.0"
-optional         = true
-default-features = false
-features         = ["derive", "std"]
-
-[dev-dependencies]
-m_lexer         = "0.0.4"
-serde_json      = "1.0"
-serde_test      = "1.0"
-crossbeam-utils = "0.8"
-criterion       = "0.3"
-
-[[bench]]
-name    = "main"
-harness = false
-
-[features]
-default = []
-# Implementations of `serde::{De,}Serialize` for CSTrees.
-serialize = ["serde", "lasso?/serialize"]
-# Interoperability with the `lasso` interning crate.
-# When enabled, `cstree`'s default interners will use `lasso` internally, too.
-lasso_compat = ["lasso"]
-# Additionally provide threadsafe interner types. 
-# Where applicable (and if the corresponding features are selected), provide compatibility 
-# implementations for multi-thread interners from other crates.
-multi_threaded_interning = ["lasso_compat", "lasso/multi-threaded"]
-# Interoperability with the `salsa` framework for incremental computation.
-# Use this feature for "Salsa 2022".
-# WARNING: This feature is considered unstable!
-salsa_2022_compat = ["salsa"]
-
-[[example]]
-name              = "salsa"
-required-features = ["salsa_2022_compat"]
-
-[package.metadata.docs.rs]
-all-features = true
-rustdoc-args = ["--cfg", "doc_cfg"]

@@ -1,0 +1,5 @@
+error: `static_text` takes the text as a function argument: `#[static_text("...")]`
+ --> tests/ui/static_text/text_assigned.rs:7:5
+  |
+7 |     #[static_text = "b"]
+  |     ^^^^^^^^^^^^^^^^^^^^

@@ -38,7 +38,7 @@ concrete syntax trees as its output. We'll talk more about parsing below -- firs
 to happen to go from input text to a `cstree` syntax tree:
 
  1. Define an enumeration of the types of tokens (like keywords) and nodes (like "an expression")
- that you want to have in your syntax and implement `Language`
+ that you want to have in your syntax and implement `Syntax`
 
  2. Create a `GreenNodeBuilder` and call `start_node`, `token` and `finish_node` from your parser  
 
@@ -52,12 +52,12 @@ compound expression. They will, however, be allowed to write nested expressions 
 ### Defining the language
 First, we need to list the different part of our language's grammar.
 We can do that using an `enum` with a unit variant for any terminal and non-terminal.
-The `enum` needs to be convertible to a `u16`, so we use the `repr` attribute to ensure it uses the correct
+The `enum` needs to be convertible to a `u32`, so we use the `repr` attribute to ensure it uses the correct
 representation.
 
 ```rust
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-#[repr(u16)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(u32)]
 enum SyntaxKind {
     /* Tokens */
     Int,    // 42
@@ -71,6 +71,15 @@ enum SyntaxKind {
 }
 ```
 
+For convenience when we're working with generic `cstree` types like `SyntaxNode`, we'll also give a
+name to our syntax as a whole and add a type alias for it. 
+That way, we can match against `SyntaxKind`s using the original name, but use the more informative
+`Node<Calculator>` to instantiate `cstree`'s types.
+
+```rust
+type Calculator = SyntaxKind;
+```
+
 Most of these are tokens to lex the input string into, like numbers (`Int`) and operators (`Plus`, `Minus`).
 We only really need one type of node; expressions.
 Our syntax tree's root node will have the special kind `Root`, all other nodes will be
@@ -78,22 +87,16 @@ expressions containing a sequence of arithmetic operations potentially involving
 expression nodes.
 
 To use our `SyntaxKind`s with `cstree`, we need to tell it how to convert it back to just a number (the
-`#[repr(u16)]` that we added) by implementing the `Language` trait. We can also tell `cstree` about tokens that
+`#[repr(u32)]` that we added) by implementing the `Syntax` trait. We can also tell `cstree` about tokens that
 always have the same text through the `static_text` method on the trait. This is useful for the operators and
 parentheses, but not possible for numbers, since an integer token may be produced from the input `3`, but also from
-other numbers like `7` or `12`. We implement `Language` on an empty type, just so we can give it a name.
+other numbers like `7` or `12`. We implement `Syntax` on an empty type, just so we can give it a name.
 
 ```rust
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct Calculator;
-
-impl Language for Calculator {
-    // The tokens and nodes we just defined
-    type Kind = SyntaxKind;
-
-    fn kind_from_raw(raw: RawSyntaxKind) -> Self::Kind {
-        // This just needs to be the inverse of `kind_to_raw`, but could also
-        // be an `impl TryFrom<u16> for SyntaxKind` or any other conversion.
+impl Syntax for Calculator { 
+    fn from_raw(raw: RawSyntaxKind) -> Self {
+        // This just needs to be the inverse of `into_raw`, but could also
+        // be an `impl TryFrom<u32> for SyntaxKind` or any other conversion.
         match raw.0 {
             0 => SyntaxKind::Int,
             1 => SyntaxKind::Plus,
@@ -106,12 +109,12 @@ impl Language for Calculator {
         }
     }
 
-    fn kind_to_raw(kind: Self::Kind) -> RawSyntaxKind {
-        RawSyntaxKind(kind as u16)
+    fn ino_raw(self) -> RawSyntaxKind {
+        RawSyntaxKind(self as u32)
     }
 
-    fn static_text(kind: Self::Kind) -> Option<&'static str> {
-        match kind {
+    fn static_text(self) -> Option<&'static str> {
+        match self {
             SyntaxKind::Plus => Some("+"),
             SyntaxKind::Minus => Some("-"),
             SyntaxKind::LParen => Some("("),
@@ -122,7 +125,14 @@ impl Language for Calculator {
 }
 ```
 
+#### Deriving `Syntax`
+To save yourself the hassle of defining this conversion (and, perhaps more importantly, continually updating it
+while your language's syntax is in flux), `cstree` includes a derive macro for `Syntax` when built with the `derive`
+feature. With the macro, the `Syntax` trait implementation above can be replaced by simply adding
+`#[derive(Syntax)]` to `SyntaxKind`.
+
 ### Parsing into a green tree
+
 With that out of the way, we can start writing the parser for our expressions.
 For the purposes of this introduction to `cstree`, I'll assume that there is a lexer that yields the following
 tokens:

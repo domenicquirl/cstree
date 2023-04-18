@@ -1,0 +1,11 @@
+error: argument to `static_text` must be a string literal: `#[static_text("...")]`
+ --> tests/ui/static_text/empty_expr.rs:7:7
+  |
+7 |     #[static_text()]
+  |       ^^^^^^^^^^^^^
+
+error: unexpected end of input, expected string literal
+ --> tests/ui/static_text/empty_expr.rs:7:19
+  |
+7 |     #[static_text()]
+  |                   ^

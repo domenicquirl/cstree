@@ -1,0 +1,18 @@
+[package]
+name                   = "cstree_derive"
+edition.workspace      = true
+version.workspace      = true
+authors.workspace      = true
+license.workspace      = true
+repository.workspace   = true
+readme.workspace       = true
+rust-version.workspace = true
+
+[lib]
+name       = "cstree_derive"
+proc-macro = true
+
+[dependencies]
+proc-macro2 = "1.0.56"
+quote       = "1.0.26"
+syn         = { version = "2.0.14" }
