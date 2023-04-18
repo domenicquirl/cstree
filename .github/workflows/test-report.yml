@@ -10,7 +10,7 @@ jobs:
     steps:
     - uses: dorny/test-reporter@v1
       with:
-        artifact: test-results                # artifact name
-        name: cargo nextest results           # Name of the check run which will be created
-        path: 'target/nextest/**/junit-*.xml' # Path to test results (inside artifact .zip)
-        reporter: java-junit                  # Format of test results
+        artifact: /test-results-([a-z]*)-(.*)/ # artifact name: test-results-<toolchain>-<os>
+        name: cargo nextest results $1 $2      # Name of the check run which will be created
+        path: './**/junit-*.xml'               # Path to test results (inside artifact .zip)
+        reporter: java-junit                   # Format of test results
