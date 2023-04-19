@@ -6,13 +6,13 @@
 //!  1. Define an enumeration of the types of tokens (like keywords) and nodes (like "an expression") that you want to
 //! have in your syntax and implement [`Syntax`]
 //!
-//!  2. Create a [`GreenNodeBuilder`](build::GreenNodeBuilder) and call
-//! [`start_node`](build::GreenNodeBuilder::start_node), [`token`](build::GreenNodeBuilder::token) and
-//! [`finish_node`](build::GreenNodeBuilder::finish_node) from your parser  
+//!  2. Create a [`GreenNodeBuilder`](crate::build::GreenNodeBuilder) and call
+//! [`start_node`](crate::build::GreenNodeBuilder::start_node), [`token`](crate::build::GreenNodeBuilder::token) and
+//! [`finish_node`](crate::build::GreenNodeBuilder::finish_node) from your parser  
 //!
-//!  3. Call [`SyntaxNode::new_root`](syntax::SyntaxNode::new_root) or
-//! [`SyntaxNode::new_root_with_resolver`](syntax::SyntaxNode::new_root_with_resolver) with the resulting
-//! [`GreenNode`](green::GreenNode) to obtain a syntax tree that you can traverse
+//!  3. Call [`SyntaxNode::new_root`](crate::syntax::SyntaxNode::new_root) or
+//! [`SyntaxNode::new_root_with_resolver`](crate::syntax::SyntaxNode::new_root_with_resolver) with the resulting
+//! [`GreenNode`](crate::green::GreenNode) to obtain a syntax tree that you can traverse
 //!
 //! Let's walk through the motions of parsing a (very) simple language into `cstree` syntax trees.
 //! We'll just support addition and subtraction on integers, from which the user is allowed to construct a single,
@@ -169,8 +169,8 @@
 //! ```
 //!
 //! In contrast to parsers that return abstract syntax trees, with `cstree` the syntax tree nodes
-//! for all element in the language grammar will have the same type: [`GreenNode`](green::GreenNode)
-//! for the inner ("green") tree and [`SyntaxNode`](syntax::SyntaxNode) for the outer ("red") tree.
+//! for all element in the language grammar will have the same type: [`GreenNode`](crate::green::GreenNode)
+//! for the inner ("green") tree and [`SyntaxNode`](crate::syntax::SyntaxNode) for the outer ("red") tree.
 //! Different kinds of nodes (and tokens) are differentiated by their `SyntaxKind` tag, which we defined above.
 //!
 //! You can implement many types of parsers with `cstree`. To get a feel for how it works, consider
@@ -182,7 +182,7 @@
 //!
 //! Because `cstree`'s syntax trees are untyped, there is no explicit AST representation that the
 //! parser would build. Instead, parsing into a CST using the
-//! [`GreenNodeBuilder`](build::GreenNodeBuilder) follows the source code more closely in that you
+//! [`GreenNodeBuilder`](crate::build::GreenNodeBuilder) follows the source code more closely in that you
 //! tell `cstree` about each new element you enter and all tokens that the parser consumes. So, for
 //! example, to parse a struct definition the parser first "enters" the struct definition node, then
 //! parses the `struct` keyword and type name, then parses each field, and finally "finishes"
@@ -218,10 +218,10 @@
 //! expression node in order for the whole input to be part of the expression.
 //!
 //! To get around this, `GreenNodeBuilder` provides the
-//! [`checkpoint`](build::GreenNodeBuilder::checkpoint) method, which we can call to "remember" the
+//! [`checkpoint`](crate::build::GreenNodeBuilder::checkpoint) method, which we can call to "remember" the
 //! current position in the input.  For example, we can create a checkpoint before the parser parses
 //! the first `1`. Later, when it sees the following `+`, it can create an `Expr` node for the
-//! whole expression using [`start_node_at`](build::GreenNodeBuilder::start_node_at):
+//! whole expression using [`start_node_at`](crate::build::GreenNodeBuilder::start_node_at):
 //!
 //! ```rust,ignore
 //! fn parse_lhs(&mut self) -> Result<(), String> {
@@ -284,7 +284,7 @@
 //!
 //! Our parser is now capable of parsing our little arithmetic language, but it's methods don't
 //! return anything. So how do we get our syntax tree out? The answer lies in
-//! [`GreenNodeBuilder::finish`](build::GreenNodeBuilder::finish), which finally returns the tree
+//! [`GreenNodeBuilder::finish`](crate::build::GreenNodeBuilder::finish), which finally returns the tree
 //! that we have painstakingly constructed.
 //!
 //! ```rust,ignore
@@ -301,18 +301,18 @@
 //! it for parsing related inputs (e.g., different source files from the same crate may share a lot
 //! of common function and type names that can be deduplicated). See `GreenNodeBuilder`'s
 //! documentation for more information on this, in particular the `with_cache` and `from_cache`
-//! methods. Most importantly for us, we can extract the [`Interner`](interning::Interner) that
+//! methods. Most importantly for us, we can extract the [`Interner`](crate::interning::Interner) that
 //! contains the source text of the tree's tokens from the cache, which we need if we want to look
 //! up things like variable names or the value of numbers for our calculator.
 //!
-//! To work with the syntax tree, you'll want to upgrade it to a [`SyntaxNode`](syntax::SyntaxNode)
-//! using [`SyntaxNode::new_root`](syntax::SyntaxNode::new_root). You can also use
-//! [`SyntaxNode::new_root_with_resolver`](syntax::SyntaxNode::new_root_with_resolver) to combine
+//! To work with the syntax tree, you'll want to upgrade it to a [`SyntaxNode`](crate::syntax::SyntaxNode)
+//! using [`SyntaxNode::new_root`](crate::syntax::SyntaxNode::new_root). You can also use
+//! [`SyntaxNode::new_root_with_resolver`](crate::syntax::SyntaxNode::new_root_with_resolver) to combine
 //! tree and interner, which lets you directly retrieve source text and makes the nodes implement
 //! `Display` and `Debug`. The same output can be produced from `SyntaxNode`s by calling the
-//! `debug` or `display` method with a [`Resolver`](interning::Resolver). To visualize the whole
+//! `debug` or `display` method with a [`Resolver`](crate::interning::Resolver). To visualize the whole
 //! syntax tree, pass `true` for the `recursive` parameter on `debug`, or simply debug-print a
-//! [`ResolvedNode`](syntax::ResolvedNode):
+//! [`ResolvedNode`](crate::syntax::ResolvedNode):
 //!
 //! ```rust,ignore
 //! let input = "11 + 2-(5 + 4)";
