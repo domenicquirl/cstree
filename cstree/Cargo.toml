@@ -22,6 +22,7 @@ indexmap = "1.9"
 
 [dependencies.cstree_derive]
 path     = "../cstree-derive"
+version  = "0.12.0-rc.0"      # must match the `cstree` version in the virtual workspace manifest
 optional = true
 
 [dependencies.lasso]
