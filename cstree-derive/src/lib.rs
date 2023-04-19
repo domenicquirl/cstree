@@ -1,3 +1,18 @@
+//! This crate provides `cstree`'s derive macro for `Syntax`.
+//!
+//! ```
+//! # use cstree_derive::Syntax;
+//! #
+//! # #[derive(Debug, Copy, Clone, PartialEq, Eq)]
+//! #[derive(Syntax)]
+//! # #[repr(u32)]
+//! # enum SyntaxKind { Root }
+//! ```
+//!
+//! Please refer to [the `cstree` main crate] for how to set this up.
+//!
+//! [the `cstree` main crate]: https://docs.rs/cstree/
+
 use errors::ErrorContext;
 use parsing::SyntaxKindEnum;
 use proc_macro2::TokenStream;
