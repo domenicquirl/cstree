@@ -1,10 +1,11 @@
 //! This crate provides `cstree`'s derive macro for `Syntax`.
 //!
 //! ```
-//! # use cstree::Syntax;
+//! # use cstree_derive::Syntax;
 //! #
 //! # #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 //! #[derive(Syntax)]
+//! # #[repr(u32)]
 //! # enum SyntaxKind { Root }
 //! ```
 //!
