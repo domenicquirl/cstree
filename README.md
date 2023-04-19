@@ -11,25 +11,51 @@
   </p>
 </div>
 
-`cstree` is a library for creating and working with concrete syntax trees (CSTs).
-"Traditional" abstract syntax trees (ASTs) usually contain different types of nodes which represent information about the source text of a document and reduce this information to the minimal amount necessary to correctly interpret it.
-In contrast, CSTs are lossless representations of the entire input where all tree nodes are represented uniformly (i.e. the nodes are _untyped_), but include a `SyntaxKind` field to determine the kind of node.
-One of the big advantages of this representation is not only that it can recreate the original source exactly, but also that it lends itself very well to the representation of _incomplete or erroneous_ trees and is thus very suited for usage in contexts such as IDEs.
-
-The concept of and the data structures for CSTs are inspired in part by Swift's [libsyntax](https://github.com/apple/swift/tree/5e2c815edfd758f9b1309ce07bfc01c4bc20ec23/lib/Syntax).
-Trees consist of two layers: the inner tree (called _green_ tree) contains the actual source text in _position independent_ green nodes. 
-Tokens and nodes that appear identically at multiple places in the source text are _deduplicated_ in this representation in order to store the tree efficiently.
-This means that the green tree may not structurally be a tree.
-To remedy this, the actual syntax tree is constructed on top of the green tree as a secondary tree (called _red_ tree), which models the exact source structure.
-
-The `cstree` implementation is a fork of the excellent [`rowan`](https://github.com/rust-analyzer/rowan/), developed by the authors of [rust-analyzer](https://github.com/rust-analyzer/rust-analyzer/) who wrote up a conceptual overview of their implementation in [their repository](https://github.com/rust-analyzer/rust-analyzer/blob/master/docs/dev/syntax.md#trees).
+`cstree` is a generic library for creating and working with concrete syntax trees (CSTs).
+"Traditional" abstract syntax trees (ASTs) usually contain different types of nodes which
+represent different syntactical elements of the source text of a document and reduce its
+information to the minimal amount necessary to correctly interpret it. In contrast, CSTs are
+lossless representations of the entire input where all tree nodes are represented homogeneously
+(i.e., the nodes are _untyped_), but are tagged with a `RawSyntaxKind`  to determine the kind
+of grammatical element they represent.
+One big advantage of this representation is that it cannot only recreate the original source
+exactly, but also lends itself very well to the representation of _incomplete or erroneous_
+trees and is thus highly suited for usage in contexts such as IDEs or any other application
+where a user is _editing_ the source text.
+The concept of and the data structures for `cstree`'s syntax trees are inspired in part by
+Swift's [libsyntax](https://github.com/apple/swift/tree/5e2c815edfd758f9b1309ce07bfc01c4bc20ec23/lib/Syntax).
+Trees consist of two layers: the inner tree (called _green_ tree) contains the actual source
+text as position independent green nodes. Tokens and nodes that appear identically at multiple
+places in the source are deduplicated in this representation in order to store the tree
+efficiently. This means that a green tree may not actually structurally be a tree. To remedy
+this, the real syntax tree is constructed on top of the green tree as a secondary tree (called
+the _red_ tree), which models the exact source structure.
+As a possible third layer, a strongly typed AST [can be built] on top of the red tree.
+[can be built]: #ast-layer
+The `cstree` implementation is a fork of the excellent [`rowan`](https://github.com/rust-analyzer/rowan/),
+developed by the authors of [rust-analyzer](https://github.com/rust-analyzer/rust-analyzer/) who
+wrote up a conceptual overview of their implementation in
+[their repository](https://github.com/rust-analyzer/rust-analyzer/blob/master/docs/dev/syntax.md#trees).
 Notable differences of `cstree` compared to `rowan`:
-  - Syntax trees (red trees) are created lazily, but are persistent. Once a node has been created, it will remain allocated, while `rowan` re-creates the red layer on the fly. Apart from the trade-off discussed [here](https://github.com/rust-analyzer/rust-analyzer/blob/master/docs/dev/syntax.md#memoized-rednodes), this helps to achieve good tree traversal speed while providing the next points:
-  - Syntax (red) nodes are `Send` and `Sync`, allowing to share realized trees across threads. This is achieved by atomically reference counting syntax trees as a whole, which also gets rid of the need to reference count individual nodes (helping with the point above).
-  - Syntax nodes can hold custom data.
-  - `cstree` trees are trees over interned strings. This means `cstree` will deduplicate the text of tokens such as identifiers with the same name. In this position, `rowan` stores each string, with a small string optimization (see [`SmolStr`](https://crates.io/crates/smol_str)).
-  - Performance optimizations for tree creation: only allocate new nodes on the heap if they are not in cache, avoid recursively hashing subtrees
-  - Performance optimizations for tree traversal: persisting red nodes allows tree traversal methods to return references. You can still `clone` to obtain an owned node, but you only pay that cost when you need to.
+- Syntax trees (red trees) are created lazily, but are persistent. Once a red node has been
+  created by `cstree`, it will remain allocated. In contrast, `rowan` re-creates the red layer on
+  the fly on each traversal of the tree. Apart from the trade-off discussed
+  [here](https://github.com/rust-analyzer/rust-analyzer/blob/master/docs/dev/syntax.md#memoized-rednodes),
+  this helps to achieve good tree traversal speed while helping to provide the following:
+- Syntax (red) nodes are `Send` and `Sync`, allowing to share realized trees across threads. This is achieved by
+  atomically reference counting syntax trees as a whole, which also gets rid of the need to reference count
+  individual nodes.
+- `SyntaxNode`s can hold custom data.
+- `cstree` trees are trees over interned strings. This means `cstree` will deduplicate the text of tokens with the
+  same source string, such as identifiers with the same name. In this position, `rowan` stores each token's text
+  together with its metadata as a custom DST (dynamically-sized type).
+- `cstree` includes some performance optimizations for tree creation: it only allocates space for new nodes on the
+  heap if they are not in cache and avoids recursively hashing subtrees by pre-hashing them.
+- `cstree` includes some performance optimizations for tree traversal: persisting red nodes allows tree traversal
+  methods to return references instead of cloning nodes, which involves updating the tree's reference count. You can
+  still `clone` the reference to obtain an owned node, but you only pay that cost when you need to.
+- The downside of offering thread safe syntax trees is that `cstree` cannot offer any mutability API for its CSTs.
+  Trees can still be updated into new trees through replacing nodes, but cannot be mutated in place.
 
 ## Getting Started
 
