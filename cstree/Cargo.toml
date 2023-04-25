@@ -29,7 +29,7 @@ version  = "0.12.0-rc.0"      # must match the `cstree` version in the virtual w
 optional = true
 
 [dependencies.lasso]
-version  = "0.6"
+version  = "0.7"
 features = ["inline-more"]
 optional = true
 
