@@ -33,11 +33,11 @@ version  = "0.7"
 features = ["inline-more"]
 optional = true
 
-[dependencies.salsa]
-git      = "https://github.com/salsa-rs/salsa/"
-version  = "0.1"
-optional = true
-package  = "salsa-2022"
+# [dependencies.salsa]
+# git      = "https://github.com/salsa-rs/salsa/"
+# version  = "0.1"
+# optional = true
+# package  = "salsa-2022"
 
 [dependencies.serde]
 version          = "1.0"
@@ -72,7 +72,15 @@ multi_threaded_interning = ["lasso_compat", "lasso/multi-threaded"]
 # Interoperability with the `salsa` framework for incremental computation.
 # Use this feature for "Salsa 2022".
 # WARNING: This feature is considered unstable!
-salsa_2022_compat = ["salsa"]
+# salsa_2022_compat = ["salsa"]
+
+[[example]]
+name              = "math"
+required-features = ["derive"]
+
+[[example]]
+name              = "s_expressions"
+required-features = ["derive"]
 
 [[example]]
 name              = "salsa"

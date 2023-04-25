@@ -53,12 +53,12 @@
 //! implementation to make `lasso`'s interners work with `cstree` (as well as a re-export of the matching version of
 //! `lasso` here). If enabled, `cstree`'s built-in interning functionality is replaced with `lasso`'s more efficient one
 //! transparently, so you'll now be returned a `lasso` interner from [`new_interner`].
-//!
-//! ### `salsa`
-//! If you are using the "2022" version of the `salsa` incremental query framework, it is possible to use its interning
-//! capabilities with `cstree` as well. Support for this is experimental, and you have to opt in via the
-//! `salsa_2022_compat` feature. For instructions on how to do this, and whether you actually want to, please refer to
-//! [the `salsa_compat` module documentation].
+//
+// ### `salsa`
+// If you are using the "2022" version of the `salsa` incremental query framework, it is possible to use its interning
+// capabilities with `cstree` as well. Support for this is experimental, and you have to opt in via the
+// `salsa_2022_compat` feature. For instructions on how to do this, and whether you actually want to, please refer to
+// [the `salsa_compat` module documentation].
 #![cfg_attr(
     feature = "multi_threaded_interning",
     doc = r###"
@@ -104,7 +104,7 @@ of the `GreenNodeBuilder` appropriately.
 //! [`NodeCache::into_interner`]: crate::build::NodeCache::into_interner
 //! [`SyntaxNode::new_root_with_resolver`]: crate::syntax::SyntaxNode::new_root_with_resolver
 //! [`lasso`]: lasso
-//! [the `salsa_compat` module documentation]: salsa_compat
+// [the `salsa_compat` module documentation]: salsa_compat
 
 mod traits;
 pub use self::traits::*;
