@@ -1,5 +1,8 @@
 [package]
 name                   = "cstree"
+description            = "Library for generic lossless syntax trees"
+categories             = ["parsing", "data-structures"]
+keywords               = ["cstree", "parser", "parsing", "cst"]
 edition.workspace      = true
 version.workspace      = true
 authors.workspace      = true

@@ -1,5 +1,7 @@
 [package]
 name                   = "cstree_derive"
+description            = "Macro implementation of `#[derive(Syntax)]`"
+keywords               = ["cstree", "derive"]
 edition.workspace      = true
 version.workspace      = true
 authors.workspace      = true
