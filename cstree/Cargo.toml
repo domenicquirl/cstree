@@ -17,7 +17,7 @@ fxhash      = "0.2.1"
 parking_lot = "0.12.1"
 
 # Arc
-triomphe = "0.1.7"
+triomphe = { version = "0.1.7", default-features = false, features = ["stable_deref_trait", "std"] }
 sptr     = "0.3.2"
 
 # Default Interner
@@ -61,7 +61,7 @@ default = []
 # Derive macro for `Syntax`
 derive = ["dep:cstree_derive"]
 # Implementations of `serde::{De,}Serialize` for CSTrees.
-serialize = ["serde", "lasso?/serialize"]
+serialize = ["serde", "lasso?/serialize", "triomphe/serde"]
 # Interoperability with the `lasso` interning crate.
 # When enabled, `cstree`'s default interners will use `lasso` internally, too.
 lasso_compat = ["lasso"]
