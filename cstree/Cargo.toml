@@ -17,7 +17,7 @@ fxhash      = "0.2.1"
 parking_lot = "0.12.1"
 
 # Arc
-triomphe = { version = "0.1.7", default-features = false, features = ["stable_deref_trait", "std"] }
+triomphe = { version = "0.1.8", default-features = false, features = ["stable_deref_trait", "std"] }
 sptr     = "0.3.2"
 
 # Default Interner
