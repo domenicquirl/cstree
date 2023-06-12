@@ -89,7 +89,7 @@
 #![allow(unstable_name_collisions)] // strict provenance - must come after `future_incompatible` to take precedence
 #![warn(missing_docs)]
 // Docs.rs
-#![doc(html_root_url = "https://docs.rs/cstree/0.12.0-rc.0")]
+#![doc(html_root_url = "https://docs.rs/cstree/0.12.0")]
 #![cfg_attr(doc_cfg, feature(doc_cfg))]
 
 pub mod getting_started;
