@@ -136,7 +136,7 @@ impl Syntax for Calculator {
         }
     }
 
-    fn ino_raw(self) -> RawSyntaxKind {
+    fn into_raw(self) -> RawSyntaxKind {
         RawSyntaxKind(self as u32)
     }
 
