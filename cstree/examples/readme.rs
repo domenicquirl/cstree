@@ -74,7 +74,7 @@ impl<'input> Lexer<'input> {
 
     fn next_token(&mut self) -> Result<Token<'input>, String> {
         loop {
-            let Some(next_char) =  self.input.chars().next() else {
+            let Some(next_char) = self.input.chars().next() else {
                 self.at_eof = true;
                 return Ok(Token::EoF);
             };

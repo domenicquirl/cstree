@@ -433,14 +433,12 @@ impl<S: Syntax, D> SyntaxNode<S, D> {
             match elem {
                 SyntaxElement::Node(node) => {
                     // There are three things to handle here:
-                    //   1) `node` was just created, which allocated `NodeData` that we now need to
-                    //      drop, and
-                    //   2) dropping `node` will decrement the global `ref_count`, even though the
-                    //      count was not incremented when creating `node` (because it is an
-                    //      internal reference). Thus, we need to bump the count up by one.
-                    //   3) dropping `node`'s `NodeData` will drop its `parent` reference, which
-                    //      will again decrement the `ref_count`. Thus, we have to offset by 2
-                    //      overall.
+                    //   1) `node` was just created, which allocated `NodeData` that we now need to drop, and
+                    //   2) dropping `node` will decrement the global `ref_count`, even though the count was not
+                    //      incremented when creating `node` (because it is an internal reference). Thus, we need to
+                    //      bump the count up by one.
+                    //   3) dropping `node`'s `NodeData` will drop its `parent` reference, which will again decrement
+                    //      the `ref_count`. Thus, we have to offset by 2 overall.
 
                     // safety: `node` was just created and has not been shared
                     let ref_count = unsafe { &*node.data().ref_count };
