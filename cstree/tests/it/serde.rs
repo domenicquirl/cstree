@@ -23,7 +23,7 @@ macro_rules! event_tokens {
         [
             Token::Struct { name: "Event", len: 2 },
             Token::BorrowedStr("t"),
-            Token::BorrowedStr("Token"),
+            Token::UnitVariant{ name: "Event", variant: "Token" },
             Token::BorrowedStr("c"),
             Token::Tuple { len: 2 },
             Token::U32($kind),
@@ -37,7 +37,7 @@ macro_rules! event_tokens {
         [
             Token::Struct { name: "Event", len: 2 },
             Token::BorrowedStr("t"),
-            Token::BorrowedStr("EnterNode"),
+            Token::UnitVariant{ name: "Event", variant: "EnterNode" },
             Token::BorrowedStr("c"),
             Token::Tuple { len: 2 },
             Token::U32($kind),
@@ -51,7 +51,7 @@ macro_rules! event_tokens {
         [
             Token::Struct { name: "Event", len: 1 },
             Token::BorrowedStr("t"),
-            Token::BorrowedStr("LeaveNode"),
+            Token::UnitVariant{ name: "Event", variant: "LeaveNode" },
             Token::StructEnd,
         ].as_ref()
     };
