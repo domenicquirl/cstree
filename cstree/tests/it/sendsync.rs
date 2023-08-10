@@ -149,7 +149,7 @@ fn drop_send() {
 
 #[test]
 #[cfg_attr(miri, ignore)]
-#[allow(clippy::drop_ref)]
+#[allow(dropping_references)]
 fn drop_sync() {
     let tree = two_level_tree();
     let tree = build_tree::<()>(&tree);
