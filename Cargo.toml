@@ -2,6 +2,7 @@
 members = [
     "cstree",
     "cstree-derive",
+    "cstree-event",
     "test_suite",
 ]
 resolver = "2"
