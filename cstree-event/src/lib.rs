@@ -5,3 +5,4 @@
 #[cfg(feature = "concurrent")]
 pub mod channel;
 pub mod events;
+pub mod parsing;

@@ -12,13 +12,13 @@ readme.workspace       = true
 rust-version.workspace = true
 
 [dependencies]
-text-size   = "1.1.0"
-fxhash      = "0.2.1"
-parking_lot = "0.12.1"
+text-size             = "1.1.0"
+fxhash.workspace      = true
+parking_lot.workspace = true
 
 # Arc
-triomphe = { version = "0.1.8", default-features = false, features = ["stable_deref_trait", "std"] }
-sptr     = "0.3.2"
+triomphe.workspace = true
+sptr               = "0.3.2"
 
 # Default Interner
 indexmap = "1.9"

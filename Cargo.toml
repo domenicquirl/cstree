@@ -21,3 +21,8 @@ rust-version = "1.71"
 
 [profile.release]
 debug = true
+
+[workspace.dependencies]
+fxhash      = "0.2.1"
+parking_lot = "0.12.1"
+triomphe    = { version = "0.1.8", default-features = false, features = ["stable_deref_trait", "std"] }
