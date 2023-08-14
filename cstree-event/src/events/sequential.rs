@@ -1,6 +1,6 @@
-use super::{Event, EventSink};
+use super::{Event, __private::EventSinkInternal};
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 #[repr(transparent)]
 pub struct SequentialEventSink<S: cstree::Syntax> {
     inner: Vec<Event<S>>,
@@ -18,9 +18,9 @@ impl<S: cstree::Syntax> SequentialEventSink<S> {
     }
 }
 
-impl<S: cstree::Syntax> EventSink<S> for SequentialEventSink<S> {
+impl<S: cstree::Syntax> EventSinkInternal<S> for SequentialEventSink<S> {
     #[inline]
-    fn add(&mut self, event: Event<S>, _guard: super::__private::Guard) {
+    fn add(&mut self, event: Event<S>) {
         self.inner.push(event);
     }
 
@@ -40,17 +40,17 @@ impl<S: cstree::Syntax> EventSink<S> for SequentialEventSink<S> {
     }
 
     #[inline]
-    fn into_inner(self, _guard: super::__private::Guard) -> Vec<Event<S>> {
+    fn into_inner(self) -> Vec<Event<S>> {
         self.inner
     }
 
     #[inline]
-    fn inner(&self, _guard: super::__private::Guard) -> &Vec<Event<S>> {
+    fn inner(&self) -> &Vec<Event<S>> {
         &self.inner
     }
 
     #[inline]
-    fn inner_mut(&mut self, _guard: super::__private::Guard) -> &mut Vec<Event<S>> {
+    fn inner_mut(&mut self) -> &mut Vec<Event<S>> {
         &mut self.inner
     }
 
@@ -70,5 +70,113 @@ impl<S: cstree::Syntax> AsRef<[Event<S>]> for SequentialEventSink<S> {
 impl<S: cstree::Syntax> AsMut<[Event<S>]> for SequentialEventSink<S> {
     fn as_mut(&mut self) -> &mut [Event<S>] {
         self.inner.as_mut()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use core::num::NonZeroUsize;
+
+    use cstree::testing::TestSyntaxKind;
+
+    use crate::events::EventSink;
+
+    use super::*;
+
+    #[test]
+    fn basic() {
+        let mut events = SequentialEventSink::with_capacity(10);
+        assert!(events.is_empty());
+        assert!(events.currently_deopt());
+        let root = events.enter_node(TestSyntaxKind::Root);
+        events.add(Event::Token {
+            kind: TestSyntaxKind::Float,
+        });
+        root.complete(&mut events);
+        assert_eq!(events.len(), 3);
+        events.assert_complete();
+    }
+
+    #[test]
+    fn discard() {
+        let mut events = SequentialEventSink::with_capacity(10);
+        let root = events.enter_node(TestSyntaxKind::Root);
+        let inner = events.enter_node(TestSyntaxKind::Operation);
+        events.add(Event::Token {
+            kind: TestSyntaxKind::Float,
+        });
+        inner.discard(&mut events);
+        root.complete(&mut events);
+        assert_eq!(events.len(), 2);
+        assert_eq!(
+            events.inner()[0],
+            Event::Enter {
+                kind:        TestSyntaxKind::Root,
+                preceded_by: None,
+            }
+        );
+        events.assert_complete();
+    }
+
+    #[test]
+    fn abandon() {
+        let mut events = SequentialEventSink::with_capacity(10);
+        let root = events.enter_node(TestSyntaxKind::Root);
+        let inner = events.enter_node(TestSyntaxKind::Operation);
+        events.add(Event::Token {
+            kind: TestSyntaxKind::Float,
+        });
+        inner.abandon(&mut events);
+        root.complete(&mut events);
+        assert_eq!(events.len(), 4);
+        assert_eq!(events.inner()[1], Event::Placeholder);
+        events.assert_complete();
+    }
+
+    #[test]
+    fn complete_as() {
+        let mut events = SequentialEventSink::with_capacity(10);
+        let root = events.enter_node(TestSyntaxKind::Root);
+        events.add(Event::Token {
+            kind: TestSyntaxKind::Float,
+        });
+        root.complete_as(&mut events, Some(TestSyntaxKind::Operation));
+        assert_eq!(events.len(), 3);
+        assert_eq!(
+            events.inner()[0],
+            Event::Enter {
+                kind:        TestSyntaxKind::Operation,
+                preceded_by: None,
+            }
+        );
+        events.assert_complete();
+    }
+
+    #[test]
+    fn precede() {
+        let mut events = SequentialEventSink::with_capacity(10);
+        let op = events.enter_node(TestSyntaxKind::Operation);
+        events.add(Event::Token {
+            kind: TestSyntaxKind::Float,
+        });
+        let node = op.complete(&mut events);
+        let root = node.precede(&mut events, TestSyntaxKind::Root);
+        root.complete(&mut events);
+        assert_eq!(events.len(), 5);
+        assert_eq!(
+            events.inner()[0],
+            Event::Enter {
+                kind:        TestSyntaxKind::Operation,
+                preceded_by: Some(NonZeroUsize::new(3).unwrap()),
+            }
+        );
+        assert_eq!(
+            events.inner()[3],
+            Event::Enter {
+                kind:        TestSyntaxKind::Root,
+                preceded_by: None,
+            }
+        );
+        events.assert_complete();
     }
 }

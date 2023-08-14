@@ -9,7 +9,8 @@ mod concurrent;
 #[cfg(feature = "concurrent")]
 pub use concurrent::ConcurrentEventSink;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum Event<S: cstree::Syntax> {
     Enter {
         kind:        S,
@@ -91,41 +92,43 @@ impl<S: cstree::Syntax> ConcurrentEventSource for crate::channel::Receiver<Event
 }
 
 mod __private {
-    pub trait Sealed {}
-    #[derive(Debug)]
-    pub struct Guard;
+    use super::Event;
+
+    pub trait EventSinkInternal<S: cstree::Syntax> {
+        #[doc(hidden)]
+        fn add(&mut self, event: Event<S>);
+
+        fn len(&self) -> usize;
+
+        #[inline]
+        fn is_empty(&self) -> bool {
+            self.len() == 0
+        }
+
+        fn assert_complete(&self);
+
+        #[doc(hidden)]
+        fn into_inner(self) -> Vec<Event<S>>;
+
+        #[doc(hidden)]
+        fn inner(&self) -> &Vec<Event<S>>;
+
+        #[doc(hidden)]
+        fn inner_mut(&mut self) -> &mut Vec<Event<S>>;
+
+        fn currently_deopt(&self) -> bool;
+    }
 }
 
-impl<S: cstree::Syntax> __private::Sealed for SequentialEventSink<S> {}
-#[cfg(feature = "concurrent")]
-impl<S: cstree::Syntax> __private::Sealed for ConcurrentEventSink<S> {}
-
-pub trait EventSink<S: cstree::Syntax>: __private::Sealed {
-    #[doc(hidden)]
-    fn add(&mut self, event: Event<S>, guard: __private::Guard);
-
-    fn len(&self) -> usize;
-
+pub trait EventSink<S: cstree::Syntax>: __private::EventSinkInternal<S> {
     // TODO(DQ): add other event variants
     fn enter_node(&mut self, kind: S) -> EnteredNode {
         let idx = self.len();
-        self.add(Event::enter(kind), __private::Guard {});
+        self.add(Event::enter(kind));
         EnteredNode::new(idx, false)
     }
-
-    fn assert_complete(&self);
-
-    #[doc(hidden)]
-    fn into_inner(self, guard: __private::Guard) -> Vec<Event<S>>;
-
-    #[doc(hidden)]
-    fn inner(&self, guard: __private::Guard) -> &Vec<Event<S>>;
-
-    #[doc(hidden)]
-    fn inner_mut(&mut self, guard: __private::Guard) -> &mut Vec<Event<S>>;
-
-    fn currently_deopt(&self) -> bool;
 }
+impl<S: cstree::Syntax, Sink: __private::EventSinkInternal<S>> EventSink<S> for Sink {}
 
 #[derive(Debug)]
 pub struct EnteredNode {
@@ -144,10 +147,12 @@ impl EnteredNode {
     }
 
     #[inline]
+    #[track_caller]
     pub fn complete<S: cstree::Syntax, Sink: EventSink<S>>(self, sink: &mut Sink) -> ExitedNode {
         self.complete_as(sink, None)
     }
 
+    #[track_caller]
     pub fn complete_as<S: cstree::Syntax, Sink: EventSink<S>>(
         mut self,
         sink: &mut Sink,
@@ -155,39 +160,40 @@ impl EnteredNode {
     ) -> ExitedNode {
         self.is_live = false;
         let is_deopt = sink.currently_deopt();
-        let inner = sink.inner_mut(__private::Guard {});
+        let inner = sink.inner_mut();
         if is_deopt {
             match &mut inner[self.idx] {
                 Event::Enter { kind, .. } => {
                     if let Some(with_kind) = with_kind {
                         *kind = with_kind;
                     };
-                    sink.add(Event::Exit, __private::Guard {});
+                    sink.add(Event::Exit);
                 }
                 #[cfg(feature = "concurrent")]
                 Event::DeOpt => {
-                    sink.add(Event::Opt, __private::Guard {});
+                    sink.add(Event::Opt);
                 }
                 _ => unreachable!("entered node complete as"),
             }
         } else {
-            assert!(!self.is_deopt);
-            sink.add(Event::Exit, __private::Guard {});
+            assert!(!self.is_deopt, "Cannot `complete_as` in Opt");
+            sink.add(Event::Exit);
         }
         ExitedNode { pos: self.idx }
     }
 
     /// Deletes the entered node and any children since.
+    #[track_caller]
     pub fn discard<S: cstree::Syntax, Sink: EventSink<S>>(mut self, sink: &mut Sink) {
         let is_deopt = sink.currently_deopt();
-        let inner = sink.inner_mut(__private::Guard {});
+        let inner = sink.inner_mut();
 
+        if !is_deopt {
+            panic!("Cannot discard in Opt");
+        }
         #[cfg(feature = "concurrent")]
         if let Event::DeOpt = &inner[self.idx] {
             panic!("Cannot discard a DeOpt");
-        }
-        if is_deopt {
-            panic!("Cannot discard in Opt");
         }
 
         self.is_live = false;
@@ -196,17 +202,17 @@ impl EnteredNode {
 
     /// Mark this event to be skipped over without effect. A matching exit event is not required and the children of the
     /// entered node will become children of its parent node instead.
+    #[track_caller]
     pub fn abandon<S: cstree::Syntax, Sink: EventSink<S>>(mut self, sink: &mut Sink) {
         let is_deopt = sink.currently_deopt();
-        let inner = sink.inner_mut(__private::Guard {});
+        let inner = sink.inner_mut();
 
+        if !is_deopt {
+            panic!("Cannot abandon in Opt");
+        }
         #[cfg(feature = "concurrent")]
         if let Event::DeOpt = &inner[self.idx] {
             panic!("Cannot abandon a DeOpt");
-        }
-
-        if is_deopt {
-            panic!("Cannot abandon in Opt");
         }
 
         self.is_live = false;
@@ -242,7 +248,7 @@ impl ExitedNode {
     pub fn precede<S: cstree::Syntax, Sink: EventSink<S>>(self, sink: &mut Sink, kind: S) -> EnteredNode {
         let n = sink.enter_node(kind);
         let is_deopt = sink.currently_deopt();
-        let inner = sink.inner_mut(__private::Guard {});
+        let inner = sink.inner_mut();
         assert!(is_deopt, "cannot precede concurrent events"); // Only allow precede while buffering events
         match &mut inner[self.pos] {
             Event::Enter { preceded_by, .. } => {
@@ -257,7 +263,7 @@ impl ExitedNode {
 
     pub fn kind<S: cstree::Syntax, Sink: EventSink<S>>(&self, sink: &Sink) -> S {
         assert!(sink.currently_deopt(), "cannot access concurrent events"); // Only allow precede while buffering events
-        let inner = sink.inner(__private::Guard {});
+        let inner = sink.inner();
         match &inner[self.pos] {
             Event::Enter { kind, .. } => *kind,
             _ => panic!("tried to get the kind of an event that was not `Enter`"),

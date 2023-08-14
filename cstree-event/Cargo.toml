@@ -30,3 +30,6 @@ version          = "0.1"
 default-features = false
 features         = ["stable_deref_trait", "std"]
 optional         = true
+
+[dev-dependencies]
+cstree = { path = "../cstree" }
