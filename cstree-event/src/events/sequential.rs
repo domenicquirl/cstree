@@ -91,6 +91,7 @@ mod tests {
         let root = events.enter_node(TestSyntaxKind::Root);
         events.add(Event::Token {
             kind: TestSyntaxKind::Float,
+            n_input_tokens: 1,
         });
         root.complete(&mut events);
         assert_eq!(events.len(), 3);
@@ -104,6 +105,7 @@ mod tests {
         let inner = events.enter_node(TestSyntaxKind::Operation);
         events.add(Event::Token {
             kind: TestSyntaxKind::Float,
+            n_input_tokens: 1,
         });
         inner.discard(&mut events);
         root.complete(&mut events);
@@ -125,6 +127,7 @@ mod tests {
         let inner = events.enter_node(TestSyntaxKind::Operation);
         events.add(Event::Token {
             kind: TestSyntaxKind::Float,
+            n_input_tokens: 1,
         });
         inner.abandon(&mut events);
         root.complete(&mut events);
@@ -139,6 +142,7 @@ mod tests {
         let root = events.enter_node(TestSyntaxKind::Root);
         events.add(Event::Token {
             kind: TestSyntaxKind::Float,
+            n_input_tokens: 1,
         });
         root.complete_as(&mut events, Some(TestSyntaxKind::Operation));
         assert_eq!(events.len(), 3);
@@ -158,6 +162,7 @@ mod tests {
         let op = events.enter_node(TestSyntaxKind::Operation);
         events.add(Event::Token {
             kind: TestSyntaxKind::Float,
+            n_input_tokens: 1,
         });
         let node = op.complete(&mut events);
         let root = node.precede(&mut events, TestSyntaxKind::Root);

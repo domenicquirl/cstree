@@ -19,6 +19,7 @@ pub enum Event<S: cstree::Syntax> {
     Exit,
     Token {
         kind: S,
+        n_input_tokens: usize,
     },
     #[cfg(feature = "concurrent")]
     DeOpt,

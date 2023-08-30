@@ -52,7 +52,7 @@ pub trait TreeSink<S: cstree::Syntax> {
     /// between the two input tokens.
     fn output_token(&mut self, kind: S, n_input_tokens: usize);
 
-    fn start_node<A: TriviaAttachment<S>>(&mut self, kind: S, attacher: A);
+    fn start_node<A: TriviaAttachment<S>>(&mut self, kind: S, attacher: &A);
 
     fn finish_node(&mut self);
 }
@@ -72,6 +72,36 @@ pub trait TriviaAttachment<S: cstree::Syntax> {
     /// there are node kinds that exist for purely grammatical reasons, but do not carry semantic meaning.
     fn forwards_trivia(&self, #[allow(unused)] kind: S) -> bool {
         false
+    }
+}
+
+/// An attacher that never attaches anything.
+#[derive(Debug)]
+struct NoopAttacher;
+
+impl<S: cstree::Syntax> TriviaAttachment<S> for NoopAttacher {
+    fn trivias_to_attach<T: Token>(&self, _kind: S, _current_trivias: &[T], _input: &str) -> usize {
+        0
+    }
+}
+
+impl<S: cstree::Syntax, A: TriviaAttachment<S>> TriviaAttachment<S> for &A {
+    fn trivias_to_attach<T: Token>(&self, kind: S, current_trivias: &[T], input: &str) -> usize {
+        A::trivias_to_attach(self, kind, current_trivias, input)
+    }
+
+    fn forwards_trivia(&self, #[allow(unused)] kind: S) -> bool {
+        A::forwards_trivia(self, kind)
+    }
+}
+
+impl<S: cstree::Syntax, A: TriviaAttachment<S>> TriviaAttachment<S> for Box<A> {
+    fn trivias_to_attach<T: Token>(&self, kind: S, current_trivias: &[T], input: &str) -> usize {
+        A::trivias_to_attach(self, kind, current_trivias, input)
+    }
+
+    fn forwards_trivia(&self, #[allow(unused)] kind: S) -> bool {
+        A::forwards_trivia(self, kind)
     }
 }
 

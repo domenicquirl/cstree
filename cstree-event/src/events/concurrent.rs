@@ -109,6 +109,7 @@ mod tests {
         let root = events.enter_node(TestSyntaxKind::Root);
         events.add(Event::Token {
             kind: TestSyntaxKind::Float,
+            n_input_tokens: 1,
         });
         root.complete(&mut events);
         assert_eq!(events.len(), 0);
@@ -127,6 +128,7 @@ mod tests {
         assert!(events.currently_deopt());
         events.add(Event::Token {
             kind: TestSyntaxKind::Float,
+            n_input_tokens: 1,
         });
         inner.discard(&mut events);
         // We expect the following:
@@ -148,6 +150,7 @@ mod tests {
         let inner = events.enter_node(TestSyntaxKind::Operation);
         events.add(Event::Token {
             kind: TestSyntaxKind::Float,
+            n_input_tokens: 1,
         });
         inner.abandon(&mut events);
         opt_guard.complete(&mut events);
@@ -166,6 +169,7 @@ mod tests {
         let root = events.enter_node(TestSyntaxKind::Root);
         events.add(Event::Token {
             kind: TestSyntaxKind::Float,
+            n_input_tokens: 1,
         });
         root.complete_as(&mut events, Some(TestSyntaxKind::Operation));
         opt_guard.complete(&mut events);
@@ -189,6 +193,7 @@ mod tests {
         let op = events.enter_node(TestSyntaxKind::Operation);
         events.add(Event::Token {
             kind: TestSyntaxKind::Float,
+            n_input_tokens: 1,
         });
         let node = op.complete(&mut events);
         let root = node.precede(&mut events, TestSyntaxKind::Root);
@@ -222,6 +227,7 @@ mod tests {
         let op = events.enter_node(TestSyntaxKind::Operation);
         events.add(Event::Token {
             kind: TestSyntaxKind::Float,
+            n_input_tokens: 1,
         });
         let node = op.complete(&mut events);
         let _root = node.precede(&mut events, TestSyntaxKind::Root);
@@ -235,6 +241,7 @@ mod tests {
         let inner = events.enter_node(TestSyntaxKind::Operation);
         events.add(Event::Token {
             kind: TestSyntaxKind::Float,
+            n_input_tokens: 1,
         });
         inner.abandon(&mut events);
     }
