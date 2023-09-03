@@ -27,7 +27,11 @@ where
     T: Token<Syntax = S>,
     I: cstree::interning::Interner,
 {
-    pub fn build<E: EventSource<Syntax = S>, A: TriviaAttachment<S>>(&mut self, source: &mut E, attacher: &A) {
+    pub fn build<E: EventSource<Syntax = S>, A: TriviaAttachment<S>>(
+        mut self,
+        source: &mut E,
+        attacher: &A,
+    ) -> (GreenNode, Option<I>) {
         let events = source.events_mut();
         let mut preceded_nodes = Vec::new();
 
@@ -64,14 +68,15 @@ where
                 Event::Token { kind, n_input_tokens } => self.output_token(kind, n_input_tokens),
             }
         }
+        self.finish()
     }
 
     #[cfg(feature = "concurrent")]
     pub fn build_concurrent<C: ConcurrentEventSource<Syntax = S>, A: TriviaAttachment<S>>(
-        &mut self,
+        mut self,
         source: &C,
         attacher: &A,
-    ) {
+    ) -> (GreenNode, Option<I>) {
         let mut buffer = false;
         let mut events = Vec::with_capacity(8);
 
@@ -129,6 +134,7 @@ where
                 }
             }
         }
+        self.finish()
     }
 }
 
@@ -194,7 +200,7 @@ where
 }
 
 impl<'input, T, S: Syntax> TextTreeSink<'input, 'static, 'static, T, S, TokenInterner> {
-    pub fn new(tokens: &'input [T], input: &'input str) -> Self {
+    pub fn new(input: &'input str, tokens: &'input [T]) -> Self {
         Self {
             input,
             current_byte: 0,
@@ -210,7 +216,7 @@ where
     T: Token<Syntax = S>,
     I: cstree::interning::Interner,
 {
-    pub fn with_cache(tokens: &'input [T], input: &'input str, cache: &'cache mut NodeCache<'interner, I>) -> Self {
+    pub fn with_cache(input: &'input str, tokens: &'input [T], cache: &'cache mut NodeCache<'interner, I>) -> Self {
         Self {
             input,
             current_byte: 0,

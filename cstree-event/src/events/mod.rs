@@ -30,7 +30,7 @@ pub enum Event<S: cstree::Syntax> {
 }
 
 impl<S: cstree::Syntax> Event<S> {
-    pub fn enter(kind: S) -> Self {
+    fn enter(kind: S) -> Self {
         Event::Enter {
             kind,
             preceded_by: None,
@@ -122,11 +122,56 @@ mod __private {
 }
 
 pub trait EventSink<S: cstree::Syntax>: __private::EventSinkInternal<S> {
-    // TODO(DQ): add other event variants
     fn enter_node(&mut self, kind: S) -> EnteredNode {
         let idx = self.len();
         self.add(Event::enter(kind));
         EnteredNode::new(idx, false)
+    }
+
+    /// Assumes that the token matches a lexer token. If the parser consumed more than 1 lexer token for this token
+    /// event, use instead.
+    #[inline]
+    fn token(&mut self, kind: S) {
+        self.composite_token(kind, 1);
+    }
+
+    /// Add a token composed of `n_input_tokens` lexer tokens.
+    #[inline]
+    fn composite_token(&mut self, kind: S, n_input_tokens: usize) {
+        self.add(Event::Token { kind, n_input_tokens });
+    }
+
+    #[inline]
+    #[track_caller]
+    fn complete(&mut self, node: EnteredNode) -> CompletedNode {
+        node.complete(self)
+    }
+
+    #[inline]
+    #[track_caller]
+    fn complete_as(&mut self, node: EnteredNode, with_kind: S) -> CompletedNode {
+        node.complete_as(self, with_kind)
+    }
+
+    /// Deletes `node` and any children since.
+    #[inline]
+    #[track_caller]
+    fn discard(&mut self, node: EnteredNode) {
+        node.discard(self)
+    }
+
+    /// Mark `node` to be skipped over without effect. A matching exit event is not required and
+    /// `node`'s children will become children of the surrounding node instead.
+    #[inline]
+    #[track_caller]
+    fn abandon(&mut self, node: EnteredNode) {
+        node.abandon(self)
+    }
+
+    #[inline]
+    #[track_caller]
+    fn precede(&mut self, node: CompletedNode, kind: S) -> EnteredNode {
+        node.precede(self, kind)
     }
 }
 impl<S: cstree::Syntax, Sink: __private::EventSinkInternal<S>> EventSink<S> for Sink {}
@@ -149,16 +194,26 @@ impl EnteredNode {
 
     #[inline]
     #[track_caller]
-    pub fn complete<S: cstree::Syntax, Sink: EventSink<S>>(self, sink: &mut Sink) -> ExitedNode {
-        self.complete_as(sink, None)
+    fn complete<S: cstree::Syntax, Sink: EventSink<S> + ?Sized>(self, sink: &mut Sink) -> CompletedNode {
+        self.do_complete(sink, None)
+    }
+
+    #[inline]
+    #[track_caller]
+    fn complete_as<S: cstree::Syntax, Sink: EventSink<S> + ?Sized>(
+        self,
+        sink: &mut Sink,
+        with_kind: S,
+    ) -> CompletedNode {
+        self.do_complete(sink, Some(with_kind))
     }
 
     #[track_caller]
-    pub fn complete_as<S: cstree::Syntax, Sink: EventSink<S>>(
+    fn do_complete<S: cstree::Syntax, Sink: EventSink<S> + ?Sized>(
         mut self,
         sink: &mut Sink,
         with_kind: Option<S>,
-    ) -> ExitedNode {
+    ) -> CompletedNode {
         self.is_live = false;
         let is_deopt = sink.currently_deopt();
         let inner = sink.inner_mut();
@@ -180,12 +235,12 @@ impl EnteredNode {
             assert!(!self.is_deopt, "Cannot `complete_as` in Opt");
             sink.add(Event::Exit);
         }
-        ExitedNode { pos: self.idx }
+        CompletedNode { pos: self.idx }
     }
 
     /// Deletes the entered node and any children since.
     #[track_caller]
-    pub fn discard<S: cstree::Syntax, Sink: EventSink<S>>(mut self, sink: &mut Sink) {
+    fn discard<S: cstree::Syntax, Sink: EventSink<S> + ?Sized>(mut self, sink: &mut Sink) {
         let is_deopt = sink.currently_deopt();
         let inner = sink.inner_mut();
 
@@ -204,7 +259,7 @@ impl EnteredNode {
     /// Mark this event to be skipped over without effect. A matching exit event is not required and the children of the
     /// entered node will become children of its parent node instead.
     #[track_caller]
-    pub fn abandon<S: cstree::Syntax, Sink: EventSink<S>>(mut self, sink: &mut Sink) {
+    fn abandon<S: cstree::Syntax, Sink: EventSink<S> + ?Sized>(mut self, sink: &mut Sink) {
         let is_deopt = sink.currently_deopt();
         let inner = sink.inner_mut();
 
@@ -240,13 +295,14 @@ impl Drop for EnteredNode {
 }
 
 #[derive(Debug)]
-pub struct ExitedNode {
+pub struct CompletedNode {
     pos: usize,
 }
 
-impl ExitedNode {
+impl CompletedNode {
+    #[track_caller]
     #[allow(unsafe_code)]
-    pub fn precede<S: cstree::Syntax, Sink: EventSink<S>>(self, sink: &mut Sink, kind: S) -> EnteredNode {
+    fn precede<S: cstree::Syntax, Sink: EventSink<S> + ?Sized>(self, sink: &mut Sink, kind: S) -> EnteredNode {
         let n = sink.enter_node(kind);
         let is_deopt = sink.currently_deopt();
         let inner = sink.inner_mut();

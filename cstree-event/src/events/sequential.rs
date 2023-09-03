@@ -16,6 +16,16 @@ impl<S: cstree::Syntax> SequentialEventSink<S> {
             inner: Vec::with_capacity(capacity),
         }
     }
+
+    #[track_caller]
+    pub fn assert_complete(&self) {
+        <Self as EventSinkInternal<S>>::assert_complete(self)
+    }
+
+    #[inline]
+    pub fn into_inner(self) -> Vec<Event<S>> {
+        self.inner
+    }
 }
 
 impl<S: cstree::Syntax> EventSinkInternal<S> for SequentialEventSink<S> {
@@ -29,6 +39,7 @@ impl<S: cstree::Syntax> EventSinkInternal<S> for SequentialEventSink<S> {
         self.inner.len()
     }
 
+    #[track_caller]
     fn assert_complete(&self) {
         match &self.inner[0] {
             Event::Enter { .. } => match &self.inner[self.inner.len() - 1] {
@@ -144,7 +155,7 @@ mod tests {
             kind: TestSyntaxKind::Float,
             n_input_tokens: 1,
         });
-        root.complete_as(&mut events, Some(TestSyntaxKind::Operation));
+        root.complete_as(&mut events, TestSyntaxKind::Operation);
         assert_eq!(events.len(), 3);
         assert_eq!(
             events.inner()[0],

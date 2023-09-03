@@ -31,4 +31,4 @@ workspace = true
 optional  = true
 
 [dev-dependencies]
-cstree = { path = "../cstree" }
+cstree = { path = "../cstree", features = ["derive"] }

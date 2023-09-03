@@ -171,7 +171,7 @@ mod tests {
             kind: TestSyntaxKind::Float,
             n_input_tokens: 1,
         });
-        root.complete_as(&mut events, Some(TestSyntaxKind::Operation));
+        root.complete_as(&mut events, TestSyntaxKind::Operation);
         opt_guard.complete(&mut events);
         events.assert_complete();
 

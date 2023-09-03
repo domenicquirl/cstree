@@ -77,7 +77,7 @@ pub trait TriviaAttachment<S: cstree::Syntax> {
 
 /// An attacher that never attaches anything.
 #[derive(Debug)]
-struct NoopAttacher;
+pub struct NoopAttacher;
 
 impl<S: cstree::Syntax> TriviaAttachment<S> for NoopAttacher {
     fn trivias_to_attach<T: Token>(&self, _kind: S, _current_trivias: &[T], _input: &str) -> usize {

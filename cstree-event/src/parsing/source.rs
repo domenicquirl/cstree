@@ -17,7 +17,7 @@ impl<T> TextTokenSource<T>
 where
     T: Token,
 {
-    pub fn new(tokens: &[T], input: &str) -> Self {
+    pub fn new(input: &str, tokens: &[T]) -> Self {
         let idents = new_interner();
         Self::with_interner(tokens, input, idents)
     }
