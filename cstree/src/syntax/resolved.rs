@@ -111,8 +111,8 @@ impl<S: Syntax, D> DerefMut for ResolvedToken<S, D> {
 
 /// An element of the tree that is guaranteed to belong to a tree that contains an associated
 /// [`Resolver`](lasso::Resolver), can be either a node or a token.
-/// # See also
-/// [`SyntaxElement`](crate::syntax::SyntaxElement)
+///
+/// See also [`SyntaxElement`].
 pub type ResolvedElement<S, D = ()> = NodeOrToken<ResolvedNode<S, D>, ResolvedToken<S, D>>;
 
 impl<S: Syntax, D> From<ResolvedNode<S, D>> for ResolvedElement<S, D> {
