@@ -167,7 +167,7 @@ impl fmt::Debug for TokenKey {
     }
 }
 
-/// Constructs a new, single-threaded [`Interner`](traits::Interner).
+/// Constructs a new, single-threaded [`Interner`].
 ///
 /// If you need the interner to be multi-threaded, see [`new_threaded_interner`].
 #[inline]
@@ -175,7 +175,7 @@ pub fn new_interner() -> TokenInterner {
     TokenInterner::new()
 }
 
-/// Constructs a new [`Interner`](traits::Interner) that can be used across multiple threads.
+/// Constructs a new [`Interner`] that can be used across multiple threads.
 ///
 /// Note that you can use `&MultiThreadTokenInterner` to access interning methods through a shared reference, as well as
 /// construct new syntax trees. See [the module documentation](self) for more information and examples.

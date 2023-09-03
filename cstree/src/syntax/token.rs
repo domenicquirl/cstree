@@ -110,7 +110,7 @@ impl<S: Syntax, D> SyntaxToken<S, D> {
         self.parent.resolver()
     }
 
-    /// Turns this token into a [`ResolvedToken`](crate::syntax::ResolvedToken), but only if there is a resolver
+    /// Turns this token into a [`ResolvedToken`], but only if there is a resolver
     /// associated with this tree.
     #[inline]
     pub fn try_resolved(&self) -> Option<&ResolvedToken<S, D>> {
@@ -118,7 +118,7 @@ impl<S: Syntax, D> SyntaxToken<S, D> {
         self.resolver().map(|_| unsafe { ResolvedToken::coerce_ref(self) })
     }
 
-    /// Turns this token into a [`ResolvedToken`](crate::syntax::ResolvedToken).
+    /// Turns this token into a [`ResolvedToken`].
     /// # Panics
     /// If there is no resolver associated with this tree.
     #[inline]

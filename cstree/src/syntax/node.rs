@@ -117,15 +117,15 @@ impl<S: Syntax, D> SyntaxNode<S, D> {
         }
     }
 
-    /// Turns this node into a [`ResolvedNode`](crate::syntax::ResolvedNode), but only if there is a resolver associated
-    /// with this tree.
+    /// Turns this node into a [`ResolvedNode`], but only if there is a resolver associated with
+    /// this tree.
     #[inline]
     pub fn try_resolved(&self) -> Option<&ResolvedNode<S, D>> {
         // safety: we only coerce if `resolver` exists
         self.resolver().map(|_| unsafe { ResolvedNode::coerce_ref(self) })
     }
 
-    /// Turns this node into a [`ResolvedNode`](crate::syntax::ResolvedNode).
+    /// Turns this node into a [`ResolvedNode`].
     /// # Panics
     /// If there is no resolver associated with this tree.
     #[inline]
