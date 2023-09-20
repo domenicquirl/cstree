@@ -32,3 +32,10 @@ optional  = true
 
 [dev-dependencies]
 cstree = { path = "../cstree", features = ["derive"] }
+
+[[example]]
+name = "cstree_readme"
+
+[[example]]
+name              = "concurrent_builder"
+required-features = ["concurrent"]

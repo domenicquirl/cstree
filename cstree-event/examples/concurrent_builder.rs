@@ -1,14 +1,20 @@
-//! This is the same parser as in `cstree`'s "getting started" guide and `readme` example, but adapted to use
-//! `cstree-events`.
-
-use std::io::Write;
+//! A copy of the `cstree_readme` example with a slightly reduced expression grammar (only addition) that showcases how
+//! to run tree building in parallel to your parser.
+//!
+//! The parser and the [`TextTreeSink`] builder are spawned onto different threads in `main`.
+//! Note how [`Parser::parse_expression`] wraps the actual expression parsing (in [`Parser::do_parse_expression`]) in
+//! optimization guards to allow for backtracking / preceding events / extending expressions when more terms are
+//! encountered. This pauses tree building until the end of an expression before it continues building the syntax tree
+//! while the next expression is parsed. This pauses tree building until the end of an expression before it continues
+//! building the syntax tree while the next expression is parsed.
+use std::{io::Write, thread};
 
 use cstree::{
     prelude::*,
     syntax::{ResolvedElementRef, ResolvedNode},
 };
 use cstree_event::{
-    events::{CompletedNode, Event, EventSink as _, SequentialEventSink},
+    events::{CompletedNode, ConcurrentEventSink, EventSink as _},
     parsing::{NoopAttacher, TextTokenSource, TextTreeSink, Token, TokenSource as _},
 };
 
@@ -19,16 +25,17 @@ pub enum SyntaxKind {
     Int, // e.g. 42
     #[static_text("+")]
     Plus,
-    #[static_text("-")]
-    Minus,
-    #[static_text("(")]
-    LParen,
-    #[static_text(")")]
-    RParen,
+    #[static_text("[")]
+    LBrace,
+    #[static_text("]")]
+    RBrace,
+    #[static_text(",")]
+    Comma,
     Whitespace,
     EoF,
     /* Nodes */
     Expr,
+    List,
     Root,
 }
 type Calculator = SyntaxKind;
@@ -100,9 +107,9 @@ mod lexer {
 
             let kind = match next_char {
                 '+' => SyntaxKind::Plus,
-                '-' => SyntaxKind::Minus,
-                '(' => SyntaxKind::LParen,
-                ')' => SyntaxKind::RParen,
+                ',' => SyntaxKind::Comma,
+                '[' => SyntaxKind::LBrace,
+                ']' => SyntaxKind::RBrace,
                 c if c.is_ascii_digit() => {
                     let (last_digit_idx, _char) = self
                         .input
@@ -162,14 +169,14 @@ mod lexer {
 
 pub struct Parser {
     source: TextTokenSource<lexer::Token>,
-    events: SequentialEventSink<Calculator>,
+    events: ConcurrentEventSink<Calculator>,
 }
 
 impl Parser {
-    pub fn new(input: &str, tokens: &[lexer::Token]) -> Self {
+    pub fn new(input: &str, tokens: &[lexer::Token], events: ConcurrentEventSink<Calculator>) -> Self {
         Self {
             source: TextTokenSource::new(input, tokens),
-            events: SequentialEventSink::new(),
+            events,
         }
     }
 
@@ -198,14 +205,43 @@ impl Parser {
 
     pub fn parse(&mut self) -> Result<(), String> {
         let root = self.events.enter_node(SyntaxKind::Root);
-        self.parse_expr()?;
+        self.parse_list()?;
         self.events.complete(root);
         Ok(())
     }
 
+    fn parse_list(&mut self) -> Result<(), String> {
+        let list = self.events.enter_node(SyntaxKind::List);
+        self.consume(SyntaxKind::LBrace)?;
+        while !matches!(
+            self.source.peek_next().map(Token::kind).unwrap_or(SyntaxKind::EoF),
+            SyntaxKind::RBrace | SyntaxKind::EoF
+        ) {
+            self.parse_expr()?;
+            if self.source.peek_next().map(Token::kind) != Some(SyntaxKind::RBrace) {
+                self.consume(SyntaxKind::Comma)?;
+            }
+        }
+        self.consume(SyntaxKind::RBrace)?;
+        self.events.complete(list);
+        Ok(())
+    }
+
+    fn parse_expr(&mut self) -> Result<(), String> {
+        // Expression parsing may alter the sequence of events by using `CompletedNode::precede`,
+        // therefore we must pause tree building while the parser is recursing through an expression.
+        // We can do this by sending a `DeOpt` event.
+        let guard = self.events.deopt();
+        // Now we can parse the expression.
+        self.do_parse_expr()?;
+        // Afterwards, we `complete` the `DeOpt` event, which sends an `Opt` event to the builder
+        // that notifies it that it can continue building.
+        self.events.complete(guard);
+        Ok(())
+    }
+
     fn parse_lhs(&mut self) -> Result<CompletedNode, String> {
-        // An expression may start either with a number, or with an opening parenthesis that is the start of a
-        // parenthesized expression
+        // Only supports integer literals.
         let next_token = self.source.peek(1).unwrap();
         let expr = match next_token.kind() {
             SyntaxKind::Int => {
@@ -213,46 +249,37 @@ impl Parser {
                 self.consume(SyntaxKind::Int)?;
                 self.events.complete(node)
             }
-            SyntaxKind::LParen => {
-                // Wrap the grouped expression inside a node containing it and its parentheses
-                let expr = self.events.enter_node(SyntaxKind::Expr);
-                self.consume(SyntaxKind::LParen)?;
-                self.parse_expr()?; // Inner expression
-                self.consume(SyntaxKind::RParen)?;
-                self.events.complete(expr)
-            }
             SyntaxKind::EoF => return Err("Unexpected end of file: expected expression".to_string()),
             t => return Err(format!("Unexpected start of expression: '{t:?}'")),
         };
         Ok(expr)
     }
 
-    fn parse_expr(&mut self) -> Result<(), String> {
+    fn do_parse_expr(&mut self) -> Result<(), String> {
         // Parse the start of the expression
         let lhs = self.parse_lhs()?;
 
-        // Check if the expression continues with `+ <more>` or `- <more>`
+        // Check if the expression continues with `+ <more>`
         let Some(next_token) = self.source.peek(1) else {
             return Ok(());
         };
         let op = match next_token.kind() {
-            op @ SyntaxKind::Plus | op @ SyntaxKind::Minus => op,
-            SyntaxKind::RParen | SyntaxKind::EoF => return Ok(()),
+            op @ SyntaxKind::Plus => op,
+            SyntaxKind::Comma | SyntaxKind::RBrace | SyntaxKind::EoF => return Ok(()),
             t => return Err(format!("Expected operator, found '{t:?}'")),
         };
 
         // If so, retroactively wrap the (already parsed) LHS and the following RHS inside an `Expr` node
         let expr = self.events.precede(lhs, SyntaxKind::Expr);
         self.consume(op)?;
-        self.parse_expr()?; // RHS
+        self.do_parse_expr()?; // RHS
         self.events.complete(expr);
         Ok(())
     }
 
-    pub fn finish(mut self) -> Vec<Event<SyntaxKind>> {
+    pub fn finish(mut self) {
         assert!(self.source.next().map(|t| t.kind() == SyntaxKind::EoF).unwrap_or(true));
         self.events.assert_complete();
-        self.events.into_inner()
     }
 }
 
@@ -269,45 +296,76 @@ fn main() {
             continue;
         }
         let tokens = lexer::lex(&buf);
-        let mut parser = Parser::new(&buf, &tokens);
-        if let Err(e) = parser.parse() {
-            eprintln!("Parse error: {e}");
-            continue;
-        }
+        let (event_sink, event_receiver) = ConcurrentEventSink::new();
+        let parse_result = thread::scope(|s| {
+            let parser = s.spawn(|| event_sink.with(|events| Parser::new(&buf, &tokens, events).parse()));
+            let builder = s.spawn(|| TextTreeSink::new(&buf, &tokens).build_concurrent(&event_receiver, &NoopAttacher));
+            let parse_result = parser.join().expect("parser panicked");
+            let (tree, interner) = builder.join().expect("builder panicked");
+            parse_result.map(|()| (tree, interner))
+        });
 
-        let mut events = parser.finish();
-        let (tree, interner) = TextTreeSink::new(&buf, &tokens).build(&mut events, &NoopAttacher);
+        let (tree, interner) = match parse_result {
+            Ok((tree, interner)) => (tree, interner),
+            Err(e) => {
+                eprintln!("Parse error: {e}");
+                continue;
+            }
+        };
+
         let root = SyntaxNode::<Calculator>::new_root_with_resolver(tree, interner.unwrap());
-
         if let Some(expr) = root.first_child_or_token() {
-            let result = eval_elem(expr, &mut root.children_with_tokens());
-            println!("Result: {result}");
+            let result = eval_elem(expr);
+            println!("Result: {result:?}");
         }
     }
 }
 
-fn eval(expr: &ResolvedNode<Calculator>) -> i64 {
-    let mut children = expr
-        .children_with_tokens()
-        .filter(|elem| elem.kind() != SyntaxKind::Whitespace);
-    let lhs = eval_elem(children.next().expect("empty expr"), &mut children);
-    let Some(op) = children.next().map(|elem| elem.kind()) else {
-        // Literal expression
-        return lhs;
-    };
-    let rhs = eval_elem(children.next().expect("missing RHS"), &mut children);
+#[derive(Debug, PartialEq, Eq)]
+enum Value {
+    List(Vec<i64>),
+    Int(i64),
+}
 
-    match op {
-        SyntaxKind::Plus => lhs + rhs,
-        SyntaxKind::Minus => lhs - rhs,
-        _ => unreachable!("invalid op"),
+impl Value {
+    #[track_caller]
+    fn expect_int(self) -> i64 {
+        match self {
+            Value::Int(i) => i,
+            Value::List(_) => panic!("expected int"),
+        }
     }
 }
 
-fn eval_elem<'e>(
-    expr: ResolvedElementRef<'_, Calculator>,
-    children: &mut impl Iterator<Item = ResolvedElementRef<'e, Calculator>>,
-) -> i64 {
+fn eval(node: &ResolvedNode<Calculator>) -> Value {
+    match node.kind() {
+        SyntaxKind::Int => eval_elem(
+            node.children_with_tokens()
+                .next()
+                .expect("number node without number token"),
+        ),
+        SyntaxKind::Expr => {
+            let mut children = node
+                .children_with_tokens()
+                .filter(|elem| elem.kind() != SyntaxKind::Whitespace);
+            let lhs = eval_elem(children.next().expect("empty expr")).expect_int();
+            let Some(op) = children.next().map(|elem| elem.kind()) else {
+                // Literal expression
+                return Value::Int(lhs);
+            };
+            let rhs = eval_elem(children.next().expect("missing RHS")).expect_int();
+
+            match op {
+                SyntaxKind::Plus => Value::Int(lhs + rhs),
+                _ => unreachable!("invalid op"),
+            }
+        }
+        SyntaxKind::List => Value::List(node.children().map(eval).map(Value::expect_int).collect()),
+        kind => panic!("unsupported node '{kind:?}'"),
+    }
+}
+
+fn eval_elem(expr: ResolvedElementRef<'_, Calculator>) -> Value {
     use cstree::util::NodeOrToken;
 
     match expr {
@@ -316,26 +374,14 @@ fn eval_elem<'e>(
                 n.children_with_tokens()
                     .next()
                     .expect("number node without number token"),
-                children,
             ),
             _ => eval(n),
         },
         NodeOrToken::Token(t) => match t.kind() {
             SyntaxKind::Int => {
                 let number_str = t.text();
-                number_str.parse().expect("parsed int could not be evaluated")
-            }
-            SyntaxKind::LParen => {
-                let inner = children.next().expect("missing content inside parens");
-                // It's important that we consume the `)` here, as otherwise `eval` might mistake it for an operator
-                assert_eq!(
-                    children
-                        .next()
-                        .and_then(|elem| elem.into_token())
-                        .map(|token| token.kind()),
-                    Some(SyntaxKind::RParen)
-                );
-                eval_elem(inner, children)
+                let n: i64 = number_str.parse().expect("parsed int could not be evaluated");
+                Value::Int(n)
             }
             kind => unreachable!("invalid start of expression: {kind:?}"),
         },
@@ -348,24 +394,21 @@ mod tests {
 
     #[test]
     fn lex() {
-        let input = "11 + 2-(5 + 4)";
+        let input = "[11 + 2, 9]";
         let tokens: Vec<_> = lexer::lex(input).into_iter().map(|token| token.kind()).collect();
         assert_eq!(
             tokens,
             vec![
+                SyntaxKind::LBrace,
                 SyntaxKind::Int,
                 SyntaxKind::Whitespace,
                 SyntaxKind::Plus,
                 SyntaxKind::Whitespace,
                 SyntaxKind::Int,
-                SyntaxKind::Minus,
-                SyntaxKind::LParen,
-                SyntaxKind::Int,
-                SyntaxKind::Whitespace,
-                SyntaxKind::Plus,
+                SyntaxKind::Comma,
                 SyntaxKind::Whitespace,
                 SyntaxKind::Int,
-                SyntaxKind::RParen,
+                SyntaxKind::RBrace,
                 SyntaxKind::EoF
             ]
         );
@@ -373,13 +416,12 @@ mod tests {
 
     #[test]
     fn parse_and_eval() {
-        let input = "11 + 2-(5 + 4)";
+        let input = "[11 + 2, 9]";
         let tokens = lexer::lex(input);
-        let mut parser = Parser::new(input, &tokens);
-        parser.parse().unwrap();
-        let mut events = parser.finish();
-        let (tree, interner) = TextTreeSink::new(input, &tokens).build(&mut events, &NoopAttacher);
+        let (events, receiver) = ConcurrentEventSink::new();
+        events.with(|events| Parser::new(input, &tokens, events).parse().unwrap());
+        let (tree, interner) = TextTreeSink::new(input, &tokens).build_concurrent(&receiver, &NoopAttacher);
         let root = SyntaxNode::<Calculator>::new_root_with_resolver(tree, interner.unwrap());
-        assert_eq!(eval(&root), 4);
+        assert_eq!(eval(root.children().next().unwrap()), Value::List(vec![13, 9]));
     }
 }

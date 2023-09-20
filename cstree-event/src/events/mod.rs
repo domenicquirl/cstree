@@ -7,7 +7,7 @@ pub use sequential::SequentialEventSink;
 #[cfg(feature = "concurrent")]
 mod concurrent;
 #[cfg(feature = "concurrent")]
-pub use concurrent::ConcurrentEventSink;
+pub use concurrent::{ConcurrentEventSink, ConcurrentEventSinkRef};
 
 #[derive(Debug, PartialEq, Eq)]
 #[non_exhaustive]

@@ -8,25 +8,63 @@ pub struct ConcurrentEventSink<S: cstree::Syntax + 'static> {
     deopt:  bool,
 }
 
+#[derive(Debug)]
+#[repr(transparent)]
+pub struct ConcurrentEventSinkRef<S: cstree::Syntax + 'static>(ConcurrentEventSink<S>);
+
+impl<S: cstree::Syntax> ConcurrentEventSinkRef<S> {
+    /// Run the given parsing function with the event sink.
+    pub fn with<F, R>(self, parse: F) -> R
+    where
+        F: FnOnce(ConcurrentEventSink<S>) -> R,
+    {
+        parse(self.0)
+    }
+}
+
 impl<S: cstree::Syntax> ConcurrentEventSink<S> {
-    pub fn new() -> (Self, Receiver<Event<S>>) {
+    /// Create a new event sink, connected to a [`Receiver`] event source also returned from this method.
+    ///
+    /// This method does not return an event sink directly. Instead, it returns a reference to one that can be used by
+    /// passing the parser invocation as a closure to its [`with`] method. This ensures that the channel to the
+    /// [`ConcurrentEventSource`] (the [`Receiver`]) returned by this method is closed at the end of pasing and a
+    /// [`TextTreeSink`] builder is notified and finishes to [`build_concurrent`].
+    ///
+    /// [`with`]: ConcurrentEventSinkRef::with
+    /// [`ConcurrentEventSource`]: super::ConcurrentEventSource
+    /// [`TextTreeSink`]: crate::parsing::TextTreeSink
+    /// [`build_concurrent`]: crate::parsing::TextTreeSink::build_concurrent
+    #[allow(clippy::new_ret_no_self)]
+    pub fn new() -> (ConcurrentEventSinkRef<S>, Receiver<Event<S>>) {
         let (sender, receiver) = channel::unbounded_spsc();
         let this = Self {
             inner: Vec::new(),
             sender,
             deopt: false,
         };
-        (this, receiver)
+        (ConcurrentEventSinkRef(this), receiver)
     }
 
-    pub fn with_capacity(capacity: usize) -> (Self, Receiver<Event<S>>) {
+    /// Create a new event sink with an internal buffer with the given `capacity`, connected to a [`Receiver`] event
+    /// source also returned from this method.
+    ///
+    /// This method does not return an event sink directly. Instead, it returns a reference to one that can be used by
+    /// passing the parser invocation as a closure to its [`with`] method. This ensures that the channel to the
+    /// [`ConcurrentEventSource`] (the [`Receiver`]) returned by this method is closed at the end of pasing and a
+    /// [`TextTreeSink`] builder is notified and finishes to [`build_concurrent`].
+    ///
+    /// [`with`]: ConcurrentEventSinkRef::with
+    /// [`ConcurrentEventSource`]: super::ConcurrentEventSource
+    /// [`TextTreeSink`]: crate::parsing::TextTreeSink
+    /// [`build_concurrent`]: crate::parsing::TextTreeSink::build_concurrent
+    pub fn with_capacity(capacity: usize) -> (ConcurrentEventSinkRef<S>, Receiver<Event<S>>) {
         let (sender, receiver) = channel::unbounded_spsc();
         let this = Self {
             inner: Vec::with_capacity(capacity),
             sender,
             deopt: false,
         };
-        (this, receiver)
+        (ConcurrentEventSinkRef(this), receiver)
     }
 }
 
@@ -89,6 +127,11 @@ impl<S: cstree::Syntax> ConcurrentEventSink<S> {
         self.add(Event::DeOpt);
         EnteredNode::new(idx, true)
     }
+
+    #[track_caller]
+    pub fn assert_complete(&self) {
+        <Self as EventSinkInternal<S>>::assert_complete(self)
+    }
 }
 
 #[cfg(test)]
@@ -103,17 +146,19 @@ mod tests {
 
     #[test]
     fn basic() {
-        let (mut events, receiver) = ConcurrentEventSink::with_capacity(10);
-        assert!(events.is_empty());
-        assert!(!events.currently_deopt());
-        let root = events.enter_node(TestSyntaxKind::Root);
-        events.add(Event::Token {
-            kind: TestSyntaxKind::Float,
-            n_input_tokens: 1,
+        let (events, receiver) = ConcurrentEventSink::with_capacity(10);
+        events.with(|mut events| {
+            assert!(events.is_empty());
+            assert!(!events.currently_deopt());
+            let root = events.enter_node(TestSyntaxKind::Root);
+            events.add(Event::Token {
+                kind: TestSyntaxKind::Float,
+                n_input_tokens: 1,
+            });
+            root.complete(&mut events);
+            assert_eq!(events.len(), 0);
+            events.assert_complete();
         });
-        root.complete(&mut events);
-        assert_eq!(events.len(), 0);
-        events.assert_complete();
 
         let events: Vec<_> = receiver.drain().collect();
         assert_eq!(events.len(), 3);
@@ -121,41 +166,45 @@ mod tests {
 
     #[test]
     fn discard() {
-        let (mut events, _receiver) = ConcurrentEventSink::with_capacity(10);
-        let root = events.enter_node(TestSyntaxKind::Root);
-        let opt_guard = events.deopt();
-        let inner = events.enter_node(TestSyntaxKind::Operation);
-        assert!(events.currently_deopt());
-        events.add(Event::Token {
-            kind: TestSyntaxKind::Float,
-            n_input_tokens: 1,
+        let (events, _receiver) = ConcurrentEventSink::with_capacity(10);
+        events.with(|mut events| {
+            let root = events.enter_node(TestSyntaxKind::Root);
+            let opt_guard = events.deopt();
+            let inner = events.enter_node(TestSyntaxKind::Operation);
+            assert!(events.currently_deopt());
+            events.add(Event::Token {
+                kind: TestSyntaxKind::Float,
+                n_input_tokens: 1,
+            });
+            inner.discard(&mut events);
+            // We expect the following:
+            // - the enter event for `Root` should have been sent directly, as the sink was in opt
+            // - then the sink buffered the events for the deopt, `inner` and the `Float` token
+            // - and then everything starting from (and including) `inner` is discarded
+            assert_eq!(events.len(), 1);
+            opt_guard.complete(&mut events);
+            assert!(!events.currently_deopt());
+            root.complete(&mut events);
+            events.assert_complete();
         });
-        inner.discard(&mut events);
-        // We expect the following:
-        // - the enter event for `Root` should have been sent directly, as the sink was in opt
-        // - then the sink buffered the events for the deopt, `inner` and the `Float` token
-        // - and then everything starting from (and including) `inner` is discarded
-        assert_eq!(events.len(), 1);
-        opt_guard.complete(&mut events);
-        assert!(!events.currently_deopt());
-        root.complete(&mut events);
-        events.assert_complete();
     }
 
     #[test]
     fn abandon() {
-        let (mut events, receiver) = ConcurrentEventSink::with_capacity(10);
-        let root = events.enter_node(TestSyntaxKind::Root);
-        let opt_guard = events.deopt();
-        let inner = events.enter_node(TestSyntaxKind::Operation);
-        events.add(Event::Token {
-            kind: TestSyntaxKind::Float,
-            n_input_tokens: 1,
+        let (events, receiver) = ConcurrentEventSink::with_capacity(10);
+        events.with(|mut events| {
+            let root = events.enter_node(TestSyntaxKind::Root);
+            let opt_guard = events.deopt();
+            let inner = events.enter_node(TestSyntaxKind::Operation);
+            events.add(Event::Token {
+                kind: TestSyntaxKind::Float,
+                n_input_tokens: 1,
+            });
+            inner.abandon(&mut events);
+            opt_guard.complete(&mut events);
+            root.complete(&mut events);
+            events.assert_complete();
         });
-        inner.abandon(&mut events);
-        opt_guard.complete(&mut events);
-        root.complete(&mut events);
-        events.assert_complete();
 
         let events: Vec<_> = receiver.drain().collect();
         assert_eq!(events.len(), 6);
@@ -164,16 +213,18 @@ mod tests {
 
     #[test]
     fn complete_as() {
-        let (mut events, receiver) = ConcurrentEventSink::with_capacity(10);
-        let opt_guard = events.deopt();
-        let root = events.enter_node(TestSyntaxKind::Root);
-        events.add(Event::Token {
-            kind: TestSyntaxKind::Float,
-            n_input_tokens: 1,
+        let (events, receiver) = ConcurrentEventSink::with_capacity(10);
+        events.with(|mut events| {
+            let opt_guard = events.deopt();
+            let root = events.enter_node(TestSyntaxKind::Root);
+            events.add(Event::Token {
+                kind: TestSyntaxKind::Float,
+                n_input_tokens: 1,
+            });
+            root.complete_as(&mut events, TestSyntaxKind::Operation);
+            opt_guard.complete(&mut events);
+            events.assert_complete();
         });
-        root.complete_as(&mut events, TestSyntaxKind::Operation);
-        opt_guard.complete(&mut events);
-        events.assert_complete();
 
         let events: Vec<_> = receiver.drain().collect();
         assert_eq!(events.len(), 5);
@@ -188,18 +239,20 @@ mod tests {
 
     #[test]
     fn precede() {
-        let (mut events, receiver) = ConcurrentEventSink::with_capacity(10);
-        let opt_guard = events.deopt();
-        let op = events.enter_node(TestSyntaxKind::Operation);
-        events.add(Event::Token {
-            kind: TestSyntaxKind::Float,
-            n_input_tokens: 1,
+        let (events, receiver) = ConcurrentEventSink::with_capacity(10);
+        events.with(|mut events| {
+            let opt_guard = events.deopt();
+            let op = events.enter_node(TestSyntaxKind::Operation);
+            events.add(Event::Token {
+                kind: TestSyntaxKind::Float,
+                n_input_tokens: 1,
+            });
+            let node = op.complete(&mut events);
+            let root = node.precede(&mut events, TestSyntaxKind::Root);
+            root.complete(&mut events);
+            opt_guard.complete(&mut events);
+            events.assert_complete();
         });
-        let node = op.complete(&mut events);
-        let root = node.precede(&mut events, TestSyntaxKind::Root);
-        root.complete(&mut events);
-        opt_guard.complete(&mut events);
-        events.assert_complete();
 
         let events: Vec<_> = receiver.drain().collect();
         assert_eq!(events.len(), 7);
@@ -223,26 +276,30 @@ mod tests {
     #[test]
     #[should_panic(expected = "cannot precede concurrent events")]
     fn precede_in_opt() {
-        let (mut events, _receiver) = ConcurrentEventSink::with_capacity(10);
-        let op = events.enter_node(TestSyntaxKind::Operation);
-        events.add(Event::Token {
-            kind: TestSyntaxKind::Float,
-            n_input_tokens: 1,
+        let (events, _receiver) = ConcurrentEventSink::with_capacity(10);
+        events.with(|mut events| {
+            let op = events.enter_node(TestSyntaxKind::Operation);
+            events.add(Event::Token {
+                kind: TestSyntaxKind::Float,
+                n_input_tokens: 1,
+            });
+            let node = op.complete(&mut events);
+            let _root = node.precede(&mut events, TestSyntaxKind::Root);
         });
-        let node = op.complete(&mut events);
-        let _root = node.precede(&mut events, TestSyntaxKind::Root);
     }
 
     #[test]
     #[should_panic(expected = "Cannot abandon in Opt")]
     fn abandon_in_opt() {
-        let (mut events, _receiver) = ConcurrentEventSink::with_capacity(10);
-        let _root = events.enter_node(TestSyntaxKind::Root);
-        let inner = events.enter_node(TestSyntaxKind::Operation);
-        events.add(Event::Token {
-            kind: TestSyntaxKind::Float,
-            n_input_tokens: 1,
+        let (events, _receiver) = ConcurrentEventSink::with_capacity(10);
+        events.with(|mut events| {
+            let _root = events.enter_node(TestSyntaxKind::Root);
+            let inner = events.enter_node(TestSyntaxKind::Operation);
+            events.add(Event::Token {
+                kind: TestSyntaxKind::Float,
+                n_input_tokens: 1,
+            });
+            inner.abandon(&mut events);
         });
-        inner.abandon(&mut events);
     }
 }
