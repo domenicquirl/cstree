@@ -9,6 +9,7 @@
  * The `interning` module has been rewritten. It now provides fuctions for obtaining a default interner (`new_interner` and `new_threaded_interner`) and provides a small, dependency-free interner implementation.
    * Compatibility with other interners can be enable via feature flags. 
    * **Note** that compatibilty with `lasso` is not enabled by default. Use the `lasso_compat` feature to match the previous default.
+     * If you are using `lasso` interners directly that you are also passing to `cstree`, note that while e.g. the `GreenNodeBuilder` can work with `lasso::Rodeo`s, you will not be able to convert between `lasso`'s `Spur` and `cstree`'s `TokenKey`. The `TokenKey` can, however, be used as the key type for `lasso` interners at no additional cost by working wiht a `Rodeo<TokenKey>` instead of the `lasso`-default `Rodeo<Spur>`.
  * Introduced `Syntax::static_text` to optimize tokens that always appear with the same text (estimated 10-15% faster tree building when used, depending on the ratio of static to dynamic tokens).
    * Since `cstree`s are lossless, `GreenNodeBuilder::token` must still be passed the source text even for static tokens. 
  * Internal performance improvements for up to 10% faster tree building by avoiding unnecessary duplication of elements.
