@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+ * Implement `Hash` and `Eq` for `ResolvedNode` and `ResolvedToken`
+
 ## `v0.12.0`
 
  * Documentation has been improved in most areas, together with a switch to a more principled module structure that allows explicitly documenting submodules.

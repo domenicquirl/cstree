@@ -5,6 +5,7 @@
 
 use std::{
     fmt,
+    hash::Hash,
     ops::{Deref, DerefMut},
     sync::Arc as StdArc,
 };
@@ -65,6 +66,18 @@ impl<S: Syntax, D> DerefMut for ResolvedNode<S, D> {
     }
 }
 
+impl<S: Syntax, D> PartialEq for ResolvedNode<S, D> {
+    fn eq(&self, other: &Self) -> bool {
+        self.syntax == other.syntax
+    }
+}
+impl<S: Syntax, D> Eq for ResolvedNode<S, D> {}
+impl<S: Syntax, D> Hash for ResolvedNode<S, D> {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.syntax.hash(state);
+    }
+}
+
 /// Syntax tree token that is guaranteed to belong to a tree that contains an associated
 /// [`Resolver`](lasso::Resolver).
 /// # See also
@@ -106,6 +119,18 @@ impl<S: Syntax, D> Deref for ResolvedToken<S, D> {
 impl<S: Syntax, D> DerefMut for ResolvedToken<S, D> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.syntax
+    }
+}
+
+impl<S: Syntax, D> PartialEq for ResolvedToken<S, D> {
+    fn eq(&self, other: &Self) -> bool {
+        self.syntax == other.syntax
+    }
+}
+impl<S: Syntax, D> Eq for ResolvedToken<S, D> {}
+impl<S: Syntax, D> Hash for ResolvedToken<S, D> {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.syntax.hash(state);
     }
 }
 
