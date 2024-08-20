@@ -400,6 +400,7 @@ impl<S: Syntax, D> SyntaxNode<S, D> {
     }
 
     /// Returns the data associated with this node, if any.
+    #[allow(clippy::useless_asref)] // make `Arc::clone` explicit
     pub fn get_data(&self) -> Option<Arc<D>> {
         let ptr = self.data().data.read();
         (*ptr).as_ref().map(Arc::clone)

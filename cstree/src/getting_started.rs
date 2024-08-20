@@ -4,15 +4,15 @@
 //! to happen to go from input text to a `cstree` syntax tree:
 //!
 //!  1. Define an enumeration of the types of tokens (like keywords) and nodes (like "an expression") that you want to
-//! have in your syntax and implement [`Syntax`]
+//!     have in your syntax and implement [`Syntax`]
 //!
 //!  2. Create a [`GreenNodeBuilder`](crate::build::GreenNodeBuilder) and call
-//! [`start_node`](crate::build::GreenNodeBuilder::start_node), [`token`](crate::build::GreenNodeBuilder::token) and
-//! [`finish_node`](crate::build::GreenNodeBuilder::finish_node) from your parser  
+//!     [`start_node`](crate::build::GreenNodeBuilder::start_node), [`token`](crate::build::GreenNodeBuilder::token) and
+//!     [`finish_node`](crate::build::GreenNodeBuilder::finish_node) from your parser
 //!
 //!  3. Call [`SyntaxNode::new_root`](crate::syntax::SyntaxNode::new_root) or
-//! [`SyntaxNode::new_root_with_resolver`](crate::syntax::SyntaxNode::new_root_with_resolver) with the resulting
-//! [`GreenNode`](crate::green::GreenNode) to obtain a syntax tree that you can traverse
+//!     [`SyntaxNode::new_root_with_resolver`](crate::syntax::SyntaxNode::new_root_with_resolver) with the resulting
+//!     [`GreenNode`](crate::green::GreenNode) to obtain a syntax tree that you can traverse
 //!
 //! Let's walk through the motions of parsing a (very) simple language into `cstree` syntax trees.
 //! We'll just support addition and subtraction on integers, from which the user is allowed to construct a single,
