@@ -58,15 +58,15 @@
 //! to happen to go from input text to a `cstree` syntax tree:
 //!
 //!  1. Define an enumeration of the types of tokens (like keywords) and nodes (like "an expression") that you want to
-//! have in your syntax and implement [`Syntax`]
+//!     have in your syntax and implement [`Syntax`]
 //!
 //!  2. Create a [`GreenNodeBuilder`](build::GreenNodeBuilder) and call
-//! [`start_node`](build::GreenNodeBuilder::start_node), [`token`](build::GreenNodeBuilder::token) and
-//! [`finish_node`](build::GreenNodeBuilder::finish_node) from your parser  
+//!     [`start_node`](build::GreenNodeBuilder::start_node), [`token`](build::GreenNodeBuilder::token) and
+//!     [`finish_node`](build::GreenNodeBuilder::finish_node) from your parser
 //!
 //!  3. Call [`SyntaxNode::new_root`](syntax::SyntaxNode::new_root) or
-//! [`SyntaxNode::new_root_with_resolver`](syntax::SyntaxNode::new_root_with_resolver) with the resulting
-//! [`GreenNode`](green::GreenNode) to obtain a syntax tree that you can traverse
+//!     [`SyntaxNode::new_root_with_resolver`](syntax::SyntaxNode::new_root_with_resolver) with the resulting
+//!     [`GreenNode`](green::GreenNode) to obtain a syntax tree that you can traverse
 //!
 //! There's a full [getting started guide] that walks through each of the above steps in detail in the documentation for
 //! the `getting_started` module. The walkthrough goes through the necessary steps bit by bit and skips the lexer, but
@@ -86,7 +86,11 @@
 
 #![forbid(missing_debug_implementations, unconditional_recursion)]
 #![deny(unsafe_code, future_incompatible)]
-#![allow(unstable_name_collisions)] // strict provenance - must come after `future_incompatible` to take precedence
+#![allow(
+    unstable_name_collisions, // strict provenance - must come after `future_incompatible` to take precedence
+    unexpected_cfgs, // nightly docs.rs features and `salsa-2022` feature until that is figured out
+    clippy::duplicated_attributes, // interning modules
+)]
 #![warn(missing_docs)]
 // Docs.rs
 #![doc(html_root_url = "https://docs.rs/cstree/0.12.0")]

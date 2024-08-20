@@ -131,7 +131,7 @@ impl PackedGreenElement {
 
     pub(crate) fn into_node(self) -> Option<GreenNode> {
         if self.is_node() {
-            unsafe { Some(mem::transmute(self)) }
+            unsafe { Some(mem::transmute::<Self, GreenNode>(self)) }
         } else {
             None
         }
@@ -147,7 +147,7 @@ impl PackedGreenElement {
 
     pub(crate) fn into_token(self) -> Option<GreenToken> {
         if !self.is_node() {
-            unsafe { Some(mem::transmute(self)) }
+            unsafe { Some(mem::transmute::<Self, GreenToken>(self)) }
         } else {
             None
         }
