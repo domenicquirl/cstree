@@ -21,7 +21,7 @@ triomphe = { version = "0.1.8", default-features = false, features = ["stable_de
 sptr     = "0.3.2"
 
 # Default Interner
-indexmap = "1.9"
+indexmap = "2.4.0"
 
 [dependencies.cstree_derive]
 path     = "../cstree-derive"
