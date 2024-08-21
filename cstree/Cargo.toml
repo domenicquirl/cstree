@@ -21,11 +21,11 @@ triomphe = { version = "0.1.8", default-features = false, features = ["stable_de
 sptr     = "0.3.2"
 
 # Default Interner
-indexmap = "1.9"
+indexmap = "2.4.0"
 
 [dependencies.cstree_derive]
 path     = "../cstree-derive"
-version  = "0.12.0"           # must match the `cstree` version in the virtual workspace manifest
+version  = "0.12.1"           # must match the `cstree` version in the virtual workspace manifest
 optional = true
 
 [dependencies.lasso]
