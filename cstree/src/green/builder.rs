@@ -472,6 +472,56 @@ where
         Checkpoint(self.children.len())
     }
 
+    /// Delete all tokens parsed since the [`Checkpoint`] was created.
+    ///
+    /// This is useful for backtracking parsers.
+    ///
+    /// NOTE: this does *not* delete any unfinished nodes; you are responsible for only
+    /// pairing checkpoint/start_node_at. Using `start_node` combined with `revert` has unspecified behavior.
+    ///
+    /// NOTE: checkpoints can only be nested "forwards" not backwards. Attempting to go backwards then forwards is
+    /// unspecified (it will usually panic).
+    ///
+    /// Example:
+    /// ```rust
+    /// # use cstree::testing::*;
+    /// # use cstree::build::GreenNodeBuilder;
+    /// # struct Parser;
+    /// # impl Parser {
+    /// #     fn peek(&self) -> Option<TestSyntaxKind> { None }
+    /// #     fn parse_expr(&mut self) {}
+    /// # }
+    /// # let mut builder: GreenNodeBuilder<MySyntax> = GreenNodeBuilder::new();
+    /// # let mut parser = Parser;
+    /// let checkpoint = builder.checkpoint();
+    /// parser.parse_expr();
+    /// if let Some(Plus) = parser.peek() {
+    ///     // 1 + 2 = Add(1, 2)
+    ///     builder.start_node_at(checkpoint, Operation);
+    ///     parser.parse_expr();
+    ///     builder.finish_node();
+    /// } else {
+    ///     builder.revert(checkpoint);
+    /// }
+    /// ```
+    pub fn revert(&mut self, checkpoint: Checkpoint) {
+        let Checkpoint(checkpoint) = checkpoint;
+        // This doesn't catch scenarios where we've read more tokens since the previous revert,
+        // but it's close enough.
+        assert!(
+            checkpoint <= self.children.len(),
+            "cannot rollback to a checkpoint in the future"
+        );
+        if let Some(&(_, first_child)) = self.parents.last() {
+            assert!(
+                checkpoint >= first_child,
+                "checkpoint no longer valid, was an unmatched start_node_at called?"
+            );
+        }
+
+        self.children.truncate(checkpoint);
+    }
+
     /// Wrap the previous branch marked by [`checkpoint`](GreenNodeBuilder::checkpoint) in a new
     /// branch and make it current.
     #[inline]
