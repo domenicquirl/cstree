@@ -1,5 +1,6 @@
 mod basic;
 mod regressions;
+mod rollback;
 mod sendsync;
 #[cfg(feature = "serialize")]
 mod serde;
@@ -7,7 +8,8 @@ mod serde;
 use cstree::{
     build::{GreenNodeBuilder, NodeCache},
     green::GreenNode,
-    interning::Interner,
+    interning::{Interner, Resolver},
+    util::NodeOrToken,
     RawSyntaxKind, Syntax,
 };
 
@@ -77,4 +79,35 @@ where
         }
     }
     from
+}
+
+#[track_caller]
+pub fn assert_tree_eq(
+    (left, left_res): (&SyntaxNode, &impl Resolver),
+    (right, right_res): (&SyntaxNode, &impl Resolver),
+) {
+    if left.green() == right.green() {
+        return;
+    }
+
+    if left.kind() != right.kind() || left.children_with_tokens().len() != right.children_with_tokens().len() {
+        panic!("{} !=\n{}", left.debug(left_res, true), right.debug(right_res, true))
+    }
+
+    for elem in left.children_with_tokens().zip(right.children_with_tokens()) {
+        match elem {
+            (NodeOrToken::Node(ln), NodeOrToken::Node(rn)) => assert_tree_eq((ln, left_res), (rn, right_res)),
+            (NodeOrToken::Node(n), NodeOrToken::Token(t)) => {
+                panic!("{} != {}", n.debug(left_res, true), t.debug(right_res))
+            }
+            (NodeOrToken::Token(t), NodeOrToken::Node(n)) => {
+                panic!("{} != {}", t.debug(left_res), n.debug(right_res, true))
+            }
+            (NodeOrToken::Token(lt), NodeOrToken::Token(rt)) => {
+                if lt.syntax_kind() != rt.syntax_kind() || lt.resolve_text(left_res) != rt.resolve_text(right_res) {
+                    panic!("{} != {}", lt.debug(left_res), rt.debug(right_res))
+                }
+            }
+        }
+    }
 }
