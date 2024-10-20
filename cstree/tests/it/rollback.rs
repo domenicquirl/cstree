@@ -23,6 +23,42 @@ fn comparison_works() {
 }
 
 #[test]
+fn no_rollback_token() {
+    let (first, res1) = with_builder(|builder| {
+        builder.start_node(SyntaxKind(0));
+        builder.token(SyntaxKind(1), "hi");
+        builder.finish_node();
+    });
+    let (second, res2) = with_builder(|builder| {
+        let checkpoint = builder.checkpoint();
+        builder.token(SyntaxKind(1), "hi");
+        builder.start_node_at(checkpoint, SyntaxKind(0));
+        builder.finish_node();
+    });
+    assert_tree_eq((&first, &res1), (&second, &res2));
+}
+
+#[test]
+fn no_rollback_node() {
+    let (first, res1) = with_builder(|builder| {
+        builder.start_node(SyntaxKind(2));
+        builder.start_node(SyntaxKind(0));
+        builder.token(SyntaxKind(1), "hi");
+        builder.finish_node();
+        builder.finish_node();
+    });
+    let (second, res2) = with_builder(|builder| {
+        let checkpoint = builder.checkpoint();
+        builder.start_node(SyntaxKind(0));
+        builder.token(SyntaxKind(1), "hi");
+        builder.finish_node();
+        builder.start_node_at(checkpoint, SyntaxKind(2));
+        builder.finish_node();
+    });
+    assert_tree_eq((&first, &res1), (&second, &res2));
+}
+
+#[test]
 fn simple() {
     let (first, res1) = with_builder(|builder| {
         builder.start_node(SyntaxKind(0));
@@ -34,7 +70,7 @@ fn simple() {
         // Add a token, then remove it.
         let initial = builder.checkpoint();
         builder.token(SyntaxKind(1), "hi");
-        builder.revert(initial);
+        builder.revert_to(initial);
 
         builder.finish_node();
     });
@@ -54,13 +90,22 @@ fn nested() {
         let initial = builder.checkpoint();
         builder.token(SyntaxKind(1), "hi");
         builder.token(SyntaxKind(2), "hello");
-        builder.revert(initial);
+        builder.revert_to(initial);
 
         builder.finish_node();
     });
 
     let (third, res3) = with_builder(|builder| {
         builder.start_node(SyntaxKind(0));
+
+        // Add two tokens, then remove one after the other.
+        let initial = builder.checkpoint();
+        builder.token(SyntaxKind(1), "hi");
+        let second = builder.checkpoint();
+        builder.token(SyntaxKind(2), "hello");
+        builder.revert_to(second);
+        builder.revert_to(initial);
+
         builder.finish_node();
     });
 
@@ -69,9 +114,29 @@ fn nested() {
 }
 
 #[test]
-#[should_panic = "checkpoint in the future"]
+fn unfinished_node() {
+    let (first, res1) = with_builder(|builder| {
+        builder.start_node(SyntaxKind(2));
+        builder.finish_node();
+    });
+    let (second, res2) = with_builder(|builder| {
+        builder.start_node(SyntaxKind(2));
+        let checkpoint = builder.checkpoint();
+        builder.start_node(SyntaxKind(0));
+        builder.token(SyntaxKind(1), "hi");
+        builder.revert_to(checkpoint);
+        builder.finish_node();
+    });
+    assert_tree_eq((&first, &res1), (&second, &res2));
+}
+
+#[test]
 fn misuse() {
-    with_builder(|builder| {
+    let (first, res1) = with_builder(|builder| {
+        builder.start_node(SyntaxKind(0));
+        builder.finish_node();
+    });
+    let (second, res2) = with_builder(|builder| {
         builder.start_node(SyntaxKind(0));
 
         // Add two tokens, but remove them in the wrong order.
@@ -79,15 +144,36 @@ fn misuse() {
         builder.token(SyntaxKind(1), "hi");
         let new = builder.checkpoint();
         builder.token(SyntaxKind(2), "hello");
-        builder.revert(initial);
-        builder.revert(new);
+        builder.revert_to(initial);
+        builder.revert_to(new);
+
+        builder.finish_node();
+    });
+
+    assert_tree_eq((&first, &res1), (&second, &res2));
+}
+
+#[test]
+#[should_panic = "checkpoint in the future"]
+fn misuse2() {
+    with_builder(|builder| {
+        builder.start_node(SyntaxKind(0));
+
+        // Take two snapshots across a node boundary, but revert them in the wrong order.
+        let initial = builder.checkpoint();
+        builder.start_node(SyntaxKind(3));
+        builder.token(SyntaxKind(1), "hi");
+        let new = builder.checkpoint();
+        builder.token(SyntaxKind(2), "hello");
+        builder.revert_to(initial);
+        builder.revert_to(new);
 
         builder.finish_node();
     });
 }
 
 #[test]
-fn misuse2() {
+fn misuse3() {
     let (first, res1) = with_builder(|builder| {
         builder.start_node(SyntaxKind(0));
         builder.token(SyntaxKind(3), "no");
@@ -102,13 +188,13 @@ fn misuse2() {
         builder.token(SyntaxKind(1), "hi");
         let new = builder.checkpoint();
         builder.token(SyntaxKind(2), "hello");
-        builder.revert(initial);
+        builder.revert_to(initial);
 
         // This is wrong, but there's not a whole lot the library can do about it.
         builder.token(SyntaxKind(3), "no");
         builder.token(SyntaxKind(4), "bad");
         builder.token(SyntaxKind(4), "wrong");
-        builder.revert(new);
+        builder.revert_to(new);
 
         builder.finish_node();
     });

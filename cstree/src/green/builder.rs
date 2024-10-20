@@ -242,7 +242,10 @@ where
 
 /// A checkpoint for maybe wrapping a node. See [`GreenNodeBuilder::checkpoint`] for details.
 #[derive(Clone, Copy, Debug)]
-pub struct Checkpoint(usize);
+pub struct Checkpoint {
+    parent_idx: usize,
+    child_idx:  usize,
+}
 
 /// A builder for green trees.
 /// Construct with [`new`](GreenNodeBuilder::new), [`with_cache`](GreenNodeBuilder::with_cache), or
@@ -469,18 +472,20 @@ where
     /// ```
     #[inline]
     pub fn checkpoint(&self) -> Checkpoint {
-        Checkpoint(self.children.len())
+        Checkpoint {
+            parent_idx: self.parents.len(),
+            child_idx:  self.children.len(),
+        }
     }
 
     /// Delete all tokens parsed since the [`Checkpoint`] was created.
     ///
-    /// This is useful for backtracking parsers.
+    /// This is useful for backtracking parsers. It will delete any nodes that were started but not
+    /// finished since the checkpoint was taken. You are responsible for only pairing
+    /// `checkpoint`/`start_node_at`.
     ///
-    /// NOTE: this does *not* delete any unfinished nodes; you are responsible for only
-    /// pairing checkpoint/start_node_at. Using `start_node` combined with `revert` has unspecified behavior.
-    ///
-    /// NOTE: checkpoints can only be nested "forwards" not backwards. Attempting to go backwards then forwards is
-    /// unspecified (it will usually panic).
+    /// NOTE: Checkpoints can be nested, but not backwards. Reverting to an earlier checkpoint and
+    /// then to a later one will not work (it will usually panic).
     ///
     /// Example:
     /// ```rust
@@ -501,45 +506,56 @@ where
     ///     parser.parse_expr();
     ///     builder.finish_node();
     /// } else {
-    ///     builder.revert(checkpoint);
+    ///     builder.revert_to(checkpoint);
     /// }
     /// ```
-    pub fn revert(&mut self, checkpoint: Checkpoint) {
-        let Checkpoint(checkpoint) = checkpoint;
+    pub fn revert_to(&mut self, checkpoint: Checkpoint) {
+        let Checkpoint { parent_idx, child_idx } = checkpoint;
         // This doesn't catch scenarios where we've read more tokens since the previous revert,
         // but it's close enough.
         assert!(
-            checkpoint <= self.children.len(),
+            parent_idx <= self.parents.len(),
             "cannot rollback to a checkpoint in the future"
         );
+
+        // NOTE(DQ): See `start_node_at`.
         if let Some(&(_, first_child)) = self.parents.last() {
             assert!(
-                checkpoint >= first_child,
+                child_idx >= first_child,
                 "checkpoint no longer valid, was an unmatched start_node_at called?"
             );
         }
 
-        self.children.truncate(checkpoint);
+        self.parents.truncate(parent_idx);
+        self.children.truncate(usize::min(child_idx, self.children.len()));
     }
 
-    /// Wrap the previous branch marked by [`checkpoint`](GreenNodeBuilder::checkpoint) in a new
-    /// branch and make it current.
+    /// Start a node at the given [`checkpoint`](GreenNodeBuilder::checkpoint), wrapping all nodes
+    /// and tokens created since the checkpoint was taken.
+    ///
+    /// The new node will **not** contain any nodes that were started but not finished, you must
+    /// finish all nodes that you want to wrap before calling `start_node_at`.
     #[inline]
     pub fn start_node_at(&mut self, checkpoint: Checkpoint, kind: S) {
-        let Checkpoint(checkpoint) = checkpoint;
+        let Checkpoint { parent_idx, child_idx } = checkpoint;
         assert!(
-            checkpoint <= self.children.len(),
+            parent_idx <= self.parents.len(),
             "checkpoint no longer valid, was finish_node called early?"
         );
 
+        // NOTE(DQ): When `start_node` is called after `checkpoint`, the new node gets pushed to `parents`.
+        // However, `start_node` and `finish_node` must be balanced inbetween the calls to `checkpoint` and
+        // `start_node_at`, and `finish_node` causes the topmost parent to become a child instead.
+        // Therefore, the topmost parent _at the time of calling `start_node_at`_ must still be pointing
+        // "behind" the checkpoint in the list of children.
         if let Some(&(_, first_child)) = self.parents.last() {
             assert!(
-                checkpoint >= first_child,
-                "checkpoint no longer valid, was an unmatched start_node_at called?"
+                child_idx >= first_child,
+                "checkpoint no longer valid, was an unmatched start_node or start_node_at called?"
             );
         }
 
-        self.parents.push((kind, checkpoint));
+        self.parents.push((kind, usize::min(child_idx, self.children.len())));
     }
 
     /// Complete building the tree.
