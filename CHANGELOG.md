@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## `v0.12.2`
+
+ * `Checkpoint`s for the `GreenNodeBuilder` can now be used across node boundaries, meaning you can use them to wrap (finished) nodes in addition to just tokens. 
+ * A new method `Checkpoint::revert_to` has been added which resets a `GreenNodeBuilder` to the state it was in when the checkpoint was taken, allowing a parser to backtrack to the checkpoint.
+
+## `v0.12.1`
+
  * Implement `Hash` and `Eq` for `ResolvedNode` and `ResolvedToken`
 
 ## `v0.12.0`
