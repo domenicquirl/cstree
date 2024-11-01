@@ -59,6 +59,20 @@ fn no_rollback_node() {
 }
 
 #[test]
+#[should_panic = "unfinished nodes"]
+fn no_rollback_unfinished_node() {
+    let (second, res2) = with_builder(|builder| {
+        let checkpoint = builder.checkpoint();
+        builder.start_node(SyntaxKind(0));
+        builder.token(SyntaxKind(1), "hi");
+        builder.start_node_at(checkpoint, SyntaxKind(2));
+        builder.finish_node();
+        builder.finish_node();
+    });
+    println!("{}", second.debug(&res2, true));
+}
+
+#[test]
 fn simple() {
     let (first, res1) = with_builder(|builder| {
         builder.start_node(SyntaxKind(0));
@@ -131,6 +145,7 @@ fn unfinished_node() {
 }
 
 #[test]
+#[should_panic = "checkpoint no longer valid after reverting to an earlier checkpoint"]
 fn misuse() {
     let (first, res1) = with_builder(|builder| {
         builder.start_node(SyntaxKind(0));
@@ -154,7 +169,7 @@ fn misuse() {
 }
 
 #[test]
-#[should_panic = "checkpoint in the future"]
+#[should_panic = "did you already `revert_to`?"]
 fn misuse2() {
     with_builder(|builder| {
         builder.start_node(SyntaxKind(0));
@@ -199,5 +214,93 @@ fn misuse3() {
         builder.finish_node();
     });
 
+    assert_tree_eq((&first, &res1), (&second, &res2));
+}
+
+#[test]
+#[should_panic = "was `finish_node` called early or did you already `revert_to`"]
+fn misuse_combined() {
+    with_builder(|builder| {
+        builder.start_node(SyntaxKind(0));
+
+        // Take two snapshots across a node boundary, revert to the earlier one but then try to start a node at the
+        // later one.
+        let initial = builder.checkpoint();
+        builder.start_node(SyntaxKind(3));
+        builder.token(SyntaxKind(1), "hi");
+        let new = builder.checkpoint();
+        builder.token(SyntaxKind(2), "hello");
+        builder.revert_to(initial);
+        builder.start_node_at(new, SyntaxKind(4));
+
+        builder.finish_node();
+    });
+}
+
+#[test]
+#[should_panic = "reverting to an earlier checkpoint"]
+fn misuse_combined2() {
+    with_builder(|builder| {
+        builder.start_node(SyntaxKind(0));
+
+        // Take two snapshots with only tokens between them, revert to the earlier one but then try to start a node at
+        // the later one.
+        let initial = builder.checkpoint();
+        builder.token(SyntaxKind(1), "hi");
+        let new = builder.checkpoint();
+        builder.token(SyntaxKind(2), "hello");
+        builder.revert_to(initial);
+        builder.start_node_at(new, SyntaxKind(3));
+
+        builder.finish_node();
+    });
+}
+
+#[test]
+fn revert_then_start() {
+    let (first, res1) = with_builder(|builder| {
+        builder.start_node(SyntaxKind(0));
+        builder.start_node(SyntaxKind(3));
+        builder.token(SyntaxKind(2), "hello");
+        builder.finish_node();
+        builder.finish_node();
+    });
+    let (second, res2) = with_builder(|builder| {
+        builder.start_node(SyntaxKind(0));
+
+        // Take two snapshots with only tokens between them, revert to the earlier one but then try to start a node at
+        // the later one.
+        let initial = builder.checkpoint();
+        builder.token(SyntaxKind(1), "hi");
+        builder.revert_to(initial);
+        builder.start_node_at(initial, SyntaxKind(3));
+        builder.token(SyntaxKind(2), "hello");
+        builder.finish_node();
+
+        builder.finish_node();
+    });
+    assert_tree_eq((&first, &res1), (&second, &res2));
+}
+
+#[test]
+fn start_then_revert() {
+    let (first, res1) = with_builder(|builder| {
+        builder.start_node(SyntaxKind(0));
+        builder.token(SyntaxKind(2), "hello");
+        builder.finish_node();
+    });
+    let (second, res2) = with_builder(|builder| {
+        builder.start_node(SyntaxKind(0));
+
+        // Take two snapshots with only tokens between them, revert to the earlier one but then try to start a node at
+        // the later one.
+        let initial = builder.checkpoint();
+        builder.token(SyntaxKind(1), "hi");
+        builder.start_node_at(initial, SyntaxKind(3));
+        builder.revert_to(initial);
+        builder.token(SyntaxKind(2), "hello");
+
+        builder.finish_node();
+    });
     assert_tree_eq((&first, &res1), (&second, &res2));
 }
