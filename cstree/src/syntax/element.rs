@@ -103,7 +103,7 @@ impl<'a, S: Syntax, D> From<&'a SyntaxElement<S, D>> for SyntaxElementRef<'a, S,
     }
 }
 
-impl<'a, S: Syntax, D> SyntaxElementRef<'a, S, D> {
+impl<S: Syntax, D> SyntaxElementRef<'_, S, D> {
     /// Returns this element's [`Display`](fmt::Display) representation as a string.
     ///
     /// To avoid allocating for every element, see [`write_display`](type.SyntaxElementRef.html#method.write_display).

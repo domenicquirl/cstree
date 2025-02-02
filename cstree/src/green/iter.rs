@@ -65,7 +65,7 @@ impl<'a> Iterator for GreenNodeChildren<'a> {
     }
 }
 
-impl<'a> DoubleEndedIterator for GreenNodeChildren<'a> {
+impl DoubleEndedIterator for GreenNodeChildren<'_> {
     #[inline]
     fn next_back(&mut self) -> Option<Self::Item> {
         self.inner.next_back().map(PackedGreenElement::as_ref)

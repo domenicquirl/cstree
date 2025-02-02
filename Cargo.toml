@@ -16,7 +16,7 @@ authors = [
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/domenicquirl/cstree"
 readme = "README.md"
-rust-version = "1.71"
+rust-version = "1.84"
 
 [profile.release]
 debug = true
