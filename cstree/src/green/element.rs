@@ -4,8 +4,6 @@ use std::{fmt, hash, mem};
 // This MUST be size=1 such that pointer math actually advances the pointer.
 type ErasedPtr = *const u8;
 
-use sptr::Strict;
-
 use crate::{
     green::{GreenNode, GreenToken},
     text::TextSize,

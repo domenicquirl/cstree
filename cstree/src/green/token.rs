@@ -5,7 +5,6 @@ use crate::{
     text::TextSize,
     RawSyntaxKind,
 };
-use sptr::Strict;
 use triomphe::Arc;
 
 #[repr(align(2))] // to use 1 bit for pointer tagging. NB: this is an at-least annotation
