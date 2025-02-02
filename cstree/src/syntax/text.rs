@@ -258,8 +258,8 @@ impl<I: Resolver<TokenKey> + ?Sized, S: Syntax, D> PartialEq<SyntaxText<'_, '_, 
     }
 }
 
-impl<'n1, 'i1, 'n2, 'i2, I1, I2, S1, S2, D1, D2> PartialEq<SyntaxText<'n2, 'i2, I2, S2, D2>>
-    for SyntaxText<'n1, 'i1, I1, S1, D1>
+impl<I1, I2, S1, S2, D1, D2> PartialEq<SyntaxText<'_, '_, I2, S2, D2>>
+    for SyntaxText<'_, '_, I1, S1, D1>
 where
     S1: Syntax,
     S2: Syntax,

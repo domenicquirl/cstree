@@ -57,13 +57,13 @@ impl<'n> Iterator for Iter<'n> {
     }
 }
 
-impl<'n> ExactSizeIterator for Iter<'n> {
+impl ExactSizeIterator for Iter<'_> {
     #[inline(always)]
     fn len(&self) -> usize {
         self.green.len()
     }
 }
-impl<'n> FusedIterator for Iter<'n> {}
+impl FusedIterator for Iter<'_> {}
 
 /// An iterator over the child nodes of a [`SyntaxNode`].
 #[derive(Clone, Debug)]
@@ -109,13 +109,13 @@ impl<'n, S: Syntax, D> Iterator for SyntaxNodeChildren<'n, S, D> {
     }
 }
 
-impl<'n, S: Syntax, D> ExactSizeIterator for SyntaxNodeChildren<'n, S, D> {
+impl<S: Syntax, D> ExactSizeIterator for SyntaxNodeChildren<'_, S, D> {
     #[inline(always)]
     fn len(&self) -> usize {
         self.inner.len()
     }
 }
-impl<'n, S: Syntax, D> FusedIterator for SyntaxNodeChildren<'n, S, D> {}
+impl<S: Syntax, D> FusedIterator for SyntaxNodeChildren<'_, S, D> {}
 
 /// An iterator over the children of a [`SyntaxNode`].
 #[derive(Clone, Debug)]
@@ -159,10 +159,10 @@ impl<'n, S: Syntax, D> Iterator for SyntaxElementChildren<'n, S, D> {
     }
 }
 
-impl<'n, S: Syntax, D> ExactSizeIterator for SyntaxElementChildren<'n, S, D> {
+impl<S: Syntax, D> ExactSizeIterator for SyntaxElementChildren<'_, S, D> {
     #[inline(always)]
     fn len(&self) -> usize {
         self.inner.len()
     }
 }
-impl<'n, S: Syntax, D> FusedIterator for SyntaxElementChildren<'n, S, D> {}
+impl<S: Syntax, D> FusedIterator for SyntaxElementChildren<'_, S, D> {}
