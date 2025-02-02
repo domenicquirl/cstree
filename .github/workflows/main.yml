@@ -39,7 +39,7 @@ jobs:
 
     steps:
       # setup
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: hecrj/setup-rust-action@v1
         with:
           rust-version: ${{ matrix.rust }}
@@ -56,7 +56,7 @@ jobs:
         run: cargo test --doc --verbose --all-features
 
       # upload test results
-      - uses: actions/upload-artifact@v3  
+      - uses: actions/upload-artifact@v4  
         if: success() || failure()        # run this step even if previous step failed
         with:
           name: test-results-${{ matrix.rust }}-${{ matrix.os }}
@@ -66,7 +66,7 @@ jobs:
     name: Check
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: hecrj/setup-rust-action@v1
         with:
           rust-version: nightly
@@ -81,7 +81,7 @@ jobs:
       RUSTFLAGS: -Dwarnings
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: hecrj/setup-rust-action@v1
         with:
           components: clippy
@@ -92,7 +92,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: hecrj/setup-rust-action@v1
         with:
           rust-version: nightly
@@ -106,7 +106,7 @@ jobs:
       RUSTDOCFLAGS: -Dwarnings --cfg doc_cfg
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: hecrj/setup-rust-action@v1
         with:
           rust-version: nightly
@@ -122,7 +122,7 @@ jobs:
         os: [ubuntu-latest, windows-latest, macos-latest]
     
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: hecrj/setup-rust-action@v1
         with:
           rust-version: nightly
@@ -139,7 +139,7 @@ jobs:
       matrix:
         sanitizer: [address, memory, thread, leak]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: hecrj/setup-rust-action@v1
         with:
           rust-version: nightly
