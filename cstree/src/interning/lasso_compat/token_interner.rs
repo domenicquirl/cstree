@@ -82,6 +82,8 @@ pub use multi_threaded::MultiThreadedTokenInterner;
 mod multi_threaded {
     use super::*;
 
+    use std::sync::Arc as StdArc;
+
     /// A threadsafe [`Interner`] for deduplicating [`GreenToken`](crate::green::GreenToken) strings.
     ///
     /// Note that [`Interner`] and [`Resolver`] are also implemented for  `&MultiThreadTokenInterner` so you can pass
@@ -106,4 +108,5 @@ mod multi_threaded {
     impl_traits!(for MultiThreadedTokenInterner, if #[cfg(feature = "multi_threaded_interning")]);
 
     impl_traits!(for &MultiThreadedTokenInterner, if #[cfg(feature = "multi_threaded_interning")]);
+    impl_traits!(for StdArc<MultiThreadedTokenInterner>, if #[cfg(feature = "multi_threaded_interning")]);
 }
