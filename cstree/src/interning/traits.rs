@@ -1,6 +1,7 @@
 use core::fmt;
 
 use super::TokenKey;
+use std::sync::Arc as StdArc;
 
 /// Common interface for all intern keys via conversion to and from `u32`.
 ///
@@ -38,6 +39,37 @@ pub trait Resolver<Key: InternKey = TokenKey> {
     }
 }
 
+// Blanket [`Resolver`] implementations.
+impl<R: Resolver> Resolver for &R {
+    fn try_resolve(&self, key: TokenKey) -> Option<&str> {
+        (**self).try_resolve(key)
+    }
+
+    fn resolve(&self, key: TokenKey) -> &str {
+        (**self).resolve(key)
+    }
+}
+
+impl<R: Resolver> Resolver for &mut R {
+    fn try_resolve(&self, key: TokenKey) -> Option<&str> {
+        (**self).try_resolve(key)
+    }
+
+    fn resolve(&self, key: TokenKey) -> &str {
+        (**self).resolve(key)
+    }
+}
+
+impl<R: Resolver> Resolver for StdArc<R> {
+    fn try_resolve(&self, key: TokenKey) -> Option<&str> {
+        self.as_ref().try_resolve(key)
+    }
+
+    fn resolve(&self, key: TokenKey) -> &str {
+        self.as_ref().resolve(key)
+    }
+}
+
 /// A full interner, which can intern new strings returning intern keys and also resolve intern keys to the interned
 /// value.
 ///
@@ -63,5 +95,37 @@ pub trait Interner<Key: InternKey = TokenKey>: Resolver<Key> {
     fn get_or_intern(&mut self, text: &str) -> Key {
         self.try_get_or_intern(text)
             .unwrap_or_else(|_| panic!("failed to intern `{text:?}`"))
+    }
+}
+
+// Blanket [`Interner`] implementations.
+impl<I: Interner> Interner for &mut I {
+    type Error = I::Error;
+
+    fn try_get_or_intern(&mut self, text: &str) -> Result<TokenKey, Self::Error> {
+        (**self).try_get_or_intern(text)
+    }
+
+    fn get_or_intern(&mut self, text: &str) -> TokenKey {
+        (**self).get_or_intern(text)
+    }
+}
+
+impl<I: Resolver> Interner for StdArc<I>
+where
+    for<'a> &'a I: Interner,
+{
+    type Error = <&I as Interner>::Error;
+    //            ^^ how do we get a lifetime here?
+    // - for<'a> doesn't work.
+    // - 'a on impl<'a, I: Interner> doesn't work.
+    // - Can't do type Error<'a> as that is not the signature.
+
+    fn try_get_or_intern<'a>(&'a mut self, text: &str) -> Result<TokenKey, Self::Error> {
+        self.as_ref().try_get_or_intern(text)
+    }
+
+    fn get_or_intern(&mut self, text: &str) -> TokenKey {
+        self.as_ref().get_or_intern(text)
     }
 }
