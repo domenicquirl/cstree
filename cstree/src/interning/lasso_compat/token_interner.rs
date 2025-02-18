@@ -34,10 +34,10 @@ macro_rules! impl_traits {
 
         $(#[cfg_attr(doc_cfg, doc(cfg(feature = $feature)))])?
         impl Interner<TokenKey> for $interner {
-            type Error = lasso::LassoError;
+            type Error<'a> = lasso::LassoError;
 
             #[inline]
-            fn try_get_or_intern(&mut self, text: &str) -> Result<TokenKey, Self::Error> {
+            fn try_get_or_intern(&mut self, text: &str) -> Result<TokenKey, Self::Error<'_>> {
                 self.rodeo.try_get_or_intern(text)
             }
 

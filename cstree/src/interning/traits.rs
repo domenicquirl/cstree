@@ -81,12 +81,14 @@ pub trait Interner<Key: InternKey = TokenKey>: Resolver<Key> {
     /// Represents possible ways in which interning may fail.
     /// For example, this might be running out of fresh intern keys, or failure to allocate sufficient space for a new
     /// value.
-    type Error;
+    type Error<'a>
+    where
+        Self: 'a;
 
     /// Interns `text` and returns a new intern key for it.
     /// If `text` was already previously interned, it will not be used and the existing intern key for its value will be
     /// returned.
-    fn try_get_or_intern(&mut self, text: &str) -> Result<Key, Self::Error>;
+    fn try_get_or_intern(&mut self, text: &str) -> Result<Key, Self::Error<'_>>;
 
     /// Interns `text` and returns a new intern key for it.
     ///
@@ -100,9 +102,9 @@ pub trait Interner<Key: InternKey = TokenKey>: Resolver<Key> {
 
 // Blanket [`Interner`] implementations.
 impl<I: Interner> Interner for &mut I {
-    type Error = I::Error;
+    type Error<'a> = I::Error<'a> where Self: 'a;
 
-    fn try_get_or_intern(&mut self, text: &str) -> Result<TokenKey, Self::Error> {
+    fn try_get_or_intern(&mut self, text: &str) -> Result<TokenKey, Self::Error<'_>> {
         (**self).try_get_or_intern(text)
     }
 
@@ -113,16 +115,14 @@ impl<I: Interner> Interner for &mut I {
 
 impl<I: Resolver> Interner for StdArc<I>
 where
-    for<'a> &'a I: Interner,
+    for<'i> &'i I: Interner,
 {
-    type Error = <&I as Interner>::Error;
-    //            ^^ how do we get a lifetime here?
-    // - for<'a> doesn't work.
-    // - 'a on impl<'a, I: Interner> doesn't work.
-    // - Can't do type Error<'a> as that is not the signature.
+    type Error<'a> = <&'a I as Interner>::Error<'a> where Self: 'a;
 
-    fn try_get_or_intern<'a>(&'a mut self, text: &str) -> Result<TokenKey, Self::Error> {
-        self.as_ref().try_get_or_intern(text)
+    fn try_get_or_intern(&mut self, text: &str) -> Result<TokenKey, Self::Error<'_>> {
+        let mut inner = self.as_ref();
+        let result = inner.try_get_or_intern(text);
+        unsafe { core::mem::transmute::<_, Result<TokenKey, Self::Error<'_>>>(result) }
     }
 
     fn get_or_intern(&mut self, text: &str) -> TokenKey {

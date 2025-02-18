@@ -48,9 +48,9 @@ impl Resolver<TokenKey> for TokenInterner {
 const N_INDICES: usize = u32::MAX as usize;
 
 impl Interner<TokenKey> for TokenInterner {
-    type Error = InternerError;
+    type Error<'a> = InternerError;
 
-    fn try_get_or_intern(&mut self, text: &str) -> Result<TokenKey, Self::Error> {
+    fn try_get_or_intern(&mut self, text: &str) -> Result<TokenKey, Self::Error<'_>> {
         if let Some(index) = self.id_set.get_index_of(text) {
             let raw_key = u32::try_from(index).unwrap_or_else(|_| {
                 panic!("found interned text with invalid index `{index}` (index too high for keyspace)")

@@ -81,9 +81,9 @@ macro_rules! compat_interner {
             S: BuildHasher,
             $($($t: $bound),+)?
         {
-            type Error = LassoCompatError;
+            type Error<'a> = LassoCompatError where Self: 'a;
 
-            fn try_get_or_intern(&mut self, text: &str) -> Result<TokenKey, Self::Error> {
+            fn try_get_or_intern(&mut self, text: &str) -> Result<TokenKey, Self::Error<'_>> {
                 let lasso_key = <Self as lasso::Interner<K>>::try_get_or_intern(self, text)?;
                 let raw_key = K::into_usize(lasso_key);
                 u32::try_from(raw_key)
@@ -120,31 +120,14 @@ mod multi_threaded {
     compat_interner!(ThreadedRodeo<K, S> where K: Hash, S: Clone if #[cfg(feature = "multi_threaded_interning")]);
 
     #[cfg_attr(doc_cfg, doc(cfg(feature = "multi_threaded_interning")))]
-    impl<K, S> Resolver<TokenKey> for &lasso::ThreadedRodeo<K, S>
-    where
-        K: lasso::Key + Hash,
-        S: BuildHasher + Clone,
-    {
-        #[inline]
-        fn try_resolve(&self, key: TokenKey) -> Option<&str> {
-            <lasso::ThreadedRodeo<K, S> as Resolver<TokenKey>>::try_resolve(self, key)
-        }
-
-        #[inline]
-        fn resolve(&self, key: TokenKey) -> &str {
-            <lasso::ThreadedRodeo<K, S> as Resolver<TokenKey>>::resolve(self, key)
-        }
-    }
-
-    #[cfg_attr(doc_cfg, doc(cfg(feature = "multi_threaded_interning")))]
     impl<K, S> Interner<TokenKey> for &lasso::ThreadedRodeo<K, S>
     where
         K: lasso::Key + Hash,
         S: BuildHasher + Clone,
     {
-        type Error = <lasso::ThreadedRodeo<K, S> as Interner<TokenKey>>::Error;
+        type Error<'a> = <lasso::ThreadedRodeo<K, S> as Interner<TokenKey>>::Error<'a> where Self: 'a;
 
-        fn try_get_or_intern(&mut self, text: &str) -> Result<TokenKey, Self::Error> {
+        fn try_get_or_intern(&mut self, text: &str) -> Result<TokenKey, Self::Error<'_>> {
             let lasso_key = <Self as lasso::Interner<K>>::try_get_or_intern(self, text)?;
             let raw_key = K::into_usize(lasso_key);
             u32::try_from(raw_key)
