@@ -2,7 +2,7 @@
 
 #![cfg(feature = "lasso_compat")]
 
-use std::{hash::BuildHasher, num::NonZeroUsize};
+use std::{fmt, hash::BuildHasher, num::NonZeroUsize};
 
 use lasso::{Capacity, Rodeo, ThreadedRodeo};
 use rustc_hash::FxBuildHasher;
@@ -50,7 +50,6 @@ macro_rules! impl_traits {
 }
 
 /// The default [`Interner`] used to deduplicate green token strings.
-#[derive(Debug)]
 pub struct TokenInterner {
     rodeo: Rodeo<TokenKey, FxBuildHasher>,
 }
@@ -73,6 +72,12 @@ impl TokenInterner {
     }
 }
 
+impl fmt::Debug for TokenInterner {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("TokenInterner")
+    }
+}
+
 impl_traits!(for TokenInterner);
 
 #[cfg(feature = "multi_threaded_interning")]
@@ -87,7 +92,6 @@ mod multi_threaded {
     /// Note that [`Interner`] and [`Resolver`] are also implemented for  `&MultiThreadTokenInterner` so you can pass
     /// `&mut &interner` in shared contexts.
     #[cfg_attr(doc_cfg, doc(cfg(feature = "multi_threaded_interning")))]
-    #[derive(Debug)]
     pub struct MultiThreadedTokenInterner {
         rodeo: ThreadedRodeo<TokenKey, FxBuildHasher>,
     }
@@ -100,6 +104,12 @@ mod multi_threaded {
                     FxBuildHasher::default(),
                 ),
             }
+        }
+    }
+
+    impl fmt::Debug for MultiThreadedTokenInterner {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            f.write_str("MultiThreadedTokenInterner")
         }
     }
 
