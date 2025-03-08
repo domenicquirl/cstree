@@ -13,7 +13,7 @@ rust-version.workspace = true
 
 [dependencies]
 text-size   = "1.1.0"
-fxhash      = "0.2.1"
+rustc-hash  = "2.1.1"
 parking_lot = "0.12.1"
 
 # Arc
