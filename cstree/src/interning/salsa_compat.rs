@@ -54,8 +54,8 @@
 //! // Build a tree with the `salsa` interner
 //! let db = Database::default();
 //! let interner = db.as_interner(); // <-- conversion happens here
-//! let mut shared_interner = &interner;
-//! let mut builder: GreenNodeBuilder<MySyntax, _> = GreenNodeBuilder::with_interner(&mut shared_interner);
+//! let mut shared_interner = Arc::new(interner);
+//! let mut builder: GreenNodeBuilder<MySyntax, _> = GreenNodeBuilder::with_interner(Arc::clone(shared_interner));
 //! let (tree, _no_interner_because_it_was_borrowed) = {
 //!     builder.start_node(TestSyntaxKind::Plus);
 //!     builder.token(TestSyntaxKind::Float, "2.05");
