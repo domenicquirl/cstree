@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+ * Implemented `Resolver` and `Interner` for `Arc<T>` where `T` implements either one of these traits.
+
 ## `v0.12.2`
 
  * `Checkpoint`s for the `GreenNodeBuilder` can now be used across node boundaries, meaning you can use them to wrap (finished) nodes in addition to just tokens. 

@@ -69,24 +69,25 @@ shared access. With the `multi_threaded_interning` feature, you can get such an 
 [`new_threaded_interner`]. The feature also enables support for `ThreadedRodeo`, the multi-threaded interner from
 `lasso`.
 
-**You can pass a reference to that interner to anything that expects an [`Interner`]!**
+**You can pass a reference or an Arc to that interner to anything that expects an [`Interner`]!**
 While the interning methods on [`Interner`] require a `&mut self` to also work for single-threaded interners, both
-[`Resolver`] and [`Interner`] will be implemented for `&interner` if `interner` is multi-threaded:
+[`Resolver`] and [`Interner`] will be implemented for `&interner` and `Arc::new(interner)` if `interner` is multi-threaded:
 
 ```
 # use cstree::testing::*;
 # use cstree::interning::*;
+# use std::sync::Arc;
 let interner = new_threaded_interner();
-let mut builder: GreenNodeBuilder<MySyntax, &MultiThreadedTokenInterner> =
-    GreenNodeBuilder::from_interner(&interner);
+let mut builder: GreenNodeBuilder<MySyntax, Arc<MultiThreadedTokenInterner>> =
+    GreenNodeBuilder::from_interner(Arc::clone(interner));
+// or:
+// let mut builder: GreenNodeBuilder<MySyntax, &MultiThreadedTokenInterner> =
+//     GreenNodeBuilder::from_interner(&interner);
 # builder.start_node(Root);
 # builder.token(Int, "42");
 # builder.finish_node();
 parse(&mut builder, "42");
 let (tree, cache) = builder.finish();
-// Note that we get a cache and interner back, because we passed an "owned" reference to `from_interner`
-let used_interner = cache.unwrap().into_interner().unwrap();
-assert_eq!(used_interner as *const _, &interner as *const _);
 let int = tree.children().next().unwrap();
 assert_eq!(int.as_token().unwrap().text(&interner), Some("42"));
 ```
@@ -177,8 +178,9 @@ pub fn new_interner() -> TokenInterner {
 
 /// Constructs a new [`Interner`] that can be used across multiple threads.
 ///
-/// Note that you can use `&MultiThreadTokenInterner` to access interning methods through a shared reference, as well as
-/// construct new syntax trees. See [the module documentation](self) for more information and examples.
+/// Note that you can use `&MultiThreadedTokenInterner` and `Arc<MultiThreadTokenInterner>` to access interning methods
+/// through a shared reference, as well as construct new syntax trees. See [the module documentation](self) for more
+/// information and examples.
 #[cfg(feature = "multi_threaded_interning")]
 #[cfg_attr(doc_cfg, doc(cfg(feature = "multi_threaded_interning")))]
 #[inline]

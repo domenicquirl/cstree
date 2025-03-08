@@ -120,23 +120,6 @@ mod multi_threaded {
     compat_interner!(ThreadedRodeo<K, S> where K: Hash, S: Clone if #[cfg(feature = "multi_threaded_interning")]);
 
     #[cfg_attr(doc_cfg, doc(cfg(feature = "multi_threaded_interning")))]
-    impl<K, S> Resolver<TokenKey> for &lasso::ThreadedRodeo<K, S>
-    where
-        K: lasso::Key + Hash,
-        S: BuildHasher + Clone,
-    {
-        #[inline]
-        fn try_resolve(&self, key: TokenKey) -> Option<&str> {
-            <lasso::ThreadedRodeo<K, S> as Resolver<TokenKey>>::try_resolve(self, key)
-        }
-
-        #[inline]
-        fn resolve(&self, key: TokenKey) -> &str {
-            <lasso::ThreadedRodeo<K, S> as Resolver<TokenKey>>::resolve(self, key)
-        }
-    }
-
-    #[cfg_attr(doc_cfg, doc(cfg(feature = "multi_threaded_interning")))]
     impl<K, S> Interner<TokenKey> for &lasso::ThreadedRodeo<K, S>
     where
         K: lasso::Key + Hash,
