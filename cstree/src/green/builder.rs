@@ -1,6 +1,6 @@
 use std::hash::{Hash, Hasher};
 
-use fxhash::{FxHashMap, FxHasher32};
+use rustc_hash::{FxHashMap, FxHasher};
 use text_size::TextSize;
 
 use crate::{
@@ -180,7 +180,7 @@ where
     fn node<S: Syntax>(&mut self, kind: S, all_children: &mut Vec<GreenElement>, offset: usize) -> GreenNode {
         // NOTE: this fn must remove all children starting at `first_child` from `all_children` before returning
         let kind = S::into_raw(kind);
-        let mut hasher = FxHasher32::default();
+        let mut hasher = FxHasher::default();
         let mut text_len: TextSize = 0.into();
         for child in &all_children[offset..] {
             text_len += child.text_len();

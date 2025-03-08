@@ -4,8 +4,8 @@
 
 use std::{hash::BuildHasher, num::NonZeroUsize};
 
-use fxhash::FxBuildHasher as Hasher;
 use lasso::{Capacity, Rodeo, ThreadedRodeo};
+use rustc_hash::FxBuildHasher;
 
 use crate::interning::{Interner, Resolver, TokenKey};
 
@@ -52,7 +52,7 @@ macro_rules! impl_traits {
 /// The default [`Interner`] used to deduplicate green token strings.
 #[derive(Debug)]
 pub struct TokenInterner {
-    rodeo: Rodeo<TokenKey, Hasher>,
+    rodeo: Rodeo<TokenKey, FxBuildHasher>,
 }
 
 impl TokenInterner {
@@ -60,7 +60,7 @@ impl TokenInterner {
         Self {
             rodeo: Rodeo::with_capacity_and_hasher(
                 Capacity::new(DEFAULT_STRING_CAPACITY, DEFAULT_BYTE_CAPACITY),
-                Hasher::default(),
+                FxBuildHasher::default(),
             ),
         }
     }
@@ -89,7 +89,7 @@ mod multi_threaded {
     #[cfg_attr(doc_cfg, doc(cfg(feature = "multi_threaded_interning")))]
     #[derive(Debug)]
     pub struct MultiThreadedTokenInterner {
-        rodeo: ThreadedRodeo<TokenKey, Hasher>,
+        rodeo: ThreadedRodeo<TokenKey, FxBuildHasher>,
     }
 
     impl MultiThreadedTokenInterner {
@@ -97,7 +97,7 @@ mod multi_threaded {
             Self {
                 rodeo: ThreadedRodeo::with_capacity_and_hasher(
                     Capacity::new(DEFAULT_STRING_CAPACITY, DEFAULT_BYTE_CAPACITY),
-                    Hasher::default(),
+                    FxBuildHasher::default(),
                 ),
             }
         }
