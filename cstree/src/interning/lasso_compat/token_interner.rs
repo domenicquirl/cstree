@@ -86,8 +86,8 @@ mod multi_threaded {
 
     /// A threadsafe [`Interner`] for deduplicating [`GreenToken`](crate::green::GreenToken) strings.
     ///
-    /// Note that [`Interner`] and [`Resolver`] are also implemented for `Arc<MultiThreadTokenInterner>` so you can pass
-    /// `&mut Arc::clone(interner)` in shared contexts.
+    /// Note that [`Interner`] and [`Resolver`] are also implemented for `&MultiThreadTokenInterner` and 
+    /// `Arc<MultiThreadTokenInterner>` so you can pass a mutable reference to either of these in shared contexts.
     #[cfg_attr(doc_cfg, doc(cfg(feature = "multi_threaded_interning")))]
     #[derive(Debug)]
     pub struct MultiThreadedTokenInterner {
