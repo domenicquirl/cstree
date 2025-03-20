@@ -101,7 +101,7 @@ mod multi_threaded {
             Self {
                 rodeo: ThreadedRodeo::with_capacity_and_hasher(
                     Capacity::new(DEFAULT_STRING_CAPACITY, DEFAULT_BYTE_CAPACITY),
-                    FxBuildHasher::default(),
+                    FxBuildHasher,
                 ),
             }
         }
