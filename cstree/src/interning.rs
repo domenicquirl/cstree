@@ -77,12 +77,15 @@ While the interning methods on [`Interner`] require a `&mut self` to also work f
 # use cstree::testing::*;
 # use cstree::interning::*;
 # use std::sync::Arc;
-let interner = new_threaded_interner();
+let interner = Arc::new(new_threaded_interner());
 let mut builder: GreenNodeBuilder<MySyntax, Arc<MultiThreadedTokenInterner>> =
-    GreenNodeBuilder::from_interner(Arc::clone(interner));
+    GreenNodeBuilder::from_interner(Arc::clone(&interner));
+
 // or:
+// let interner = new_threaded_interner();
 // let mut builder: GreenNodeBuilder<MySyntax, &MultiThreadedTokenInterner> =
 //     GreenNodeBuilder::from_interner(&interner);
+
 # builder.start_node(Root);
 # builder.token(Int, "42");
 # builder.finish_node();
