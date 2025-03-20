@@ -2,10 +2,10 @@
 
 #![cfg(feature = "lasso_compat")]
 
-use std::{hash::BuildHasher, num::NonZeroUsize};
+use std::{fmt, hash::BuildHasher, num::NonZeroUsize};
 
-use fxhash::FxBuildHasher as Hasher;
 use lasso::{Capacity, Rodeo, ThreadedRodeo};
+use rustc_hash::FxBuildHasher;
 
 use crate::interning::{Interner, Resolver, TokenKey};
 
@@ -50,9 +50,8 @@ macro_rules! impl_traits {
 }
 
 /// The default [`Interner`] used to deduplicate green token strings.
-#[derive(Debug)]
 pub struct TokenInterner {
-    rodeo: Rodeo<TokenKey, Hasher>,
+    rodeo: Rodeo<TokenKey, FxBuildHasher>,
 }
 
 impl TokenInterner {
@@ -60,7 +59,7 @@ impl TokenInterner {
         Self {
             rodeo: Rodeo::with_capacity_and_hasher(
                 Capacity::new(DEFAULT_STRING_CAPACITY, DEFAULT_BYTE_CAPACITY),
-                Hasher::default(),
+                FxBuildHasher,
             ),
         }
     }
@@ -70,6 +69,12 @@ impl TokenInterner {
     #[inline]
     pub fn into_inner(self) -> Rodeo<TokenKey, impl BuildHasher> {
         self.rodeo
+    }
+}
+
+impl fmt::Debug for TokenInterner {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("TokenInterner")
     }
 }
 
@@ -87,9 +92,8 @@ mod multi_threaded {
     /// Note that [`Interner`] and [`Resolver`] are also implemented for  `&MultiThreadTokenInterner` so you can pass
     /// `&mut &interner` in shared contexts.
     #[cfg_attr(doc_cfg, doc(cfg(feature = "multi_threaded_interning")))]
-    #[derive(Debug)]
     pub struct MultiThreadedTokenInterner {
-        rodeo: ThreadedRodeo<TokenKey, Hasher>,
+        rodeo: ThreadedRodeo<TokenKey, FxBuildHasher>,
     }
 
     impl MultiThreadedTokenInterner {
@@ -97,9 +101,15 @@ mod multi_threaded {
             Self {
                 rodeo: ThreadedRodeo::with_capacity_and_hasher(
                     Capacity::new(DEFAULT_STRING_CAPACITY, DEFAULT_BYTE_CAPACITY),
-                    Hasher::default(),
+                    FxBuildHasher,
                 ),
             }
+        }
+    }
+
+    impl fmt::Debug for MultiThreadedTokenInterner {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            f.write_str("MultiThreadedTokenInterner")
         }
     }
 

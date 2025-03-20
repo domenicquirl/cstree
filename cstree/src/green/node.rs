@@ -3,7 +3,7 @@ use std::{
     slice,
 };
 
-use fxhash::FxHasher32;
+use rustc_hash::FxHasher;
 
 use crate::{
     green::{iter::GreenNodeChildren, GreenElement, PackedGreenElement},
@@ -41,7 +41,7 @@ impl GreenNode {
         I: IntoIterator<Item = GreenElement>,
         I::IntoIter: ExactSizeIterator,
     {
-        let mut hasher = FxHasher32::default();
+        let mut hasher = FxHasher::default();
         let mut text_len: TextSize = 0.into();
         let children = children
             .into_iter()
