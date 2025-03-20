@@ -1,6 +1,7 @@
 #![cfg(not(feature = "lasso_compat"))]
 
 use core::fmt;
+use std::sync::Arc as StdArc;
 
 use indexmap::IndexSet;
 use rustc_hash::FxBuildHasher;
@@ -37,6 +38,13 @@ impl fmt::Display for InternerError {
 impl std::error::Error for InternerError {}
 
 impl Resolver<TokenKey> for TokenInterner {
+    fn try_resolve(&self, key: TokenKey) -> Option<&str> {
+        let index = key.into_u32() as usize;
+        self.id_set.get_index(index).map(String::as_str)
+    }
+}
+
+impl Resolver<TokenKey> for StdArc<TokenInterner> {
     fn try_resolve(&self, key: TokenKey) -> Option<&str> {
         let index = key.into_u32() as usize;
         self.id_set.get_index(index).map(String::as_str)

@@ -38,13 +38,33 @@ pub trait Resolver<Key: InternKey = TokenKey> {
     }
 }
 
+impl<R: Resolver> Resolver for &R {
+    fn try_resolve(&self, key: TokenKey) -> Option<&str> {
+        (**self).try_resolve(key)
+    }
+
+    fn resolve(&self, key: TokenKey) -> &str {
+        (**self).resolve(key)
+    }
+}
+
+impl<R: Resolver> Resolver for &mut R {
+    fn try_resolve(&self, key: TokenKey) -> Option<&str> {
+        (**self).try_resolve(key)
+    }
+
+    fn resolve(&self, key: TokenKey) -> &str {
+        (**self).resolve(key)
+    }
+}
+
 /// A full interner, which can intern new strings returning intern keys and also resolve intern keys to the interned
 /// value.
 ///
 /// **Note:** Because single-threaded interners may require mutable access, the methods on this trait take `&mut self`.
 /// In order to use a multi- (or single)-threaded interner that allows access through a shared reference, it is
-/// implemented for `&`[`MultiThreadedTokenInterner`](crate::interning::MultiThreadedTokenInterner), allowing it to be
-/// used with a `&mut &MultiThreadTokenInterner`.
+/// implemented for `&MultiThreadedTokenInterner` and `Arc<MultiThreadedTokenInterner>`, allowing it
+/// to be used with a `&mut &MultiThreadedTokenInterner` and `&mut Arc<MultiThreadTokenInterner>`.
 pub trait Interner<Key: InternKey = TokenKey>: Resolver<Key> {
     /// Represents possible ways in which interning may fail.
     /// For example, this might be running out of fresh intern keys, or failure to allocate sufficient space for a new
@@ -63,5 +83,17 @@ pub trait Interner<Key: InternKey = TokenKey>: Resolver<Key> {
     fn get_or_intern(&mut self, text: &str) -> Key {
         self.try_get_or_intern(text)
             .unwrap_or_else(|_| panic!("failed to intern `{text:?}`"))
+    }
+}
+
+impl<I: Interner> Interner for &mut I {
+    type Error = I::Error;
+
+    fn try_get_or_intern(&mut self, text: &str) -> Result<TokenKey, Self::Error> {
+        (**self).try_get_or_intern(text)
+    }
+
+    fn get_or_intern(&mut self, text: &str) -> TokenKey {
+        (**self).get_or_intern(text)
     }
 }

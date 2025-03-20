@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+ * `&I` and `&mut I` will now implement `Resolver` if `I` implements `Resolver`.
+ * `&mut I` will now implement `Interner` if `I` implements `Interner`.
+ * Added an implementation for `Arc<MultiThreadedTokenInterner>` to implement `Resolver` and `Interner` so an `Arc` may be used alternatively to a reference to share access to the interner.
+
 ## `v0.12.2`
 
  * `Checkpoint`s for the `GreenNodeBuilder` can now be used across node boundaries, meaning you can use them to wrap (finished) nodes in addition to just tokens. 
