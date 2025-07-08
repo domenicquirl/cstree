@@ -392,7 +392,7 @@ nan
     let root = parse.root();
     let resolver = &parse.resolver;
     let res = root.sexps().map(|it| it.eval(resolver)).collect::<Vec<_>>();
-    eprintln!("{:?}", res);
+    eprintln!("{res:?}");
     assert_eq!(res, vec![Some(92), Some(92), None, None, Some(92),])
 }
 

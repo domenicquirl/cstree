@@ -58,13 +58,13 @@ impl<S: Syntax, D> SyntaxToken<S, D> {
         write!(target, "{:?}@{:?}", self.kind(), self.text_range())?;
         let text = self.resolve_text(resolver);
         if text.len() < 25 {
-            return write!(target, " {:?}", text);
+            return write!(target, " {text:?}");
         }
 
         for idx in 21..25 {
             if text.is_char_boundary(idx) {
                 let text = format!("{} ...", &text[..idx]);
-                return write!(target, " {:?}", text);
+                return write!(target, " {text:?}");
             }
         }
         unreachable!()

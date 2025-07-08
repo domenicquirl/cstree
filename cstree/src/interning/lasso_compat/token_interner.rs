@@ -15,7 +15,7 @@ const DEFAULT_STRING_CAPACITY: usize = 512;
 
 /// Default memory in bytes that the interner will initially allocate space for.
 /// Value recommended by the author of `lasso`.
-const DEFAULT_BYTE_CAPACITY: NonZeroUsize = unsafe { NonZeroUsize::new_unchecked(4096) };
+const DEFAULT_BYTE_CAPACITY: NonZeroUsize = NonZeroUsize::new(4096).unwrap();
 
 macro_rules! impl_traits {
     (for $interner:ty $(, if #[cfg(feature = $feature:literal)])?) => {
