@@ -40,12 +40,19 @@ use crate::{
 /// let sub = text.slice(2.into()..5.into());
 /// assert_eq!(sub, "748");
 /// ```
-#[derive(Clone)]
 pub struct SyntaxText<'n, 'i, I: ?Sized, S: Syntax, D: 'static = ()> {
     node:     &'n SyntaxNode<S, D>,
     range:    TextRange,
     resolver: &'i I,
 }
+
+impl<I: ?Sized, S: Syntax, D> Clone for SyntaxText<'_, '_, I, S, D> {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+
+impl<I: ?Sized, S: Syntax, D> Copy for SyntaxText<'_, '_, I, S, D> {}
 
 impl<'n, 'i, I: Resolver<TokenKey> + ?Sized, S: Syntax, D> SyntaxText<'n, 'i, I, S, D> {
     pub(crate) fn new(node: &'n SyntaxNode<S, D>, resolver: &'i I) -> Self {
@@ -378,7 +385,7 @@ mod private {
 
 #[cfg(test)]
 mod tests {
-    use crate::{build::GreenNodeBuilder, RawSyntaxKind};
+    use crate::{build::GreenNodeBuilder, interning::TokenInterner, RawSyntaxKind};
 
     use super::*;
 
@@ -449,5 +456,18 @@ mod tests {
         check(&["{", "abc", "}", "{"], &["{", "123", "}"]);
         check(&["{", "abc", "}"], &["{", "123", "}", "{"]);
         check(&["{", "abc", "}ab"], &["{", "abc", "}", "ab"]);
+    }
+
+    #[allow(dead_code)]
+    mod impl_asserts {
+        use super::*;
+
+        struct NotClone;
+
+        fn assert_copy<C: Copy>() {}
+
+        fn test_impls_copy() {
+            assert_copy::<SyntaxText<TokenInterner, SyntaxKind, NotClone>>();
+        }
     }
 }
