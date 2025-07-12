@@ -66,10 +66,19 @@ impl ExactSizeIterator for Iter<'_> {
 impl FusedIterator for Iter<'_> {}
 
 /// An iterator over the child nodes of a [`SyntaxNode`].
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct SyntaxNodeChildren<'n, S: Syntax, D: 'static = ()> {
     inner:  Iter<'n>,
     parent: &'n SyntaxNode<S, D>,
+}
+
+impl<S: Syntax, D> Clone for SyntaxNodeChildren<'_, S, D> {
+    fn clone(&self) -> Self {
+        Self {
+            inner:  self.inner.clone(),
+            parent: self.parent,
+        }
+    }
 }
 
 impl<'n, S: Syntax, D> SyntaxNodeChildren<'n, S, D> {
@@ -118,10 +127,19 @@ impl<S: Syntax, D> ExactSizeIterator for SyntaxNodeChildren<'_, S, D> {
 impl<S: Syntax, D> FusedIterator for SyntaxNodeChildren<'_, S, D> {}
 
 /// An iterator over the children of a [`SyntaxNode`].
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct SyntaxElementChildren<'n, S: Syntax, D: 'static = ()> {
     inner:  Iter<'n>,
     parent: &'n SyntaxNode<S, D>,
+}
+
+impl<S: Syntax, D> Clone for SyntaxElementChildren<'_, S, D> {
+    fn clone(&self) -> Self {
+        Self {
+            inner:  self.inner.clone(),
+            parent: self.parent,
+        }
+    }
 }
 
 impl<'n, S: Syntax, D> SyntaxElementChildren<'n, S, D> {
@@ -166,3 +184,35 @@ impl<S: Syntax, D> ExactSizeIterator for SyntaxElementChildren<'_, S, D> {
     }
 }
 impl<S: Syntax, D> FusedIterator for SyntaxElementChildren<'_, S, D> {}
+
+#[cfg(test)]
+#[allow(dead_code)]
+mod tests {
+    use super::*;
+
+    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    struct DummyKind;
+
+    impl Syntax for DummyKind {
+        fn from_raw(_: crate::RawSyntaxKind) -> Self {
+            unreachable!()
+        }
+
+        fn into_raw(self) -> crate::RawSyntaxKind {
+            unreachable!()
+        }
+
+        fn static_text(self) -> Option<&'static str> {
+            unreachable!()
+        }
+    }
+
+    struct NotClone;
+
+    fn assert_clone<C: Clone>() {}
+
+    fn test_impls_clone() {
+        assert_clone::<SyntaxNodeChildren<DummyKind, NotClone>>();
+        assert_clone::<SyntaxElementChildren<DummyKind, NotClone>>();
+    }
+}
