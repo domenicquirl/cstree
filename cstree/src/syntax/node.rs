@@ -851,9 +851,7 @@ impl<S: Syntax, D> SyntaxNode<S, D> {
         let range = self.text_range();
         assert!(
             range.start() <= offset && offset <= range.end(),
-            "Bad offset: range {:?} offset {:?}",
-            range,
-            offset
+            "Bad offset: range {range:?} offset {offset:?}"
         );
         if range.is_empty() {
             return TokenAtOffset::None;
@@ -940,7 +938,7 @@ impl GreenNode {
         &self,
         start_index: usize,
         mut offset: TextSize,
-    ) -> impl Iterator<Item = (GreenElementRef, (usize, TextSize))> {
+    ) -> impl Iterator<Item = (GreenElementRef<'_>, (usize, TextSize))> {
         self.children()
             .skip(start_index)
             .enumerate()
@@ -956,7 +954,7 @@ impl GreenNode {
         &self,
         end_index: usize,
         mut offset: TextSize,
-    ) -> impl Iterator<Item = (GreenElementRef, (usize, TextSize))> {
+    ) -> impl Iterator<Item = (GreenElementRef<'_>, (usize, TextSize))> {
         self.children()
             .take(end_index)
             .rev()

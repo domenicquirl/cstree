@@ -201,11 +201,9 @@ impl<'n, 'i, I: Resolver<TokenKey> + ?Sized, S: Syntax, D> SyntaxText<'n, 'i, I,
     }
 }
 
+#[inline]
 fn found<T>(res: Result<(), T>) -> Option<T> {
-    match res {
-        Ok(()) => None,
-        Err(it) => Some(it),
-    }
+    res.err()
 }
 
 impl<I: Resolver<TokenKey> + ?Sized, S: Syntax, D> fmt::Debug for SyntaxText<'_, '_, I, S, D> {
@@ -429,9 +427,9 @@ mod tests {
             let t2 = t2.resolve_text(&resolver);
             let expected = t1.to_string() == t2.to_string();
             let actual = t1 == t2;
-            assert_eq!(expected, actual, "`{}` (SyntaxText) `{}` (SyntaxText)", t1, t2);
+            assert_eq!(expected, actual, "`{t1}` (SyntaxText) `{t2}` (SyntaxText)");
             let actual = t1 == t2.to_string().as_str();
-            assert_eq!(expected, actual, "`{}` (SyntaxText) `{}` (&str)", t1, t2);
+            assert_eq!(expected, actual, "`{t1}` (SyntaxText) `{t2}` (&str)");
         }
         fn check(t1: &[&str], t2: &[&str]) {
             do_check(t1, t2);

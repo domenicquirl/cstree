@@ -114,7 +114,7 @@ fn print(indent: usize, element: SyntaxElementRef<'_>, resolver: &impl Resolver)
     print!("{:indent$}", "", indent = indent);
     match element {
         NodeOrToken::Node(node) => {
-            println!("- {:?}", kind);
+            println!("- {kind:?}");
             for child in node.children_with_tokens() {
                 print(indent + 2, child, resolver);
             }
