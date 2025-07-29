@@ -1,4 +1,6 @@
-use criterion::{Criterion, Throughput, black_box, criterion_group, criterion_main};
+use core::hint::black_box;
+
+use criterion::{Criterion, Throughput, criterion_group, criterion_main};
 use cstree::{
     RawSyntaxKind,
     Syntax,

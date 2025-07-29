@@ -49,7 +49,7 @@ m_lexer         = "0.0.4"
 serde_json      = "1.0"
 serde_test      = "1.0"
 crossbeam-utils = "0.8.21"
-criterion       = { version = "0.5.1", features = ["html_reports"] }
+criterion       = { version = "0.7.0", features = ["html_reports"] }
 
 [[bench]]
 name    = "main"
