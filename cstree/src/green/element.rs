@@ -5,10 +5,10 @@ use std::{fmt, hash, mem};
 type ErasedPtr = *const u8;
 
 use crate::{
+    RawSyntaxKind,
     green::{GreenNode, GreenToken},
     text::TextSize,
     util::NodeOrToken,
-    RawSyntaxKind,
 };
 
 pub(super) type GreenElement = NodeOrToken<GreenNode, GreenToken>;

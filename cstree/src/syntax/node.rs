@@ -2,12 +2,13 @@ use super::*;
 #[cfg(feature = "serialize")]
 use crate::serde_impls::{SerializeWithData, SerializeWithResolver};
 use crate::{
+    RawSyntaxKind,
+    Syntax,
     green::{GreenElementRef, GreenNode},
     interning::{Resolver, TokenKey},
     text::*,
     traversal::*,
     util::*,
-    RawSyntaxKind, Syntax,
 };
 use parking_lot::RwLock;
 use std::{
@@ -17,8 +18,8 @@ use std::{
     iter,
     ptr::{self, NonNull},
     sync::{
-        atomic::{AtomicU32, Ordering},
         Arc as StdArc,
+        atomic::{AtomicU32, Ordering},
     },
 };
 use triomphe::Arc;

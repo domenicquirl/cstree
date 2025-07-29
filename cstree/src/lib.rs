@@ -135,10 +135,11 @@ pub mod build {
 /// A convenient collection of the most used parts of `cstree`.
 pub mod prelude {
     pub use crate::{
+        RawSyntaxKind,
+        Syntax,
         build::GreenNodeBuilder,
         green::{GreenNode, GreenToken},
         syntax::{SyntaxElement, SyntaxNode, SyntaxToken},
-        RawSyntaxKind, Syntax,
     };
 }
 

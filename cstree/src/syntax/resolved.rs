@@ -13,12 +13,13 @@ use std::{
 use text_size::{TextRange, TextSize};
 
 use crate::{
+    RawSyntaxKind,
+    Syntax,
     green::GreenNode,
     interning::{Resolver, TokenKey},
     syntax::*,
     traversal::*,
     util::*,
-    RawSyntaxKind, Syntax,
 };
 
 /// Syntax tree node that is guaranteed to belong to a tree that contains an associated
@@ -35,7 +36,7 @@ impl<S: Syntax, D> ResolvedNode<S, D> {
     /// # Safety:
     /// `syntax` must belong to a tree that contains an associated inline resolver.
     pub(super) unsafe fn coerce_ref(syntax: &SyntaxNode<S, D>) -> &Self {
-        &*(syntax as *const _ as *const Self)
+        unsafe { &*(syntax as *const _ as *const Self) }
     }
 
     /// Returns this node as a [`SyntaxNode`].
@@ -91,7 +92,7 @@ impl<S: Syntax, D> ResolvedToken<S, D> {
     /// # Safety:
     /// `syntax` must belong to a tree that contains an associated inline resolver.
     pub(super) unsafe fn coerce_ref(syntax: &SyntaxToken<S, D>) -> &Self {
-        &*(syntax as *const _ as *const Self)
+        unsafe { &*(syntax as *const _ as *const Self) }
     }
 
     /// Returns this token as a [`SyntaxToken`].
@@ -172,9 +173,11 @@ impl<'a, S: Syntax, D> ResolvedElementRef<'a, S, D> {
     /// # Safety:
     /// `syntax` must belong to a tree that contains an associated inline resolver.
     pub(super) unsafe fn coerce_ref(syntax: SyntaxElementRef<'a, S, D>) -> Self {
-        match syntax {
-            NodeOrToken::Node(node) => Self::Node(ResolvedNode::coerce_ref(node)),
-            NodeOrToken::Token(token) => Self::Token(ResolvedToken::coerce_ref(token)),
+        unsafe {
+            match syntax {
+                NodeOrToken::Node(node) => Self::Node(ResolvedNode::coerce_ref(node)),
+                NodeOrToken::Token(token) => Self::Token(ResolvedToken::coerce_ref(token)),
+            }
         }
     }
 }

@@ -1,12 +1,12 @@
 use super::*;
 use cstree::{
-    build::{GreenNodeBuilder, NodeCache},
-    interning::{new_interner, Resolver},
-    text::TextRange,
     RawSyntaxKind,
+    build::{GreenNodeBuilder, NodeCache},
+    interning::{Resolver, new_interner},
+    text::TextRange,
 };
 
-fn build_tree<D>(root: &Element<'_>) -> (SyntaxNode<D>, impl Resolver) {
+fn build_tree<D>(root: &Element<'_>) -> (SyntaxNode<D>, impl Resolver + use<D>) {
     let mut builder: GreenNodeBuilder<SyntaxKind> = GreenNodeBuilder::new();
     build_recursive(root, &mut builder, 0);
     let (node, cache) = builder.finish();

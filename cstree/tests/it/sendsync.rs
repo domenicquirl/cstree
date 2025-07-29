@@ -3,13 +3,13 @@
 use crossbeam_utils::thread::scope;
 use std::{thread, time::Duration};
 
-use super::{build_recursive, Element, ResolvedNode, SyntaxKind, SyntaxNode};
+use super::{Element, ResolvedNode, SyntaxKind, SyntaxNode, build_recursive};
 use cstree::build::GreenNodeBuilder;
 
 // Excercise the multi-threaded interner when the corresponding feature is enabled.
 
 #[cfg(feature = "multi_threaded_interning")]
-use cstree::interning::{new_threaded_interner, MultiThreadedTokenInterner};
+use cstree::interning::{MultiThreadedTokenInterner, new_threaded_interner};
 
 #[cfg(not(feature = "multi_threaded_interning"))]
 fn get_builder() -> GreenNodeBuilder<'static, 'static, SyntaxKind> {

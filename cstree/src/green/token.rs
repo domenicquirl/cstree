@@ -1,9 +1,9 @@
 use std::{fmt, hash, mem::ManuallyDrop, ptr::NonNull};
 
 use crate::{
+    RawSyntaxKind,
     interning::{Resolver, TokenKey},
     text::TextSize,
-    RawSyntaxKind,
 };
 use triomphe::Arc;
 

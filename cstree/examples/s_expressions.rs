@@ -62,7 +62,7 @@ struct Parse<I> {
 /// Now, let's write a parser.
 /// Note that `parse` does not return a `Result`:
 /// By design, syntax trees can be built even for completely invalid source code.
-fn parse(text: &str) -> Parse<impl Resolver> {
+fn parse(text: &str) -> Parse<impl Resolver + use<>> {
     struct Parser<'input> {
         /// input tokens, including whitespace.
         tokens:  VecDeque<(SyntaxKind, &'input str)>,
@@ -83,7 +83,7 @@ fn parse(text: &str) -> Parse<impl Resolver> {
     }
 
     impl Parser<'_> {
-        fn parse(mut self) -> Parse<impl Resolver> {
+        fn parse(mut self) -> Parse<impl Resolver + use<>> {
             // Make sure that the root node covers all source
             self.builder.start_node(Root);
             // Parse zero or more S-expressions

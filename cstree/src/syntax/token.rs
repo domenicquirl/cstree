@@ -9,10 +9,11 @@ use text_size::{TextRange, TextSize};
 
 use super::*;
 use crate::{
+    RawSyntaxKind,
+    Syntax,
     green::{GreenNode, GreenToken},
     interning::{Resolver, TokenKey},
     traversal::Direction,
-    RawSyntaxKind, Syntax,
 };
 
 /// Syntax tree token.
@@ -284,7 +285,7 @@ impl<S: Syntax, D> SyntaxToken<S, D> {
     /// implementation by re-using the interner in both.
     /// ```
     /// # use cstree::testing::*;
-    /// use cstree::interning::{new_interner, TokenInterner, TokenKey};
+    /// use cstree::interning::{TokenInterner, TokenKey, new_interner};
     /// struct TypeTable {
     ///     // ...
     /// }

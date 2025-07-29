@@ -7,7 +7,7 @@ members = [
 resolver = "2"
 
 [workspace.package]
-edition = "2021"
+edition = "2024"
 version = "0.12.2" # when updating, also update `#![doc(html_root_url)]` and any inter-crate dependencies (such as `cstree`'s dependency on `cstree-derive`)
 authors = [
     "Domenic Quirl <DomenicQuirl@pm.me>",

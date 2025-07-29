@@ -2,7 +2,7 @@
 
 use std::{iter::FusedIterator, slice};
 
-use super::{element::PackedGreenElement, GreenElementRef};
+use super::{GreenElementRef, element::PackedGreenElement};
 
 /// An iterator over a [`GreenNode`](crate::green::GreenNode)'s children.
 #[derive(Debug, Clone)]

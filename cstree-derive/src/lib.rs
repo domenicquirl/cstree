@@ -17,7 +17,7 @@ use errors::ErrorContext;
 use parsing::SyntaxKindEnum;
 use proc_macro2::TokenStream;
 use quote::{quote, quote_spanned};
-use syn::{parse_macro_input, spanned::Spanned, DeriveInput};
+use syn::{DeriveInput, parse_macro_input, spanned::Spanned};
 
 mod errors;
 mod parsing;
