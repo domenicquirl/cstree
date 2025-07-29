@@ -5,9 +5,9 @@ use std::iter::FusedIterator;
 use text_size::TextSize;
 
 use crate::{
+    Syntax,
     green::{GreenElementRef, GreenNodeChildren},
     syntax::{SyntaxElementRef, SyntaxNode},
-    Syntax,
 };
 
 #[derive(Clone, Debug)]

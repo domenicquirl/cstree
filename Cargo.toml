@@ -7,8 +7,8 @@ members = [
 resolver = "2"
 
 [workspace.package]
-edition = "2021"
-version = "0.12.2" # when updating, also update `#![doc(html_root_url)]` and any inter-crate dependencies (such as `cstree`'s dependency on `cstree-derive`)
+edition = "2024"
+version = "0.13.0" # when updating, also update `#![doc(html_root_url)]` and any inter-crate dependencies (such as `cstree`'s dependency on `cstree-derive`)
 authors = [
     "Domenic Quirl <DomenicQuirl@pm.me>",
     "Aleksey Kladov <aleksey.kladov@gmail.com>",
@@ -16,7 +16,7 @@ authors = [
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/domenicquirl/cstree"
 readme = "README.md"
-rust-version = "1.84"
+rust-version = "1.85"
 
 [profile.release]
 debug = true

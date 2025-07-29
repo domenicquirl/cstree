@@ -4,10 +4,11 @@ use text_size::{TextRange, TextSize};
 
 use super::*;
 use crate::{
+    RawSyntaxKind,
+    Syntax,
     green::GreenElementRef,
     interning::{Resolver, TokenKey},
     util::{NodeOrToken, TokenAtOffset},
-    RawSyntaxKind, Syntax,
 };
 
 /// An element of the tree, can be either a node or a token.

@@ -1,17 +1,19 @@
 //! Serialization and Deserialization for syntax trees.
 
 use crate::{
+    RawSyntaxKind,
+    Syntax,
     build::GreenNodeBuilder,
     interning::{Resolver, TokenKey},
     syntax::{ResolvedNode, SyntaxNode},
     traversal::WalkEvent,
     util::NodeOrToken,
-    RawSyntaxKind, Syntax,
 };
 use serde::{
+    Deserialize,
+    Serialize,
     de::{Error, SeqAccess, Visitor},
     ser::SerializeTuple,
-    Deserialize, Serialize,
 };
 use std::{collections::VecDeque, fmt, marker::PhantomData};
 

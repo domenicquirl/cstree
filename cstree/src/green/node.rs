@@ -6,9 +6,9 @@ use std::{
 use rustc_hash::FxHasher;
 
 use crate::{
-    green::{iter::GreenNodeChildren, GreenElement, PackedGreenElement},
-    text::TextSize,
     RawSyntaxKind,
+    green::{GreenElement, PackedGreenElement, iter::GreenNodeChildren},
+    text::TextSize,
 };
 use triomphe::{Arc, HeaderWithLength, ThinArc};
 

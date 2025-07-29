@@ -6,11 +6,12 @@ mod sendsync;
 mod serde;
 
 use cstree::{
+    RawSyntaxKind,
+    Syntax,
     build::{GreenNodeBuilder, NodeCache},
     green::GreenNode,
     interning::{Interner, Resolver},
     util::NodeOrToken,
-    RawSyntaxKind, Syntax,
 };
 
 pub type SyntaxNode<D = ()> = cstree::syntax::SyntaxNode<SyntaxKind, D>;

@@ -4,8 +4,8 @@ use core::fmt;
 use std::hash::{BuildHasher, Hash};
 
 use crate::interning::{
-    traits::{InternKey, Interner, Resolver},
     TokenKey,
+    traits::{InternKey, Interner, Resolver},
 };
 
 // Safety: `InternKey` has the same invariant as `lasso::Key`

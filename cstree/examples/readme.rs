@@ -208,7 +208,7 @@ impl<'input> Parser<'input> {
         Ok(())
     }
 
-    pub fn finish(mut self) -> (GreenNode, impl Interner) {
+    pub fn finish(mut self) -> (GreenNode, impl Interner + use<>) {
         assert!(self.lexer.next().map(|t| t == Token::EoF).unwrap_or(true));
         let (tree, cache) = self.builder.finish();
         (tree, cache.unwrap().into_interner().unwrap())

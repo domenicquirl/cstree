@@ -13,7 +13,7 @@
 //!     - "+" Token(Add)
 //!     - "4" Token(Number)
 
-use cstree::{build::GreenNodeBuilder, interning::Resolver, util::NodeOrToken, Syntax};
+use cstree::{Syntax, build::GreenNodeBuilder, interning::Resolver, util::NodeOrToken};
 use std::iter::Peekable;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Syntax)]
@@ -99,7 +99,7 @@ impl<'input, I: Iterator<Item = (SyntaxKind, &'input str)>> Parser<'input, I> {
         self.handle_operation(&[Add, Sub], Self::parse_mul)
     }
 
-    fn parse(mut self) -> (SyntaxNode, impl Resolver) {
+    fn parse(mut self) -> (SyntaxNode, impl Resolver + use<I>) {
         self.builder.start_node(Root);
         self.parse_add();
         self.builder.finish_node();

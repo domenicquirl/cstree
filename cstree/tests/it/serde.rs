@@ -1,4 +1,4 @@
-use crate::{build_recursive, build_tree_with_cache, ResolvedNode};
+use crate::{ResolvedNode, build_recursive, build_tree_with_cache};
 
 use super::{Element, SyntaxKind, SyntaxNode};
 use cstree::{

@@ -5,6 +5,9 @@
  * `&I` and `&mut I` will now implement `Resolver` if `I` implements `Resolver`.
  * `&mut I` will now implement `Interner` if `I` implements `Interner`.
  * Added an implementation for `Arc<MultiThreadedTokenInterner>` to implement `Resolver` and `Interner` so an `Arc` may be used alternatively to a reference to share access to the interner.
+ * `SyntaxText` and the `SyntaxNodeChildren` iterator now correctly implement `Clone` independently of the generic syntax node data type `D`.
+ * The iterators returned by the `ancestors` methods on `SyntaxElementRef` / `ResolvedElementRef` no longer incorrectly capture the lifetime of the original syntax node (`self`).
+ * `cstree` was migrated to Rust edition 2024. This increases MSRV to Rust 1.85.
 
 ## `v0.12.2`
 

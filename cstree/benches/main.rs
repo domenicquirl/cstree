@@ -1,9 +1,12 @@
-use criterion::{black_box, criterion_group, criterion_main, Criterion, Throughput};
+use core::hint::black_box;
+
+use criterion::{Criterion, Throughput, criterion_group, criterion_main};
 use cstree::{
+    RawSyntaxKind,
+    Syntax,
     build::*,
     green::GreenNode,
-    interning::{new_interner, Interner},
-    RawSyntaxKind, Syntax,
+    interning::{Interner, new_interner},
 };
 
 #[derive(Debug)]

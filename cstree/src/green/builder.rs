@@ -4,11 +4,12 @@ use rustc_hash::{FxHashMap, FxHasher};
 use text_size::TextSize;
 
 use crate::{
+    RawSyntaxKind,
+    Syntax,
     green::{GreenElement, GreenNode, GreenToken},
-    interning::{new_interner, Interner, TokenInterner, TokenKey},
+    interning::{Interner, TokenInterner, TokenKey, new_interner},
     util::NodeOrToken,
     utility_types::MaybeOwned,
-    RawSyntaxKind, Syntax,
 };
 
 use super::{node::GreenNodeHead, token::GreenTokenData};

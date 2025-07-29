@@ -3,10 +3,10 @@
 use std::fmt;
 
 use crate::{
+    Syntax,
     interning::{Resolver, TokenKey},
     syntax::{SyntaxNode, SyntaxToken},
     text::{TextRange, TextSize},
-    Syntax,
 };
 
 /// An efficient representation of the text that is covered by a [`SyntaxNode`], i.e. the combined
@@ -383,7 +383,7 @@ mod private {
 
 #[cfg(test)]
 mod tests {
-    use crate::{build::GreenNodeBuilder, interning::TokenInterner, RawSyntaxKind};
+    use crate::{RawSyntaxKind, build::GreenNodeBuilder, interning::TokenInterner};
 
     use super::*;
 
@@ -409,7 +409,7 @@ mod tests {
         }
     }
 
-    fn build_tree(chunks: &[&str]) -> (SyntaxNode<SyntaxKind, ()>, impl Resolver<TokenKey>) {
+    fn build_tree(chunks: &[&str]) -> (SyntaxNode<SyntaxKind, ()>, impl Resolver<TokenKey> + use<>) {
         let mut builder: GreenNodeBuilder<SyntaxKind> = GreenNodeBuilder::new();
         builder.start_node(SyntaxKind(62));
         for &chunk in chunks.iter() {

@@ -1,6 +1,6 @@
 mod attributes;
 
-use syn::{punctuated::Punctuated, Token};
+use syn::{Token, punctuated::Punctuated};
 
 use crate::{errors::ErrorContext, symbols::*};
 
