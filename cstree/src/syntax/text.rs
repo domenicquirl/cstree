@@ -150,7 +150,7 @@ impl<'n, 'i, I: Resolver<TokenKey> + ?Sized, S: Syntax, D> SyntaxText<'n, 'i, I,
     /// See also [`fold_chunks`](SyntaxText::fold_chunks) for folds that always succeed.
     pub fn try_fold_chunks<T, F, E>(&self, init: T, mut f: F) -> Result<T, E>
     where
-        F: FnMut(T, &str) -> Result<T, E>,
+        F: FnMut(T, &'i str) -> Result<T, E>,
     {
         self.tokens_with_ranges().try_fold(init, move |acc, (token, range)| {
             f(acc, &token.resolve_text(self.resolver)[range])
@@ -195,7 +195,7 @@ impl<'n, 'i, I: Resolver<TokenKey> + ?Sized, S: Syntax, D> SyntaxText<'n, 'i, I,
         self.fold_chunks((), |(), chunk| f(chunk))
     }
 
-    fn tokens_with_ranges(&self) -> impl Iterator<Item = (&SyntaxToken<S, D>, TextRange)> {
+    fn tokens_with_ranges(&self) -> impl Iterator<Item = (&'n SyntaxToken<S, D>, TextRange)> + use<'i, 'n, I, S, D> {
         let text_range = self.range;
         self.node
             .descendants_with_tokens()

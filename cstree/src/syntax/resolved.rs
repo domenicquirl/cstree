@@ -713,7 +713,7 @@ impl<'a, S: Syntax, D> ResolvedElementRef<'a, S, D> {
 
     /// Returns an iterator along the chain of parents of this node.
     #[inline]
-    pub fn ancestors(&self) -> impl Iterator<Item = &'a ResolvedNode<S, D>> {
+    pub fn ancestors(&self) -> impl Iterator<Item = &'a ResolvedNode<S, D>> + use<'a, S, D> {
         match self {
             NodeOrToken::Node(it) => it.ancestors(),
             NodeOrToken::Token(it) => it.parent().ancestors(),
