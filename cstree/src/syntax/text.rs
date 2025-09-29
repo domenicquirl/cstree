@@ -91,6 +91,18 @@ impl<'n, 'i, I: Resolver<TokenKey> + ?Sized, S: Syntax, D> SyntaxText<'n, 'i, I,
         found(res)
     }
 
+    /// If `self.contains_char(c)`, returns `Some(pos)`, where `pos` is the byte position of the
+    /// last appearance of `c`. Otherwise, returns `None`.
+    pub fn rfind_char(&self, c: char) -> Option<TextSize> {
+        let mut acc: TextSize = 0.into();
+        let mut res = None;
+        self.for_each_chunk(|chunk| {
+            res = chunk.rfind(c).map(|pos| acc + TextSize::from(pos as u32)).or(res);
+            acc += TextSize::of(chunk);
+        });
+        res
+    }
+
     /// If `offset < self.len()`, returns `Some(c)`, where `c` is the first `char` at or after
     /// `offset` (in bytes). Otherwise, returns `None`.
     pub fn char_at(&self, offset: TextSize) -> Option<char> {
