@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## `v0.13.0`
+
  * `&I` and `&mut I` will now implement `Resolver` if `I` implements `Resolver`.
  * `&mut I` will now implement `Interner` if `I` implements `Interner`.
  * Added an implementation for `Arc<MultiThreadedTokenInterner>` to implement `Resolver` and `Interner` so an `Arc` may be used alternatively to a reference to share access to the interner.
