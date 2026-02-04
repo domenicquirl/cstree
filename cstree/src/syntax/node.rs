@@ -613,10 +613,31 @@ impl<S: Syntax, D> SyntaxNode<S, D> {
         self.get_or_add_node(node, index, offset).as_node().map(|node| *node)
     }
 
+    /// The first specific-kind child node of this node, if any.
+    ///
+    /// If you want to also consider leafs, see [`first_child_or_token_by_kind`](SyntaxNode::first_child_or_token_by_kind).
+    #[inline]
+    #[allow(clippy::map_clone)]
+    pub fn first_child_by_kind(&self, matcher: impl Fn(S) -> bool) -> Option<&SyntaxNode<S, D>> {
+        let (node, (index, offset)) = filter_nodes(self.green().children_from(0, self.text_range().start()))
+            .find(|(node, ..)| matcher(S::from_raw(node.kind())))?;
+        self.get_or_add_node(node, index, offset).as_node().map(|node| *node)
+    }
+
     /// The first child element of this node, if any, including tokens.
     #[inline]
     pub fn first_child_or_token(&self) -> Option<SyntaxElementRef<'_, S, D>> {
         let (element, (index, offset)) = self.green().children_from(0, self.text_range().start()).next()?;
+        Some(self.get_or_add_element(element, index, offset))
+    }
+
+    /// The first specific-kind child element of this node, if any, including tokens.
+    #[inline]
+    pub fn first_child_or_token_by_kind(&self, matcher: impl Fn(S) -> bool) -> Option<SyntaxElementRef<'_, S, D>> {
+        let (element, (index, offset)) = self
+            .green()
+            .children_from(0, self.text_range().start())
+            .find(|(element, ..)| matcher(S::from_raw(element.kind())))?;
         Some(self.get_or_add_element(element, index, offset))
     }
 
@@ -634,6 +655,20 @@ impl<S: Syntax, D> SyntaxNode<S, D> {
         self.get_or_add_node(node, index, offset).as_node().map(|node| *node)
     }
 
+    /// The last specific-kind child node of this node, if any.
+    ///
+    /// If you want to also consider leafs, see [`last_child_or_token_by_kind`](SyntaxNode::last_child_or_token_by_kind).
+    #[inline]
+    #[allow(clippy::map_clone)]
+    pub fn last_child_by_kind(&self, matcher: impl Fn(S) -> bool) -> Option<&SyntaxNode<S, D>> {
+        let (node, (index, offset)) = filter_nodes(
+            self.green()
+                .children_to(self.green().children().len(), self.text_range().end()),
+        )
+        .find(|(node, ..)| matcher(S::from_raw(node.kind())))?;
+        self.get_or_add_node(node, index, offset).as_node().map(|node| *node)
+    }
+
     /// The last child element of this node, if any, including tokens.
     #[inline]
     pub fn last_child_or_token(&self) -> Option<SyntaxElementRef<'_, S, D>> {
@@ -641,6 +676,16 @@ impl<S: Syntax, D> SyntaxNode<S, D> {
             .green()
             .children_to(self.green().children().len(), self.text_range().end())
             .next()?;
+        Some(self.get_or_add_element(element, index, offset))
+    }
+
+    /// The last specific-kind child element of this node, if any, including tokens.
+    #[inline]
+    pub fn last_child_or_token_by_kind(&self, matcher: impl Fn(S) -> bool) -> Option<SyntaxElementRef<'_, S, D>> {
+        let (element, (index, offset)) = self
+            .green()
+            .children_to(self.green().children().len(), self.text_range().end())
+            .find(|(element, ..)| matcher(S::from_raw(element.kind())))?;
         Some(self.get_or_add_element(element, index, offset))
     }
 
@@ -655,11 +700,44 @@ impl<S: Syntax, D> SyntaxNode<S, D> {
         self.get_or_add_node(node, index, offset).as_node().copied()
     }
 
+    /// The first specific-kind child node of this node starting at the (n + 1)-st, if any.
+    /// Note that even if this method returns `Some`, the contained node may not actually be the (n +
+    /// 1)-st child, but the next child from there that is a node.
+    ///
+    /// If you want to also consider leafs, see [`next_child_or_token_after_by_kind`](SyntaxNode::next_child_or_token_after_by_kind).
+    #[inline]
+    pub fn next_child_after_by_kind(
+        &self,
+        n: usize,
+        offset: TextSize,
+        matcher: impl Fn(S) -> bool,
+    ) -> Option<&SyntaxNode<S, D>> {
+        let (node, (index, offset)) = filter_nodes(self.green().children_from(n + 1, offset))
+            .find(|(node, ..)| matcher(S::from_raw(node.kind())))?;
+        self.get_or_add_node(node, index, offset).as_node().copied()
+    }
+
     /// The first child element of this node starting at the (n + 1)-st, if any.
     /// If this method returns `Some`, the contained node is the (n + 1)-st child of this node.
     #[inline]
     pub fn next_child_or_token_after(&self, n: usize, offset: TextSize) -> Option<SyntaxElementRef<'_, S, D>> {
         let (element, (index, offset)) = self.green().children_from(n + 1, offset).next()?;
+        Some(self.get_or_add_element(element, index, offset))
+    }
+
+    /// The first specific-kind child element of this node starting at the (n + 1)-st, if any.
+    /// If this method returns `Some`, the contained node is the (n + 1)-st child of this node.
+    #[inline]
+    pub fn next_child_or_token_after_by_kind(
+        &self,
+        n: usize,
+        offset: TextSize,
+        matcher: impl Fn(S) -> bool,
+    ) -> Option<SyntaxElementRef<'_, S, D>> {
+        let (element, (index, offset)) = self
+            .green()
+            .children_from(n + 1, offset)
+            .find(|(element, ..)| matcher(S::from_raw(element.kind())))?;
         Some(self.get_or_add_element(element, index, offset))
     }
 
@@ -674,11 +752,44 @@ impl<S: Syntax, D> SyntaxNode<S, D> {
         self.get_or_add_node(node, index, offset).as_node().copied()
     }
 
+    /// The last specific-kind child node of this node up to the nth, if any.
+    /// Note that even if this method returns `Some`, the contained node may not actually be the (n -
+    /// 1)-st child, but the previous child from there that is a node.
+    ///
+    /// If you want to also consider leafs, see [`prev_child_or_token_before`](SyntaxNode::prev_child_or_token_before).
+    #[inline]
+    pub fn prev_child_before_by_kind(
+        &self,
+        n: usize,
+        offset: TextSize,
+        matcher: impl Fn(S) -> bool,
+    ) -> Option<&SyntaxNode<S, D>> {
+        let (node, (index, offset)) =
+            filter_nodes(self.green().children_to(n, offset)).find(|(node, ..)| matcher(S::from_raw(node.kind())))?;
+        self.get_or_add_node(node, index, offset).as_node().copied()
+    }
+
     /// The last child node of this node up to the nth, if any.
     /// If this method returns `Some`, the contained node is the (n - 1)-st child.
     #[inline]
     pub fn prev_child_or_token_before(&self, n: usize, offset: TextSize) -> Option<SyntaxElementRef<'_, S, D>> {
         let (element, (index, offset)) = self.green().children_to(n, offset).next()?;
+        Some(self.get_or_add_element(element, index, offset))
+    }
+
+    /// The last specific-kind child node of this node up to the nth, if any.
+    /// If this method returns `Some`, the contained node is the (n - 1)-st child.
+    #[inline]
+    pub fn prev_child_or_token_before_by_kind(
+        &self,
+        n: usize,
+        offset: TextSize,
+        matcher: impl Fn(S) -> bool,
+    ) -> Option<SyntaxElementRef<'_, S, D>> {
+        let (element, (index, offset)) = self
+            .green()
+            .children_to(n, offset)
+            .find(|(element, ..)| matcher(S::from_raw(element.kind())))?;
         Some(self.get_or_add_element(element, index, offset))
     }
 
@@ -698,6 +809,22 @@ impl<S: Syntax, D> SyntaxNode<S, D> {
         parent.get_or_add_node(node, index, offset).as_node().copied()
     }
 
+    /// The specific-kind node to the right of this one, i.e. the next child node (!) of this node's parent after this node.
+    ///
+    /// If you want to also consider leafs, see [`next_sibling_or_token`](SyntaxNode::next_sibling_or_token).
+    #[inline]
+    pub fn next_sibling_by_kind(&self, matcher: impl Fn(S) -> bool) -> Option<&SyntaxNode<S, D>> {
+        let (parent, index, _) = self.data().kind.as_child()?;
+
+        let (node, (index, offset)) = filter_nodes(
+            parent
+                .green()
+                .children_from((index + 1) as usize, self.text_range().end()),
+        )
+        .find(|(node, ..)| matcher(S::from_raw(node.kind())))?;
+        parent.get_or_add_node(node, index, offset).as_node().copied()
+    }
+
     /// The tree element to the right of this one, i.e. the next child of this node's parent after this node.
     #[inline]
     pub fn next_sibling_or_token(&self) -> Option<SyntaxElementRef<'_, S, D>> {
@@ -707,6 +834,18 @@ impl<S: Syntax, D> SyntaxNode<S, D> {
             .green()
             .children_from((index + 1) as usize, self.text_range().end())
             .next()?;
+        Some(parent.get_or_add_element(element, index, offset))
+    }
+
+    /// The specific-kind tree element to the right of this one, i.e. the next child of this node's parent after this node.
+    #[inline]
+    pub fn next_sibling_or_token_by_kind(&self, matcher: impl Fn(S) -> bool) -> Option<SyntaxElementRef<'_, S, D>> {
+        let (parent, index, _) = self.data().kind.as_child()?;
+
+        let (element, (index, offset)) = parent
+            .green()
+            .children_from((index + 1) as usize, self.text_range().end())
+            .find(|(element, ..)| matcher(S::from_raw(element.kind())))?;
         Some(parent.get_or_add_element(element, index, offset))
     }
 
@@ -722,6 +861,19 @@ impl<S: Syntax, D> SyntaxNode<S, D> {
         parent.get_or_add_node(node, index, offset).as_node().copied()
     }
 
+    /// The specific-kind node to the left of this one, i.e. the previous child node (!) of this node's parent before this node.
+    ///
+    /// If you want to also consider leafs, see [`prev_sibling_or_token`](SyntaxNode::prev_sibling_or_token).
+    #[inline]
+    pub fn prev_sibling_by_kind(&self, matcher: impl Fn(S) -> bool) -> Option<&SyntaxNode<S, D>> {
+        let (parent, index, _) = self.data().kind.as_child()?;
+
+        let (node, (index, offset)) =
+            filter_nodes(parent.green().children_to(index as usize, self.text_range().start()))
+                .find(|(node, ..)| matcher(S::from_raw(node.kind())))?;
+        parent.get_or_add_node(node, index, offset).as_node().copied()
+    }
+
     /// The tree element to the left of this one, i.e. the previous child of this node's parent before this node.
     #[inline]
     pub fn prev_sibling_or_token(&self) -> Option<SyntaxElementRef<'_, S, D>> {
@@ -731,6 +883,18 @@ impl<S: Syntax, D> SyntaxNode<S, D> {
             .green()
             .children_to(index as usize, self.text_range().start())
             .next()?;
+        Some(parent.get_or_add_element(element, index, offset))
+    }
+
+    /// The specific-kind tree element to the left of this one, i.e. the previous child of this node's parent before this node.
+    #[inline]
+    pub fn prev_sibling_or_token_by_kind(&self, matcher: impl Fn(S) -> bool) -> Option<SyntaxElementRef<'_, S, D>> {
+        let (parent, index, _) = self.data().kind.as_child()?;
+
+        let (element, (index, offset)) = parent
+            .green()
+            .children_to(index as usize, self.text_range().start())
+            .find(|(element, ..)| matcher(S::from_raw(element.kind())))?;
         Some(parent.get_or_add_element(element, index, offset))
     }
 
