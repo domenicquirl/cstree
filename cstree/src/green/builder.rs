@@ -1,11 +1,13 @@
-use std::hash::{Hash, Hasher};
+extern crate alloc;
 
+use core::hash::{Hash, Hasher};
+
+use alloc::vec::Vec;
 use rustc_hash::{FxHashMap, FxHasher};
 use text_size::TextSize;
 
 use crate::{
-    RawSyntaxKind,
-    Syntax,
+    RawSyntaxKind, Syntax,
     green::{GreenElement, GreenNode, GreenToken},
     interning::{Interner, TokenInterner, TokenKey, new_interner},
     util::NodeOrToken,
@@ -24,8 +26,8 @@ const CHILDREN_CACHE_THRESHOLD: usize = 3;
 /// You can re-use the same cache for multiple similar trees with [`GreenNodeBuilder::with_cache`].
 #[derive(Debug)]
 pub struct NodeCache<'i, I = TokenInterner> {
-    nodes:    FxHashMap<GreenNodeHead, GreenNode>,
-    tokens:   FxHashMap<GreenTokenData, GreenToken>,
+    nodes: FxHashMap<GreenNodeHead, GreenNode>,
+    tokens: FxHashMap<GreenTokenData, GreenToken>,
     interner: MaybeOwned<'i, I>,
 }
 
@@ -55,8 +57,8 @@ impl NodeCache<'static> {
     /// ```
     pub fn new() -> Self {
         Self {
-            nodes:    FxHashMap::default(),
-            tokens:   FxHashMap::default(),
+            nodes: FxHashMap::default(),
+            tokens: FxHashMap::default(),
             interner: MaybeOwned::Owned(new_interner()),
         }
     }
@@ -102,8 +104,8 @@ where
     #[inline]
     pub fn with_interner(interner: &'i mut I) -> Self {
         Self {
-            nodes:    FxHashMap::default(),
-            tokens:   FxHashMap::default(),
+            nodes: FxHashMap::default(),
+            tokens: FxHashMap::default(),
             interner: MaybeOwned::Borrowed(interner),
         }
     }
@@ -139,8 +141,8 @@ where
     #[inline]
     pub fn from_interner(interner: I) -> Self {
         Self {
-            nodes:    FxHashMap::default(),
-            tokens:   FxHashMap::default(),
+            nodes: FxHashMap::default(),
+            tokens: FxHashMap::default(),
             interner: MaybeOwned::Owned(interner),
         }
     }
@@ -215,7 +217,7 @@ where
     fn get_cached_node(
         &mut self,
         kind: RawSyntaxKind,
-        children: std::vec::Drain<'_, GreenElement>,
+        children: alloc::vec::Drain<'_, GreenElement>,
         text_len: TextSize,
         child_hash: u32,
     ) -> GreenNode {
@@ -245,7 +247,7 @@ where
 #[derive(Clone, Copy, Debug)]
 pub struct Checkpoint {
     parent_idx: usize,
-    child_idx:  usize,
+    child_idx: usize,
 }
 
 /// A builder for green trees.
@@ -274,8 +276,8 @@ pub struct Checkpoint {
 /// ```
 #[derive(Debug)]
 pub struct GreenNodeBuilder<'cache, 'interner, S: Syntax, I = TokenInterner> {
-    cache:    MaybeOwned<'cache, NodeCache<'interner, I>>,
-    parents:  Vec<(S, usize)>,
+    cache: MaybeOwned<'cache, NodeCache<'interner, I>>,
+    parents: Vec<(S, usize)>,
     children: Vec<GreenElement>,
 }
 
@@ -283,8 +285,8 @@ impl<S: Syntax> GreenNodeBuilder<'static, 'static, S> {
     /// Creates new builder with an empty [`NodeCache`].
     pub fn new() -> Self {
         Self {
-            cache:    MaybeOwned::Owned(NodeCache::new()),
-            parents:  Vec::with_capacity(8),
+            cache: MaybeOwned::Owned(NodeCache::new()),
+            parents: Vec::with_capacity(8),
             children: Vec::with_capacity(8),
         }
     }
@@ -305,8 +307,8 @@ where
     /// share underlying trees.
     pub fn with_cache(cache: &'cache mut NodeCache<'interner, I>) -> Self {
         Self {
-            cache:    MaybeOwned::Borrowed(cache),
-            parents:  Vec::with_capacity(8),
+            cache: MaybeOwned::Borrowed(cache),
+            parents: Vec::with_capacity(8),
             children: Vec::with_capacity(8),
         }
     }
@@ -338,8 +340,8 @@ where
     /// ```
     pub fn from_cache(cache: NodeCache<'interner, I>) -> Self {
         Self {
-            cache:    MaybeOwned::Owned(cache),
-            parents:  Vec::with_capacity(8),
+            cache: MaybeOwned::Owned(cache),
+            parents: Vec::with_capacity(8),
             children: Vec::with_capacity(8),
         }
     }
@@ -477,7 +479,7 @@ where
     pub fn checkpoint(&self) -> Checkpoint {
         Checkpoint {
             parent_idx: self.parents.len(),
-            child_idx:  self.children.len(),
+            child_idx: self.children.len(),
         }
     }
 

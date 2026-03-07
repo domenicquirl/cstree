@@ -1,7 +1,7 @@
 #![cfg(feature = "lasso_compat")]
 
 use core::fmt;
-use std::hash::{BuildHasher, Hash};
+use core::hash::{BuildHasher, Hash};
 
 use crate::interning::{
     TokenKey,

@@ -139,7 +139,7 @@ pub use lasso;
 pub mod salsa_compat;
 
 use core::fmt;
-use std::num::NonZeroU32;
+use core::num::NonZeroU32;
 
 /// The intern key type for the source text of [`GreenToken`s](crate::green::GreenToken).
 /// Each unique key uniquely identifies a deduplicated, interned source string.

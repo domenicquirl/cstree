@@ -134,7 +134,7 @@
 //! combination of `cstree` and the actual parser, which we define like this:
 //!
 //! ```rust,no_run
-//! # use std::iter::Peekable;
+//! # use core::iter::Peekable;
 //! # use cstree::build::GreenNodeBuilder;
 //! # struct Lexer<'a> { input: &'a str }
 //! # impl<'a> Lexer<'a> { fn new(input: &'a str) -> Self { Self { input } } }

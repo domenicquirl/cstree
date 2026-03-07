@@ -1,16 +1,21 @@
-use std::{
+extern crate alloc;
+
+use alloc::{
+    format,
+    string::{String, ToString},
+    sync::Arc as AllocArc,
+};
+use core::{
     fmt,
     hash::{Hash, Hasher},
     iter,
-    sync::Arc as StdArc,
 };
 
 use text_size::{TextRange, TextSize};
 
 use super::*;
 use crate::{
-    RawSyntaxKind,
-    Syntax,
+    RawSyntaxKind, Syntax,
     green::{GreenNode, GreenToken},
     interning::{Resolver, TokenKey},
     traversal::Direction,
@@ -20,7 +25,7 @@ use crate::{
 #[derive(Debug)]
 pub struct SyntaxToken<S: Syntax, D: 'static = ()> {
     parent: SyntaxNode<S, D>,
-    index:  u32,
+    index: u32,
     offset: TextSize,
 }
 
@@ -28,7 +33,7 @@ impl<S: Syntax, D> Clone for SyntaxToken<S, D> {
     fn clone(&self) -> Self {
         Self {
             parent: self.parent.clone(),
-            index:  self.index,
+            index: self.index,
             offset: self.offset,
         }
     }
@@ -107,7 +112,7 @@ impl<S: Syntax, D> SyntaxToken<S, D> {
 
     /// If there is a resolver associated with this tree, returns it.
     #[inline]
-    pub fn resolver(&self) -> Option<&StdArc<dyn Resolver<TokenKey>>> {
+    pub fn resolver(&self) -> Option<&AllocArc<dyn Resolver<TokenKey>>> {
         self.parent.resolver()
     }
 
@@ -232,7 +237,7 @@ impl<S: Syntax, D> SyntaxToken<S, D> {
     ///
     /// **Note** that the result of the comparison may be wrong when comparing two tokens from
     /// different trees that use different interners.
-    ///  
+    ///
     /// # Examples
     /// ```
     /// # use cstree::testing::*;

@@ -53,7 +53,7 @@ type SyntaxElementRef<'a> = cstree::util::NodeOrToken<&'a SyntaxNode, &'a Syntax
 
 struct Parser<'input, I: Iterator<Item = (SyntaxKind, &'input str)>> {
     builder: GreenNodeBuilder<'static, 'static, MySyntax>,
-    iter:    Peekable<I>,
+    iter: Peekable<I>,
 }
 impl<'input, I: Iterator<Item = (SyntaxKind, &'input str)>> Parser<'input, I> {
     fn peek(&mut self) -> Option<SyntaxKind> {
@@ -127,7 +127,7 @@ fn print(indent: usize, element: SyntaxElementRef<'_>, resolver: &impl Resolver)
 fn main() {
     let (ast, resolver) = Parser {
         builder: GreenNodeBuilder::new(),
-        iter:    vec![
+        iter: vec![
             // 1 + 2 * 3 + 4
             (Number, "1"),
             (Whitespace, " "),

@@ -138,7 +138,7 @@ struct NonSerializable;
 /// Serializable SyntaxNode that doesn't have a identity `PartialEq` implementation,
 /// but checks if both trees have equal nodes and tokens.
 struct TestNode {
-    node:      ResolvedNode<String>,
+    node: ResolvedNode<String>,
     with_data: bool,
 }
 
@@ -177,7 +177,7 @@ impl<'de> serde::Deserialize<'de> for TestNode {
         D: serde::Deserializer<'de>,
     {
         Ok(Self {
-            node:      ResolvedNode::deserialize(deserializer)?,
+            node: ResolvedNode::deserialize(deserializer)?,
             with_data: true,
         })
     }

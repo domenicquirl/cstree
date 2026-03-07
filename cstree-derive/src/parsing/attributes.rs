@@ -1,6 +1,9 @@
 #![allow(unused)]
 
+extern crate alloc;
+
 use super::*;
+use alloc::format;
 use proc_macro2::TokenStream;
 use quote::ToTokens;
 

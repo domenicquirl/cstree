@@ -6,8 +6,7 @@ mod sendsync;
 mod serde;
 
 use cstree::{
-    RawSyntaxKind,
-    Syntax,
+    RawSyntaxKind, Syntax,
     build::{GreenNodeBuilder, NodeCache},
     green::GreenNode,
     interning::{Interner, Resolver},

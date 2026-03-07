@@ -84,6 +84,7 @@
 //!
 //! See `LICENSE-APACHE` and `LICENSE-MIT` for details.
 
+#![no_std]
 #![forbid(missing_debug_implementations, unconditional_recursion)]
 #![deny(unsafe_code, future_incompatible)]
 #![allow(
@@ -111,7 +112,7 @@ mod serde_impls;
 #[allow(missing_docs)]
 mod utility_types;
 
-use std::fmt;
+use core::fmt;
 
 /// `RawSyntaxKind` is a type tag for each token or node.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -135,8 +136,7 @@ pub mod build {
 /// A convenient collection of the most used parts of `cstree`.
 pub mod prelude {
     pub use crate::{
-        RawSyntaxKind,
-        Syntax,
+        RawSyntaxKind, Syntax,
         build::GreenNodeBuilder,
         green::{GreenNode, GreenToken},
         syntax::{SyntaxElement, SyntaxNode, SyntaxToken},
@@ -241,7 +241,7 @@ pub mod testing {
     impl Syntax for TestSyntaxKind {
         fn from_raw(raw: RawSyntaxKind) -> Self {
             assert!(raw.0 <= TestSyntaxKind::__LAST as u32);
-            unsafe { std::mem::transmute::<u32, Self>(raw.0) }
+            unsafe { core::mem::transmute::<u32, Self>(raw.0) }
         }
 
         fn into_raw(self) -> RawSyntaxKind {

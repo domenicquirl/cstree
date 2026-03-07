@@ -1,27 +1,26 @@
+extern crate alloc;
+
 use super::*;
 #[cfg(feature = "serialize")]
 use crate::serde_impls::{SerializeWithData, SerializeWithResolver};
 use crate::{
-    RawSyntaxKind,
-    Syntax,
+    RawSyntaxKind, Syntax,
     green::{GreenElementRef, GreenNode},
     interning::{Resolver, TokenKey},
     text::*,
     traversal::*,
     util::*,
 };
-use parking_lot::RwLock;
-use std::{
+use alloc::{boxed::Box, string::String, sync::Arc as AllocArc, vec::Vec};
+use core::{
     cell::UnsafeCell,
     fmt,
     hash::{Hash, Hasher},
     iter,
     ptr::{self, NonNull},
-    sync::{
-        Arc as StdArc,
-        atomic::{AtomicU32, Ordering},
-    },
+    sync::atomic::{AtomicU32, Ordering},
 };
+use parking_lot::RwLock;
 use triomphe::Arc;
 
 /// Inner syntax tree node.
@@ -111,7 +110,7 @@ impl<S: Syntax, D> SyntaxNode<S, D> {
     }
 
     /// If there is a resolver associated with this tree, returns it.
-    pub fn resolver(&self) -> Option<&StdArc<dyn Resolver<TokenKey>>> {
+    pub fn resolver(&self) -> Option<&AllocArc<dyn Resolver<TokenKey>>> {
         match &self.root().data().kind {
             Kind::Root(_, resolver) => resolver.as_ref(),
             _ => unreachable!(),
@@ -238,10 +237,10 @@ impl<S: Syntax, D> Hash for SyntaxNode<S, D> {
 }
 
 enum Kind<S: Syntax, D: 'static> {
-    Root(GreenNode, Option<StdArc<dyn Resolver<TokenKey>>>),
+    Root(GreenNode, Option<AllocArc<dyn Resolver<TokenKey>>>),
     Child {
         parent: SyntaxNode<S, D>,
-        index:  u32,
+        index: u32,
         offset: TextSize,
     },
 }
@@ -256,11 +255,11 @@ impl<S: Syntax, D> Kind<S, D> {
 }
 
 pub(super) struct NodeData<S: Syntax, D: 'static> {
-    kind:        Kind<S, D>,
-    green:       NonNull<GreenNode>,
-    ref_count:   *mut AtomicU32,
-    data:        RwLock<Option<Arc<D>>>,
-    children:    Vec<UnsafeCell<Option<SyntaxElement<S, D>>>>,
+    kind: Kind<S, D>,
+    green: NonNull<GreenNode>,
+    ref_count: *mut AtomicU32,
+    data: RwLock<Option<Arc<D>>>,
+    children: Vec<UnsafeCell<Option<SyntaxElement<S, D>>>>,
     child_locks: Vec<RwLock<()>>,
 }
 
@@ -305,7 +304,7 @@ impl<S: Syntax, D> SyntaxNode<S, D> {
         Self { data }
     }
 
-    fn make_new_root(green: GreenNode, resolver: Option<StdArc<dyn Resolver<TokenKey>>>) -> Self {
+    fn make_new_root(green: GreenNode, resolver: Option<AllocArc<dyn Resolver<TokenKey>>>) -> Self {
         let ref_count = Box::new(AtomicU32::new(1));
         let n_children = green.children().count();
         let data = NodeData::new(
@@ -350,7 +349,7 @@ impl<S: Syntax, D> SyntaxNode<S, D> {
     /// ```
     #[inline]
     pub fn new_root_with_resolver(green: GreenNode, resolver: impl Resolver<TokenKey> + 'static) -> ResolvedNode<S, D> {
-        let ptr: StdArc<dyn Resolver<TokenKey>> = StdArc::new(resolver);
+        let ptr: AllocArc<dyn Resolver<TokenKey>> = AllocArc::new(resolver);
         ResolvedNode {
             syntax: SyntaxNode::make_new_root(green, Some(ptr)),
         }

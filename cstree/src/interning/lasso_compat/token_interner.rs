@@ -2,7 +2,7 @@
 
 #![cfg(feature = "lasso_compat")]
 
-use std::{fmt, hash::BuildHasher, num::NonZeroUsize};
+use core::{fmt, hash::BuildHasher, num::NonZeroUsize};
 
 use lasso::{Capacity, Rodeo, ThreadedRodeo};
 use rustc_hash::FxBuildHasher;

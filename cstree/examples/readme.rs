@@ -63,7 +63,7 @@ pub enum Token<'input> {
 }
 
 pub struct Lexer<'input> {
-    input:  &'input str,
+    input: &'input str,
     at_eof: bool,
 }
 
@@ -131,14 +131,14 @@ impl<'input> Iterator for Lexer<'input> {
 }
 
 pub struct Parser<'input> {
-    lexer:   Peekable<Lexer<'input>>,
+    lexer: Peekable<Lexer<'input>>,
     builder: GreenNodeBuilder<'static, 'static, Calculator>,
 }
 
 impl<'input> Parser<'input> {
     pub fn new(input: &'input str) -> Self {
         Self {
-            lexer:   Lexer::new(input).peekable(),
+            lexer: Lexer::new(input).peekable(),
             builder: GreenNodeBuilder::new(),
         }
     }

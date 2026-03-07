@@ -58,7 +58,7 @@ mod tests {
     #[cfg_attr(miri, ignore)]
     #[rustfmt::skip]
     fn assert_syntax_sizes() {
-        use std::mem::size_of;
+        use core::mem::size_of;
 
         assert_eq!(size_of::<SyntaxNode<TestSyntaxKind>>(),          size_of::<*const u8>());
         // verify niche opt of `NonNull`

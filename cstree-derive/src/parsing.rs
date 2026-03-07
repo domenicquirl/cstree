@@ -1,3 +1,5 @@
+extern crate alloc;
+
 mod attributes;
 
 use syn::{Token, punctuated::Punctuated};
@@ -5,15 +7,16 @@ use syn::{Token, punctuated::Punctuated};
 use crate::{errors::ErrorContext, symbols::*};
 
 use self::attributes::Attr;
+use alloc::{string::String, vec::Vec};
 
 /// Convenience for recording errors inside `ErrorContext` instead of the `Err` variant of the `Result`.
-pub(crate) type Result<T, E = ()> = std::result::Result<T, E>;
+pub(crate) type Result<T, E = ()> = core::result::Result<T, E>;
 
 pub(crate) struct SyntaxKindEnum<'i> {
-    pub(crate) name:     syn::Ident,
-    pub(crate) repr:     Option<syn::Ident>,
+    pub(crate) name: syn::Ident,
+    pub(crate) repr: Option<syn::Ident>,
     pub(crate) variants: Vec<SyntaxKindVariant<'i>>,
-    pub(crate) source:   &'i syn::DeriveInput,
+    pub(crate) source: &'i syn::DeriveInput,
 }
 
 impl<'i> SyntaxKindEnum<'i> {
@@ -56,9 +59,9 @@ impl<'i> SyntaxKindEnum<'i> {
 }
 
 pub(crate) struct SyntaxKindVariant<'i> {
-    pub(crate) name:        syn::Ident,
+    pub(crate) name: syn::Ident,
     pub(crate) static_text: Option<String>,
-    pub(crate) source:      &'i syn::Variant,
+    pub(crate) source: &'i syn::Variant,
 }
 
 impl<'i> SyntaxKindVariant<'i> {

@@ -1,4 +1,4 @@
-use std::fmt;
+use core::fmt;
 
 /// Convenience type to represent tree elements which may either be a node or a token.
 ///
@@ -103,7 +103,7 @@ impl<T> MaybeOwned<'_, T> {
     }
 }
 
-impl<T> std::ops::Deref for MaybeOwned<'_, T> {
+impl<T> core::ops::Deref for MaybeOwned<'_, T> {
     type Target = T;
 
     fn deref(&self) -> &T {
@@ -114,7 +114,7 @@ impl<T> std::ops::Deref for MaybeOwned<'_, T> {
     }
 }
 
-impl<T> std::ops::DerefMut for MaybeOwned<'_, T> {
+impl<T> core::ops::DerefMut for MaybeOwned<'_, T> {
     fn deref_mut(&mut self) -> &mut T {
         match self {
             MaybeOwned::Owned(it) => it,
@@ -172,7 +172,7 @@ impl<T> Iterator for TokenAtOffset<T> {
     type Item = T;
 
     fn next(&mut self) -> Option<T> {
-        match std::mem::replace(self, TokenAtOffset::None) {
+        match core::mem::replace(self, TokenAtOffset::None) {
             TokenAtOffset::None => None,
             TokenAtOffset::Single(node) => {
                 *self = TokenAtOffset::None;

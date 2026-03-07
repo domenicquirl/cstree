@@ -12,7 +12,11 @@
 //! Please refer to [the `cstree` main crate] for how to set this up.
 //!
 //! [the `cstree` main crate]: https://docs.rs/cstree/
+#![no_std]
 
+extern crate alloc;
+
+use alloc::vec::Vec;
 use errors::ErrorContext;
 use parsing::SyntaxKindEnum;
 use proc_macro2::TokenStream;

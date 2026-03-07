@@ -1,11 +1,13 @@
-use std::{fmt, sync::atomic::AtomicU32};
+extern crate alloc;
+
+use alloc::string::String;
+use core::{fmt, sync::atomic::AtomicU32};
 
 use text_size::{TextRange, TextSize};
 
 use super::*;
 use crate::{
-    RawSyntaxKind,
-    Syntax,
+    RawSyntaxKind, Syntax,
     green::GreenElementRef,
     interning::{Resolver, TokenKey},
     util::{NodeOrToken, TokenAtOffset},

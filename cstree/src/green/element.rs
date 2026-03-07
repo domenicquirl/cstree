@@ -1,4 +1,4 @@
-use std::{fmt, hash, mem};
+use core::{fmt, hash, mem};
 
 // NOTE from `thin_dst`:
 // This MUST be size=1 such that pointer math actually advances the pointer.

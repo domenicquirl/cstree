@@ -1,4 +1,4 @@
-use std::{
+use core::{
     hash::{Hash, Hasher},
     slice,
 };
@@ -15,8 +15,8 @@ use triomphe::{Arc, HeaderWithLength, ThinArc};
 #[repr(align(2))] //to use 1 bit for pointer tagging. NB: this is an at-least annotation
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub(super) struct GreenNodeHead {
-    pub(super) kind:       RawSyntaxKind,
-    pub(super) text_len:   TextSize,
+    pub(super) kind: RawSyntaxKind,
+    pub(super) text_len: TextSize,
     pub(super) child_hash: u32,
 }
 
@@ -27,8 +27,8 @@ pub struct GreenNode {
     pub(super) data: ThinArc<GreenNodeHead, PackedGreenElement>,
 }
 
-impl std::fmt::Debug for GreenNode {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl core::fmt::Debug for GreenNode {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         self.data.with_arc(|data| data.fmt(f))
     }
 }

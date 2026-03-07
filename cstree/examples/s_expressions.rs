@@ -54,9 +54,9 @@ use cstree::build::GreenNodeBuilder;
 /// We'll discuss how to work with the results later.
 struct Parse<I> {
     green_node: GreenNode,
-    resolver:   I,
+    resolver: I,
     #[allow(unused)]
-    errors:     Vec<String>,
+    errors: Vec<String>,
 }
 
 /// Now, let's write a parser.
@@ -65,11 +65,11 @@ struct Parse<I> {
 fn parse(text: &str) -> Parse<impl Resolver + use<>> {
     struct Parser<'input> {
         /// input tokens, including whitespace.
-        tokens:  VecDeque<(SyntaxKind, &'input str)>,
+        tokens: VecDeque<(SyntaxKind, &'input str)>,
         /// the in-progress green tree.
         builder: GreenNodeBuilder<'static, 'static, SExprSyntax>,
         /// the list of syntax errors we've accumulated so far.
-        errors:  Vec<String>,
+        errors: Vec<String>,
     }
 
     /// The outcome of parsing a single S-expression
@@ -110,8 +110,8 @@ fn parse(text: &str) -> Parse<impl Resolver + use<>> {
             let (tree, cache) = self.builder.finish();
             Parse {
                 green_node: tree,
-                resolver:   cache.unwrap().into_interner().unwrap(),
-                errors:     self.errors,
+                resolver: cache.unwrap().into_interner().unwrap(),
+                errors: self.errors,
             }
         }
 
@@ -178,9 +178,9 @@ fn parse(text: &str) -> Parse<impl Resolver + use<>> {
     }
 
     Parser {
-        tokens:  lex(text),
+        tokens: lex(text),
         builder: GreenNodeBuilder::new(),
-        errors:  Vec::new(),
+        errors: Vec::new(),
     }
     .parse()
 }

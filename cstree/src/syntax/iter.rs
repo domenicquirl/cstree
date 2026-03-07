@@ -1,6 +1,6 @@
 //! Red tree iterators.
 
-use std::iter::FusedIterator;
+use core::iter::FusedIterator;
 
 use text_size::TextSize;
 
@@ -12,9 +12,9 @@ use crate::{
 
 #[derive(Clone, Debug)]
 struct Iter<'n> {
-    green:  GreenNodeChildren<'n>,
+    green: GreenNodeChildren<'n>,
     offset: TextSize,
-    index:  usize,
+    index: usize,
 }
 
 impl<'n> Iter<'n> {
@@ -68,14 +68,14 @@ impl FusedIterator for Iter<'_> {}
 /// An iterator over the child nodes of a [`SyntaxNode`].
 #[derive(Debug)]
 pub struct SyntaxNodeChildren<'n, S: Syntax, D: 'static = ()> {
-    inner:  Iter<'n>,
+    inner: Iter<'n>,
     parent: &'n SyntaxNode<S, D>,
 }
 
 impl<S: Syntax, D> Clone for SyntaxNodeChildren<'_, S, D> {
     fn clone(&self) -> Self {
         Self {
-            inner:  self.inner.clone(),
+            inner: self.inner.clone(),
             parent: self.parent,
         }
     }
@@ -129,14 +129,14 @@ impl<S: Syntax, D> FusedIterator for SyntaxNodeChildren<'_, S, D> {}
 /// An iterator over the children of a [`SyntaxNode`].
 #[derive(Debug)]
 pub struct SyntaxElementChildren<'n, S: Syntax, D: 'static = ()> {
-    inner:  Iter<'n>,
+    inner: Iter<'n>,
     parent: &'n SyntaxNode<S, D>,
 }
 
 impl<S: Syntax, D> Clone for SyntaxElementChildren<'_, S, D> {
     fn clone(&self) -> Self {
         Self {
-            inner:  self.inner.clone(),
+            inner: self.inner.clone(),
             parent: self.parent,
         }
     }

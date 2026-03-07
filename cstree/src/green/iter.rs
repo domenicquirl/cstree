@@ -1,6 +1,6 @@
 //! Green tree iterators.
 
-use std::{iter::FusedIterator, slice};
+use core::{iter::FusedIterator, slice};
 
 use super::{GreenElementRef, element::PackedGreenElement};
 
