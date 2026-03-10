@@ -2,6 +2,8 @@
 
 #![cfg(feature = "lasso_compat")]
 
+extern crate alloc;
+
 use core::{fmt, hash::BuildHasher, num::NonZeroUsize};
 
 use lasso::{Capacity, Rodeo, ThreadedRodeo};
@@ -87,7 +89,7 @@ pub use multi_threaded::MultiThreadedTokenInterner;
 mod multi_threaded {
     use super::*;
 
-    use std::sync::Arc as StdArc;
+    use core::sync::Arc as StdArc;
 
     /// A threadsafe [`Interner`] for deduplicating [`GreenToken`](crate::green::GreenToken) strings.
     ///

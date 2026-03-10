@@ -45,7 +45,7 @@ impl fmt::Display for LassoCompatError {
     }
 }
 
-impl std::error::Error for LassoCompatError {}
+impl core::error::Error for LassoCompatError {}
 
 macro_rules! compat_resolver {
     ($resolver:ident<K$(, $hasher:ident)?> $(where $($t:ident : $bound:ident),+)? $(if #[cfg(feature = $feature:literal)])?) => {

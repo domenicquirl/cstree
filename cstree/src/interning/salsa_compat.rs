@@ -217,7 +217,7 @@ impl<'db, Db: salsa::Database, Id: salsa::interned::InternedId> Resolver<TokenKe
 }
 
 impl<'db, Db: salsa::Database, Id: salsa::interned::InternedId> Interner<TokenKey> for &InternWithDb<'db, Db, Id> {
-    type Error = std::convert::Infallible;
+    type Error = core::convert::Infallible;
 
     fn try_get_or_intern(&mut self, text: &str) -> Result<TokenKey, Self::Error> {
         use salsa::AsId;
