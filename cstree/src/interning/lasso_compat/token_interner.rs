@@ -6,7 +6,9 @@ extern crate alloc;
 
 use core::{fmt, hash::BuildHasher, num::NonZeroUsize};
 
-use lasso::{Capacity, Rodeo, ThreadedRodeo};
+use lasso::{Capacity, Rodeo};
+#[cfg(feature = "multi_threaded_interning")]
+use lasso::ThreadedRodeo;
 use rustc_hash::FxBuildHasher;
 
 use crate::interning::{Interner, Resolver, TokenKey};
@@ -89,7 +91,7 @@ pub use multi_threaded::MultiThreadedTokenInterner;
 mod multi_threaded {
     use super::*;
 
-    use core::sync::Arc as StdArc;
+    use alloc::sync::Arc as StdArc;
 
     /// A threadsafe [`Interner`] for deduplicating [`GreenToken`](crate::green::GreenToken) strings.
     ///

@@ -3,7 +3,10 @@ extern crate alloc;
 use core::hash::{Hash, Hasher};
 
 use alloc::vec::Vec;
-use rustc_hash::{FxHashMap, FxHasher};
+use hashbrown::HashMap;
+use rustc_hash::{FxBuildHasher, FxHasher};
+
+type FxHashMap<K, V> = HashMap<K, V, FxBuildHasher>;
 use text_size::TextSize;
 
 use crate::{
