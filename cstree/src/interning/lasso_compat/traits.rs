@@ -3,8 +3,10 @@
 extern crate alloc;
 
 use alloc::format;
-use core::fmt;
-use core::hash::{BuildHasher, Hash};
+use core::{
+    fmt,
+    hash::{BuildHasher, Hash},
+};
 
 use crate::interning::{
     TokenKey,

@@ -7,7 +7,8 @@ use text_size::{TextRange, TextSize};
 
 use super::*;
 use crate::{
-    RawSyntaxKind, Syntax,
+    RawSyntaxKind,
+    Syntax,
     green::GreenElementRef,
     interning::{Resolver, TokenKey},
     util::{NodeOrToken, TokenAtOffset},

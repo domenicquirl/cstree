@@ -6,9 +6,9 @@ extern crate alloc;
 
 use core::{fmt, hash::BuildHasher, num::NonZeroUsize};
 
-use lasso::{Capacity, Rodeo};
 #[cfg(feature = "multi_threaded_interning")]
 use lasso::ThreadedRodeo;
+use lasso::{Capacity, Rodeo};
 use rustc_hash::FxBuildHasher;
 
 use crate::interning::{Interner, Resolver, TokenKey};

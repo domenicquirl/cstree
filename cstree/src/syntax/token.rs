@@ -15,7 +15,8 @@ use text_size::{TextRange, TextSize};
 
 use super::*;
 use crate::{
-    RawSyntaxKind, Syntax,
+    RawSyntaxKind,
+    Syntax,
     green::{GreenNode, GreenToken},
     interning::{Resolver, TokenKey},
     traversal::Direction,
@@ -25,7 +26,7 @@ use crate::{
 #[derive(Debug)]
 pub struct SyntaxToken<S: Syntax, D: 'static = ()> {
     parent: SyntaxNode<S, D>,
-    index: u32,
+    index:  u32,
     offset: TextSize,
 }
 
@@ -33,7 +34,7 @@ impl<S: Syntax, D> Clone for SyntaxToken<S, D> {
     fn clone(&self) -> Self {
         Self {
             parent: self.parent.clone(),
-            index: self.index,
+            index:  self.index,
             offset: self.offset,
         }
     }

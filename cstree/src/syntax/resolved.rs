@@ -14,7 +14,8 @@ use core::{
 use text_size::{TextRange, TextSize};
 
 use crate::{
-    RawSyntaxKind, Syntax,
+    RawSyntaxKind,
+    Syntax,
     green::GreenNode,
     interning::{Resolver, TokenKey},
     syntax::*,
@@ -260,7 +261,7 @@ where
         D: serde::Serialize,
     {
         crate::serde_impls::SerializeWithData {
-            node: self,
+            node:     self,
             resolver: self.resolver().as_ref(),
         }
     }

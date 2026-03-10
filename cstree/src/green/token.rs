@@ -10,8 +10,8 @@ use triomphe::Arc;
 #[repr(align(2))] // to use 1 bit for pointer tagging. NB: this is an at-least annotation
 #[derive(Debug, PartialEq, Eq, Hash, Copy, Clone)]
 pub(super) struct GreenTokenData {
-    pub(super) kind: RawSyntaxKind,
-    pub(super) text: Option<TokenKey>,
+    pub(super) kind:     RawSyntaxKind,
+    pub(super) text:     Option<TokenKey>,
     pub(super) text_len: TextSize,
 }
 

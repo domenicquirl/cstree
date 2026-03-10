@@ -44,8 +44,8 @@ use alloc::string::{String, ToString};
 /// assert_eq!(sub, "748");
 /// ```
 pub struct SyntaxText<'n, 'i, I: ?Sized, S: Syntax, D: 'static = ()> {
-    node: &'n SyntaxNode<S, D>,
-    range: TextRange,
+    node:     &'n SyntaxNode<S, D>,
+    range:    TextRange,
     resolver: &'i I,
 }
 

@@ -162,7 +162,7 @@ macro_rules! impl_cstree_interning_for_salsa {
 /// shared references (see also [the `interning` module documentation](super)).
 #[cfg_attr(doc_cfg, doc(cfg(feature = "salsa_2022_compat")))]
 pub struct InternWithDb<'db, Db: salsa::Database, Id: salsa::interned::InternedId> {
-    db: &'db Db,
+    db:     &'db Db,
     intern: fn(&Db, text: String) -> Id,
     lookup: fn(&Db, Id) -> &str,
 }

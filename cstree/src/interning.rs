@@ -138,8 +138,7 @@ pub use lasso;
 #[cfg_attr(doc_cfg, doc(cfg(feature = "salsa_2022_compat")))]
 pub mod salsa_compat;
 
-use core::fmt;
-use core::num::NonZeroU32;
+use core::{fmt, num::NonZeroU32};
 
 /// The intern key type for the source text of [`GreenToken`s](crate::green::GreenToken).
 /// Each unique key uniquely identifies a deduplicated, interned source string.
