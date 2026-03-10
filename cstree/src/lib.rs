@@ -159,7 +159,7 @@ pub mod util {
 pub mod sync {
     /// An atomically reference counted shared pointer.
     ///
-    /// This is like [`Arc`](core::sync::Arc) in the standard library, but more efficient for how `cstree` stores
+    /// This is like [`Arc`](alloc::sync::Arc) in the standard library, but more efficient for how `cstree` stores
     /// syntax trees internally. This Arc does not support weak reference counting.
     pub use triomphe::Arc;
 }
@@ -212,6 +212,9 @@ pub trait Syntax: Sized + Copy + fmt::Debug + Eq {
 #[allow(unused_imports)]
 #[macro_use]
 extern crate cstree_derive;
+
+#[cfg(doc)]
+extern crate alloc;
 
 #[cfg(feature = "derive")]
 /// Derive macro available if `cstree` is built with `features = ["derive"]`.
