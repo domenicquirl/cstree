@@ -1,5 +1,3 @@
-extern crate alloc;
-
 mod attributes;
 
 use syn::{Token, punctuated::Punctuated};
@@ -7,7 +5,6 @@ use syn::{Token, punctuated::Punctuated};
 use crate::{errors::ErrorContext, symbols::*};
 
 use self::attributes::Attr;
-use alloc::{string::String, vec::Vec};
 
 /// Convenience for recording errors inside `ErrorContext` instead of the `Err` variant of the `Result`.
 pub(crate) type Result<T, E = ()> = core::result::Result<T, E>;

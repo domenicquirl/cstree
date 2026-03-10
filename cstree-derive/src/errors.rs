@@ -1,7 +1,4 @@
-extern crate alloc;
-
-use alloc::vec::Vec;
-use core::{cell::RefCell, fmt};
+use std::{cell::RefCell, fmt, thread};
 
 use quote::ToTokens;
 
@@ -52,7 +49,7 @@ impl ErrorContext {
 
 impl Drop for ErrorContext {
     fn drop(&mut self) {
-        if self.errors.borrow().is_some() {
+        if !thread::panicking() && self.errors.borrow().is_some() {
             panic!("forgot to check for errors");
         }
     }
