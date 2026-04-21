@@ -48,7 +48,7 @@ jobs:
 
       # tests
       - name: Library Tests | Feature Powerset
-        run: cargo hack nextest run --feature-powerset --profile ci-powerset --tests --examples --verbose
+        run: cargo hack nextest run --feature-powerset -p cstree --profile ci-powerset --tests --examples --verbose
       - name: Library Tests | All Features (Release)
         run: cargo nextest run --profile ci-all-features-release --tests --examples --verbose --all-features --release
       - name: Doc Tests 
@@ -73,7 +73,7 @@ jobs:
       - name: Cargo Check | All Targets
         run: cargo check --all-targets --all-features
       - name: Cargo Check | Feature Powerset
-        run: cargo hack check --feature-powerset --no-dev-deps
+        run: cargo hack check --feature-powerset --no-dev-deps -p cstree
 
   clippy:
     name: Clippy
