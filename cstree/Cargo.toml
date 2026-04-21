@@ -60,7 +60,7 @@ harness = false
 
 [features]
 default = ["std"]
-std = ["indexmap/std", "rustc-hash/std", "triomphe/std", "serde?/std"]
+std = ["triomphe/std"]
 # Derive macro for `Syntax`
 derive = ["dep:cstree_derive"]
 # Implementations of `serde::{De,}Serialize` for CSTrees.

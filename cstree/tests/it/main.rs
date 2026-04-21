@@ -1,4 +1,5 @@
 mod basic;
+#[cfg(feature = "derive")]
 mod regressions;
 mod rollback;
 mod sendsync;

@@ -84,7 +84,7 @@
 //!
 //! See `LICENSE-APACHE` and `LICENSE-MIT` for details.
 
-#![no_std]
+#![cfg_attr(not(feature = "std"), no_std)]
 #![forbid(missing_debug_implementations, unconditional_recursion)]
 #![deny(unsafe_code, future_incompatible)]
 #![allow(
@@ -97,6 +97,7 @@
 #![doc(html_root_url = "https://docs.rs/cstree/0.13.0")]
 #![cfg_attr(doc_cfg, feature(doc_cfg))]
 
+#[cfg(feature = "derive")]
 pub mod getting_started;
 
 #[allow(unsafe_code)]
@@ -136,8 +137,7 @@ pub mod build {
 /// A convenient collection of the most used parts of `cstree`.
 pub mod prelude {
     pub use crate::{
-        RawSyntaxKind,
-        Syntax,
+        RawSyntaxKind, Syntax,
         build::GreenNodeBuilder,
         green::{GreenNode, GreenToken},
         syntax::{SyntaxElement, SyntaxNode, SyntaxToken},
@@ -173,6 +173,8 @@ pub mod sync {
 /// `s_expressions` example:
 ///
 /// ```
+/// # #[cfg(not(feature = "derive"))] fn main() {}
+/// # #[cfg(feature = "derive")] fn main() {
 /// #[derive(Debug, Clone, Copy, PartialEq, Eq, cstree::Syntax)]
 /// # #[allow(non_camel_case_types)]
 /// #[repr(u32)]
@@ -185,6 +187,7 @@ pub mod sync {
 ///     Expression, // combined expression, like `5 + 4 - 3`
 ///     Whitespace, // whitespace is explicit
 /// }
+/// # }
 /// ```
 ///
 /// `cstree` provides a procedural macro called `cstree_derive` to automatically generate `Syntax` implementations for
