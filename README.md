@@ -57,6 +57,7 @@ Notable differences of `cstree` compared to `rowan`:
   still `clone` the reference to obtain an owned node, but you only pay that cost when you need to.
 - The downside of offering thread safe syntax trees is that `cstree` cannot offer any mutability API for its CSTs.
   Trees can still be updated into new trees through replacing nodes, but cannot be mutated in place.
+- `cstree` is also fully compatible with #[no_std] by disabling the std feature and including a global allocator with the alloc crate. However, disabling the `std` feature disables some optimizations that are not possible in no_std contexts.
 
 ## Getting Started
 

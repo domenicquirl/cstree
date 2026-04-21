@@ -10,10 +10,10 @@ use self::attributes::Attr;
 pub(crate) type Result<T, E = ()> = core::result::Result<T, E>;
 
 pub(crate) struct SyntaxKindEnum<'i> {
-    pub(crate) name: syn::Ident,
-    pub(crate) repr: Option<syn::Ident>,
+    pub(crate) name:     syn::Ident,
+    pub(crate) repr:     Option<syn::Ident>,
     pub(crate) variants: Vec<SyntaxKindVariant<'i>>,
-    pub(crate) source: &'i syn::DeriveInput,
+    pub(crate) source:   &'i syn::DeriveInput,
 }
 
 impl<'i> SyntaxKindEnum<'i> {
@@ -56,9 +56,9 @@ impl<'i> SyntaxKindEnum<'i> {
 }
 
 pub(crate) struct SyntaxKindVariant<'i> {
-    pub(crate) name: syn::Ident,
+    pub(crate) name:        syn::Ident,
     pub(crate) static_text: Option<String>,
-    pub(crate) source: &'i syn::Variant,
+    pub(crate) source:      &'i syn::Variant,
 }
 
 impl<'i> SyntaxKindVariant<'i> {
