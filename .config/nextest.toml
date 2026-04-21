@@ -4,21 +4,13 @@
 # of the run (for easy scrollability).
 failure-output = "immediate-final"
 
-[profile.ci-default-features]
+[profile.ci-powerset]
 # Do not cancel the test run on the first failure.
 fail-fast = false
 
-[profile.ci-default-features.junit]
-path        = "junit-default-features.xml"
-report-name = "default-features"
-
-[profile.ci-all-features]
-# Do not cancel the test run on the first failure.
-fail-fast = false
-
-[profile.ci-all-features.junit]
-path        = "junit-all-features.xml"
-report-name = "all-features"
+[profile.ci-powerset.junit]
+path        = "junit-powerset.xml"
+report-name = "powerset"
 
 [profile.ci-all-features-release]
 # Do not cancel the test run on the first failure.
