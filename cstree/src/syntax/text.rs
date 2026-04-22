@@ -1,6 +1,8 @@
 //! Efficient representation of the source text that is covered by a [`SyntaxNode`].
 
-use std::fmt;
+extern crate alloc;
+
+use core::fmt;
 
 use crate::{
     Syntax,
@@ -8,6 +10,7 @@ use crate::{
     syntax::{SyntaxNode, SyntaxToken},
     text::{TextRange, TextSize},
 };
+use alloc::string::{String, ToString};
 
 /// An efficient representation of the text that is covered by a [`SyntaxNode`], i.e. the combined
 /// source text of all tokens that are descendants of the node.
@@ -312,7 +315,7 @@ where
         if !(x_text.starts_with(y_text) || y_text.starts_with(x_text)) {
             return Some(());
         }
-        let advance = std::cmp::min(x.1.len(), y.1.len());
+        let advance = core::cmp::min(x.1.len(), y.1.len());
         x.1 = TextRange::new(x.1.start() + advance, x.1.end());
         y.1 = TextRange::new(y.1.start() + advance, y.1.end());
     }
@@ -321,7 +324,7 @@ where
 impl<I: Resolver<TokenKey> + ?Sized, S: Syntax, D> Eq for SyntaxText<'_, '_, I, S, D> {}
 
 mod private {
-    use std::ops;
+    use core::ops;
 
     use crate::text::{TextRange, TextSize};
 

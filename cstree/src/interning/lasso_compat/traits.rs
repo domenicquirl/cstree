@@ -1,7 +1,12 @@
 #![cfg(feature = "lasso_compat")]
 
-use core::fmt;
-use std::hash::{BuildHasher, Hash};
+extern crate alloc;
+
+use alloc::format;
+use core::{
+    fmt,
+    hash::{BuildHasher, Hash},
+};
 
 use crate::interning::{
     TokenKey,
@@ -45,7 +50,7 @@ impl fmt::Display for LassoCompatError {
     }
 }
 
-impl std::error::Error for LassoCompatError {}
+impl core::error::Error for LassoCompatError {}
 
 macro_rules! compat_resolver {
     ($resolver:ident<K$(, $hasher:ident)?> $(where $($t:ident : $bound:ident),+)? $(if #[cfg(feature = $feature:literal)])?) => {

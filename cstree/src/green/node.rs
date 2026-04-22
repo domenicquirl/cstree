@@ -1,4 +1,4 @@
-use std::{
+use core::{
     hash::{Hash, Hasher},
     slice,
 };
@@ -27,8 +27,8 @@ pub struct GreenNode {
     pub(super) data: ThinArc<GreenNodeHead, PackedGreenElement>,
 }
 
-impl std::fmt::Debug for GreenNode {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl core::fmt::Debug for GreenNode {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         self.data.with_arc(|data| data.fmt(f))
     }
 }

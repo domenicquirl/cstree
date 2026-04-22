@@ -1,4 +1,4 @@
-use std::{fmt, hash, mem::ManuallyDrop, ptr::NonNull};
+use core::{fmt, hash, mem::ManuallyDrop, ptr::NonNull};
 
 use crate::{
     RawSyntaxKind,

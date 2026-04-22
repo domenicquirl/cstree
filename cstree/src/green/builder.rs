@@ -1,6 +1,12 @@
-use std::hash::{Hash, Hasher};
+extern crate alloc;
 
-use rustc_hash::{FxHashMap, FxHasher};
+use core::hash::{Hash, Hasher};
+
+use alloc::vec::Vec;
+use hashbrown::HashMap;
+use rustc_hash::{FxBuildHasher, FxHasher};
+
+type FxHashMap<K, V> = HashMap<K, V, FxBuildHasher>;
 use text_size::TextSize;
 
 use crate::{
@@ -215,7 +221,7 @@ where
     fn get_cached_node(
         &mut self,
         kind: RawSyntaxKind,
-        children: std::vec::Drain<'_, GreenElement>,
+        children: alloc::vec::Drain<'_, GreenElement>,
         text_len: TextSize,
         child_hash: u32,
     ) -> GreenNode {

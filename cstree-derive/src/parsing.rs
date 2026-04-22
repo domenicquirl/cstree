@@ -7,7 +7,7 @@ use crate::{errors::ErrorContext, symbols::*};
 use self::attributes::Attr;
 
 /// Convenience for recording errors inside `ErrorContext` instead of the `Err` variant of the `Result`.
-pub(crate) type Result<T, E = ()> = std::result::Result<T, E>;
+pub(crate) type Result<T, E = ()> = core::result::Result<T, E>;
 
 pub(crate) struct SyntaxKindEnum<'i> {
     pub(crate) name:     syn::Ident,

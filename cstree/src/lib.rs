@@ -84,6 +84,7 @@
 //!
 //! See `LICENSE-APACHE` and `LICENSE-MIT` for details.
 
+#![cfg_attr(not(feature = "std"), no_std)]
 #![forbid(missing_debug_implementations, unconditional_recursion)]
 #![deny(unsafe_code, future_incompatible)]
 #![allow(
@@ -96,6 +97,7 @@
 #![doc(html_root_url = "https://docs.rs/cstree/0.13.0")]
 #![cfg_attr(doc_cfg, feature(doc_cfg))]
 
+#[cfg(feature = "derive")]
 pub mod getting_started;
 
 #[allow(unsafe_code)]
@@ -111,7 +113,7 @@ mod serde_impls;
 #[allow(missing_docs)]
 mod utility_types;
 
-use std::fmt;
+use core::fmt;
 
 /// `RawSyntaxKind` is a type tag for each token or node.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -158,7 +160,7 @@ pub mod util {
 pub mod sync {
     /// An atomically reference counted shared pointer.
     ///
-    /// This is like [`Arc`](std::sync::Arc) in the standard library, but more efficient for how `cstree` stores
+    /// This is like [`Arc`](alloc::sync::Arc) in the standard library, but more efficient for how `cstree` stores
     /// syntax trees internally. This Arc does not support weak reference counting.
     pub use triomphe::Arc;
 }
@@ -172,6 +174,8 @@ pub mod sync {
 /// `s_expressions` example:
 ///
 /// ```
+/// # #[cfg(not(feature = "derive"))] fn main() {}
+/// # #[cfg(feature = "derive")] fn main() {
 /// #[derive(Debug, Clone, Copy, PartialEq, Eq, cstree::Syntax)]
 /// # #[allow(non_camel_case_types)]
 /// #[repr(u32)]
@@ -184,6 +188,7 @@ pub mod sync {
 ///     Expression, // combined expression, like `5 + 4 - 3`
 ///     Whitespace, // whitespace is explicit
 /// }
+/// # }
 /// ```
 ///
 /// `cstree` provides a procedural macro called `cstree_derive` to automatically generate `Syntax` implementations for
@@ -211,6 +216,9 @@ pub trait Syntax: Sized + Copy + fmt::Debug + Eq {
 #[allow(unused_imports)]
 #[macro_use]
 extern crate cstree_derive;
+
+#[cfg(doc)]
+extern crate alloc;
 
 #[cfg(feature = "derive")]
 /// Derive macro available if `cstree` is built with `features = ["derive"]`.
@@ -241,7 +249,7 @@ pub mod testing {
     impl Syntax for TestSyntaxKind {
         fn from_raw(raw: RawSyntaxKind) -> Self {
             assert!(raw.0 <= TestSyntaxKind::__LAST as u32);
-            unsafe { std::mem::transmute::<u32, Self>(raw.0) }
+            unsafe { core::mem::transmute::<u32, Self>(raw.0) }
         }
 
         fn into_raw(self) -> RawSyntaxKind {

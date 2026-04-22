@@ -1,6 +1,6 @@
 //! Red tree iterators.
 
-use std::iter::FusedIterator;
+use core::iter::FusedIterator;
 
 use text_size::TextSize;
 

@@ -2,12 +2,13 @@
 //! associated [`Resolver`]s(lasso::Resolver).
 //!
 //! This means they can implement `Debug` and `Display` and be (de-)serializable by default.
+extern crate alloc;
 
-use std::{
+use alloc::{string::String, sync::Arc as AllocArc};
+use core::{
     fmt,
     hash::Hash,
     ops::{Deref, DerefMut},
-    sync::Arc as StdArc,
 };
 
 use text_size::{TextRange, TextSize};
@@ -74,7 +75,7 @@ impl<S: Syntax, D> PartialEq for ResolvedNode<S, D> {
 }
 impl<S: Syntax, D> Eq for ResolvedNode<S, D> {}
 impl<S: Syntax, D> Hash for ResolvedNode<S, D> {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+    fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
         self.syntax.hash(state);
     }
 }
@@ -130,7 +131,7 @@ impl<S: Syntax, D> PartialEq for ResolvedToken<S, D> {
 }
 impl<S: Syntax, D> Eq for ResolvedToken<S, D> {}
 impl<S: Syntax, D> Hash for ResolvedToken<S, D> {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+    fn hash<H: core::hash::Hasher>(&self, state: &mut H) {
         self.syntax.hash(state);
     }
 }
@@ -297,7 +298,7 @@ macro_rules! forward_node {
 
 impl<S: Syntax, D> ResolvedNode<S, D> {
     /// Returns the [`Resolver`] associated with this tree.
-    pub fn resolver(&self) -> &StdArc<dyn Resolver<TokenKey>> {
+    pub fn resolver(&self) -> &AllocArc<dyn Resolver<TokenKey>> {
         self.syntax.resolver().unwrap()
     }
 
@@ -529,7 +530,7 @@ impl<S: Syntax, D> ResolvedNode<S, D> {
 
 impl<S: Syntax, D> ResolvedToken<S, D> {
     /// Returns the [`Resolver`] associated with this tree.
-    pub fn resolver(&self) -> &StdArc<dyn Resolver<TokenKey>> {
+    pub fn resolver(&self) -> &AllocArc<dyn Resolver<TokenKey>> {
         self.syntax.resolver().unwrap()
     }
 

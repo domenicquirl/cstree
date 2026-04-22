@@ -1,8 +1,14 @@
-use std::{
+extern crate alloc;
+
+use alloc::{
+    format,
+    string::{String, ToString},
+    sync::Arc as AllocArc,
+};
+use core::{
     fmt,
     hash::{Hash, Hasher},
     iter,
-    sync::Arc as StdArc,
 };
 
 use text_size::{TextRange, TextSize};
@@ -107,7 +113,7 @@ impl<S: Syntax, D> SyntaxToken<S, D> {
 
     /// If there is a resolver associated with this tree, returns it.
     #[inline]
-    pub fn resolver(&self) -> Option<&StdArc<dyn Resolver<TokenKey>>> {
+    pub fn resolver(&self) -> Option<&AllocArc<dyn Resolver<TokenKey>>> {
         self.parent.resolver()
     }
 
@@ -232,7 +238,7 @@ impl<S: Syntax, D> SyntaxToken<S, D> {
     ///
     /// **Note** that the result of the comparison may be wrong when comparing two tokens from
     /// different trees that use different interners.
-    ///  
+    ///
     /// # Examples
     /// ```
     /// # use cstree::testing::*;

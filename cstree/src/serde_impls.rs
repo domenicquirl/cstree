@@ -9,13 +9,15 @@ use crate::{
     traversal::WalkEvent,
     util::NodeOrToken,
 };
+extern crate alloc;
+use alloc::{collections::VecDeque, vec::Vec};
+use core::{fmt, marker::PhantomData};
 use serde::{
     Deserialize,
     Serialize,
     de::{Error, SeqAccess, Visitor},
     ser::SerializeTuple,
 };
-use std::{collections::VecDeque, fmt, marker::PhantomData};
 
 /// Expands to the first expression, if there's
 /// no expression following, otherwise return the second expression.

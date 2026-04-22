@@ -33,7 +33,7 @@ mod tests {
     #[cfg_attr(miri, ignore)]
     #[rustfmt::skip]
     fn assert_green_sizes() {
-        use std::mem::size_of;
+        use core::mem::size_of;
 
         assert_eq!(size_of::<GreenNode>(),          size_of::<*const u8>());
         assert_eq!(size_of::<GreenToken>(),         size_of::<*const u8>());
