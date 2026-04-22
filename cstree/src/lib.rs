@@ -52,6 +52,21 @@
 //!
 //! [replacing]: syntax::SyntaxNode::replace_with
 //!
+//! ## Cargo Feature Flags
+//!
+//! `cstree` contains several optional features that extend the crate’s functionality.
+//!
+//! - `std` (enabled by default) - Support for standard library features
+//! - `derive` - Adds support for deriving the `Syntax` trait
+//! - `serialize` - Implements `serde::{De,}Serialize` for CSTs
+//! - `lasso` - Allows using interners from the `lasso` crate for green trees.
+//!   - When enabled, `cstree`'s default interners will use `lasso` internally, too.
+//! - `multi_threaded_interning` - Additionally provide threadsafe interner types.
+//!   - Where applicable (and if the corresponding features are selected), enabling this feature will also make `cstree`
+//!     provide compatibility implementations for multi-threaded interners from other crates.
+//!   - Enabling this feature will automatically enable the `lasso` feature, as the multi-threaded interners are backed
+//!     by `lasso`.
+//!
 //! ## Getting Started
 //! If you're looking at `cstree`, you're probably looking at or already writing a parser and are considering using
 //! concrete syntax trees as its output. We'll talk more about parsing below -- first, let's have a look at what needs
@@ -94,7 +109,7 @@
 )]
 #![warn(missing_docs)]
 // Docs.rs
-#![doc(html_root_url = "https://docs.rs/cstree/0.13.0")]
+#![doc(html_root_url = "https://docs.rs/cstree/0.14.0")]
 #![cfg_attr(doc_cfg, feature(doc_cfg))]
 
 #[cfg(feature = "derive")]

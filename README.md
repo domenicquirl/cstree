@@ -57,7 +57,21 @@ Notable differences of `cstree` compared to `rowan`:
   still `clone` the reference to obtain an owned node, but you only pay that cost when you need to.
 - The downside of offering thread safe syntax trees is that `cstree` cannot offer any mutability API for its CSTs.
   Trees can still be updated into new trees through replacing nodes, but cannot be mutated in place.
-- `cstree` is also fully compatible with #[no_std] by disabling the std feature and including a global allocator with the alloc crate. However, disabling the `std` feature disables some optimizations that are not possible in no_std contexts.
+- `cstree` is also fully compatible with #[no_std] by disabling the std feature and including a global allocator with the alloc crate. 
+  However, disabling the `std` feature disables some optimizations that are not possible in no_std contexts.
+
+## Cargo Feature Flags
+
+`cstree` contains several optional features that extend the crate’s functionality.
+
+- `std` (enabled by default) - Support for standard library features
+- `derive` - Adds support for deriving the `Syntax` trait
+- `serialize` - Implements `serde::{De,}Serialize` for CSTs
+- `lasso` - Allows using interners from the `lasso` crate for green trees. 
+  - When enabled, `cstree`'s default interners will use `lasso` internally, too.
+- `multi_threaded_interning` - Additionally provide threadsafe interner types. 
+  - Where applicable (and if the corresponding features are selected), enabling this feature will also make `cstree` provide compatibility implementations for multi-threaded interners from other crates.
+  - Enabling this feature will automatically enable the `lasso` feature, as the multi-threaded interners are backed by `lasso`.
 
 ## Getting Started
 
