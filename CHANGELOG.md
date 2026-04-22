@@ -5,6 +5,7 @@
 ## `v0.14.0`
 
  * `cstree` now supports `no_std` by adding the dependency with `default-features = false`, which disables the newly introduced `std` feature (enabled by default).
+ * Added a section documenting the cargo feature flags supported by `cstree` and their effects to the `rustdoc` crate page and README.
 
 ## `v0.13.0`
 
