@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## `v0.14.0`
+
+ * `cstree` now supports `no_std` by adding the dependency with `default-features = false`, which disables the newly introduced `std` feature (enabled by default).
+
 ## `v0.13.0`
 
  * `&I` and `&mut I` will now implement `Resolver` if `I` implements `Resolver`.
