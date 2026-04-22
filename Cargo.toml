@@ -4,6 +4,10 @@ members = [
     "cstree-derive",
     "test_suite",
 ]
+default-members = [
+    "cstree",
+    "cstree-derive",
+]
 resolver = "2"
 
 [workspace.package]
