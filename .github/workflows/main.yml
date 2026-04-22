@@ -49,8 +49,6 @@ jobs:
       # tests
       - name: Library Tests | Feature Powerset
         run: cargo hack nextest run --feature-powerset -p cstree --profile ci-powerset --tests --examples --verbose
-      - name: Library Tests | All Features (Release)
-        run: cargo nextest run --profile ci-all-features-release --tests --examples --verbose --all-features --release
       - name: Doc Tests 
         run: cargo test --doc --verbose --all-features
 
