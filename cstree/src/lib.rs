@@ -94,7 +94,7 @@
 )]
 #![warn(missing_docs)]
 // Docs.rs
-#![doc(html_root_url = "https://docs.rs/cstree/0.13.0")]
+#![doc(html_root_url = "https://docs.rs/cstree/0.14.0")]
 #![cfg_attr(doc_cfg, feature(doc_cfg))]
 
 #[cfg(feature = "derive")]

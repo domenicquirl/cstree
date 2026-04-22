@@ -210,7 +210,7 @@ checksum = "460fbee9c2c2f33933d720630a6a0bac33ba7053db5344fac858d4b8952d77d5"
 
 [[package]]
 name = "cstree"
-version = "0.13.0"
+version = "0.14.0"
 dependencies = [
  "criterion",
  "crossbeam-utils",
@@ -230,7 +230,7 @@ dependencies = [
 
 [[package]]
 name = "cstree_derive"
-version = "0.13.0"
+version = "0.14.0"
 dependencies = [
  "cstree",
  "proc-macro2",
