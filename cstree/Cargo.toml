@@ -20,7 +20,7 @@ parking_lot = "0.12.4"
 triomphe = { version = "0.1.14", default-features = false, features = ["stable_deref_trait"] }
 
 # HashMap (nostd compatible alternative to std's HashMap used by indexmap under the hood)
-hashbrown = { version = "0.16", default-features = false }
+hashbrown = { version = "0.17.0", default-features = false }
 
 # Default Interner
 indexmap = { version = "2.10.0", default-features = false }
